@@ -1,32 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Delete, Lock, User, CheckCircle2 } from 'lucide-react';
+import { Lock, User, KeyRound, CheckCircle2 } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../features/auth/context/AuthContext';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
-  const [pin, setPin] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleNumberClick = (num: string) => {
-    if (pin.length < 8) {
-      setPin(prev => prev + num);
-      setError('');
-    }
-  };
-
-  const handleDelete = () => {
-    setPin(prev => prev.slice(0, -1));
-  };
-
-  const handleLogin = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!username || !pin) {
-      setError('Por favor, ingresá usuario y PIN');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError('Por favor, ingresá usuario y contraseña');
       return;
     }
 
@@ -34,7 +23,7 @@ const Login: React.FC = () => {
     try {
       const response = await api.post('/auth/login', {
         nombreUsuario: username,
-        contrasena: pin,
+        contrasena: password,
       });
       
       login(response.data);
@@ -54,7 +43,7 @@ const Login: React.FC = () => {
             <Lock size={40} />
           </div>
           <h1 className="text-3xl font-bold mb-2">Control de Pesaje</h1>
-          <p className="text-slate-400">Ingresá tus credenciales para comenzar</p>
+          <p className="text-slate-400">Acceso al Dashboard de Supervisión</p>
         </div>
 
         <div className="px-8 pb-8">
@@ -72,67 +61,39 @@ const Login: React.FC = () => {
               />
             </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-center space-x-2">
-                {[...Array(8)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-4 h-4 rounded-full border-2 border-slate-600 ${
-                      pin.length > i ? 'bg-blue-500 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-transparent'
-                    } transition-all duration-200`}
-                  />
-                ))}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                <KeyRound size={20} />
               </div>
-
-              {error && (
-                <p className="text-red-400 text-sm text-center font-medium animate-pulse">
-                  {error}
-                </p>
-              )}
-
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'borrar', 0, 'ok'].map((btn) => {
-                  if (btn === 'borrar') {
-                    return (
-                      <button
-                        key="del"
-                        type="button"
-                        onClick={handleDelete}
-                        className="h-16 flex items-center justify-center bg-slate-700/50 hover:bg-slate-700 rounded-2xl transition-colors active:scale-95"
-                      >
-                        <Delete size={24} className="text-slate-300" />
-                      </button>
-                    );
-                  }
-                  if (btn === 'ok') {
-                    return (
-                      <button
-                        key="ok"
-                        type="submit"
-                        disabled={loading}
-                        className="h-16 flex items-center justify-center bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-2xl transition-colors active:scale-95 shadow-lg shadow-blue-900/20"
-                      >
-                        {loading ? (
-                          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={24} />
-                        )}
-                      </button>
-                    );
-                  }
-                  return (
-                    <button
-                      key={btn}
-                      type="button"
-                      onClick={() => handleNumberClick(btn.toString())}
-                      className="h-16 flex items-center justify-center bg-slate-700/50 hover:bg-slate-700 text-2xl font-semibold rounded-2xl transition-colors active:scale-95"
-                    >
-                      {btn}
-                    </button>
-                  );
-                })}
-              </div>
+              <input
+                type="password"
+                className="block w-full pl-12 pr-4 py-4 bg-slate-900 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-600 text-lg"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
+
+            {error && (
+              <p className="text-red-400 text-sm text-center font-medium animate-pulse">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 mt-2 flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-2xl transition-colors shadow-lg shadow-blue-900/20 text-lg font-semibold"
+            >
+              {loading ? (
+                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Ingresar</span>
+                  <CheckCircle2 size={24} />
+                </>
+              )}
+            </button>
           </form>
         </div>
       </div>
