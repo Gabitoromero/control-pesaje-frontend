@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Navigate, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
-import { LayoutDashboard, FileBarChart, LogOut, Package } from 'lucide-react';
+import { LayoutDashboard, FileBarChart, LogOut, Package, Users } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -57,6 +57,20 @@ export const DashboardLayout: React.FC = () => {
           >
             <Package className="w-5 h-5 mr-3" />
             Artículos
+          </NavLink>
+
+          <NavLink
+            to="/dashboard/usuarios"
+            className={({ isActive }) =>
+              `flex items-center px-3 py-2.5 rounded-md transition-colors ${
+                isActive
+                  ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+              }`
+            }
+          >
+            <Users className="w-5 h-5 mr-3" />
+            Usuarios
           </NavLink>
 
           <NavLink

@@ -63,7 +63,7 @@ export const ArticulosPage = () => {
     setFormData({ codigo: '', nombre: '', descripcion: '' });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (editingArticulo?.id) {
       updateMutation.mutate({ id: editingArticulo.id, data: formData });

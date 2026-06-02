@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, User, KeyRound, CheckCircle2 } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../features/auth/context/AuthContext';
+import { getApiErrorMessage } from '../utils/errors';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -12,7 +13,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!username || !password) {
       setError('Por favor, ingresá usuario y contraseña');
@@ -26,10 +27,10 @@ const Login: React.FC = () => {
         contrasena: password,
       });
       
-      login(response.data);
+      login(response.data.data);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Error al iniciar sesión'));
     } finally {
       setLoading(false);
     }
