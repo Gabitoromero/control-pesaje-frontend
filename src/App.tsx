@@ -6,6 +6,8 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { UsuarioRol } from './shared/types';
 import { TabletWorkspace } from './features/tablet/pages/TabletWorkspace';
 
+import { ArticulosPage } from './features/dashboard/pages/ArticulosPage';
+
 function App() {
   const { isAuthenticated, user } = useAuth();
 
@@ -27,6 +29,7 @@ function App() {
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<div className="bg-white p-6 rounded shadow-sm text-gray-500">Monitoreo en vivo (En construcción)</div>} />
+          <Route path="articulos" element={<ArticulosPage />} />
           <Route path="reportes" element={<div className="bg-white p-6 rounded shadow-sm text-gray-500">Reportes (En construcción)</div>} />
         </Route>
 
