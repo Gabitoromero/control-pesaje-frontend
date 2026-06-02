@@ -1,0 +1,40 @@
+project: controlador-pesaje
+context: |
+  Vite + React 19 + TypeScript frontend application.
+  Uses Tailwind CSS for styling, Axios for HTTP clients, Zod for schema validation,
+  and React Router DOM for routing. Under active development.
+strict_tdd: false
+testing:
+  framework: null
+  command: null
+  layers:
+    unit:
+      available: false
+      tool: null
+    integration:
+      available: false
+      tool: null
+    e2e:
+      available: false
+      tool: null
+  coverage:
+    available: false
+    command: null
+  quality:
+    linter:
+      available: true
+      command: "pnpm run lint"
+    type_checker:
+      available: true
+      command: "pnpm run build" # via tsc -b
+    formatter:
+      available: false
+      command: null
+phase_rules:
+  proposal: "Standard architectural alignment checks"
+  spec: "Functional requirement specifications"
+  design: "Component and state architecture design"
+  tasks: "Detailed breakdown into atom-sized, verifiable tasks"
+  apply: "Iterative implementation using work-unit-commits and TDD"
+  verify: "Manual and automated validation checks"
+  archive: "Summary and persistence of final results"

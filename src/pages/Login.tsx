@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Delete, Lock, User, CheckCircle2 } from 'lucide-react';
 import api from '../api/axios';
+import { useAuth } from '../features/auth/context/AuthContext';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleNumberClick = (num: string) => {
     if (pin.length < 8) {
@@ -35,8 +37,7 @@ const Login: React.FC = () => {
         contrasena: pin,
       });
       
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      login(response.data);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al iniciar sesión');
