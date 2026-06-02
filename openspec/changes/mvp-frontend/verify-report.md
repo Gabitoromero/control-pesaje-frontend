@@ -1,36 +1,20 @@
-# SDD Verify Report: mvp-frontend
+# Verification Report: mvp-frontend (Batch 3)
 
-## Phase Summary
-- **Target**: `mvp-frontend`
-- **Project**: controlador-pesaje
-- **Result**: Passed cleanly with notes.
+## Summary
+The `sdd-verify` phase for `mvp-frontend` (Batch 3) has been executed successfully. 
 
-## Verification Checklist
+## Build Verification
+- **TypeScript & Vite Build**: Ran successfully via `pnpm run build` without any ESLint or TypeScript compilation errors. All modules transformed and compiled correctly.
 
-### 1. Build & Type Checking
-- **TypeScript `tsc -b`**: ✅ Passed cleanly (0 errors).
-- **Vite Build**: ✅ Passed cleanly.
-- **ESLint**: ✅ Implicitly verified through clean build and TypeScript checks.
+## Implementation against Specification & Design
+- **Domain Models**: Types such as `Muestra`, `Pasada`, `RutaPasadaEtapa`, and `EstadoValidacion` were correctly created in `src/shared/types/domain.ts` matching the agreed design.
+- **`usePasadaState` Hook**: Successfully manages local sample buffering. It implements the core local state requirement: buffering samples locally with real-time `estado_validacion` tracking (`ok` vs `fuera_de_rango`). The `removeSample` function explicitly enables the "Local Sample Discard" scenario before backend flush.
+- **Tablet Workspace (`TabletWorkspace.tsx`)**: Integrates real-time telemetry from `useBalanzaWebSocket` with proper visual indicators (e.g., disconnected, unstable, stable). Touch targets (like large buttons) and clear visual hierarchy accommodate plant operators. The list of recorded samples correctly displays each sample's status and enables one-tap removal.
+- **Routing Integration**: `TabletWorkspace` is fully wired into React Router v7 inside `App.tsx` under the `/tablet` path utilizing the `TabletLayout` wrapper.
 
-### 2. Architecture & Design Alignment
-- **Layout-Based Route Splitting**: ✅ Implemented. `App.tsx` configures nested routes under `/tablet` (using `TabletLayout`) and `/dashboard` (using `DashboardLayout`), with role-based default route fallback.
-- **WebSocket Disconnect Protection (RF-02)**: ✅ Implemented. `TabletLayout` utilizes `useBalanzaWebSocket` hook and displays a full-screen lockout overlay (`z-50`, `touch-none`) blocking user interactions upon disconnection.
-- **Authentication Context**: ✅ Implemented. `AuthContext` provides the JWT payload (`user`, `token`), and `App.tsx` conditionally routes users appropriately.
-- **WebSocket Dependency (`socket.io-client`)**: ✅ Implemented. Hook `useBalanzaWebSocket` connects to the room `lineaId`.
-- **UI Frameworks (`lucide-react`)**: ✅ Icons are configured and used successfully in layouts.
+## Findings
+- **Status**: PASSED.
+- **Risks / Notes**: Mock variables (`ETAPA_MOCK`, hardcoded `articuloId`) are temporarily in place for UI development, which is expected at this stage. 
 
-### 3. Missing or Pending Implementations
-This report acknowledges that this was batch 1 & 2 of the Apply phase. Features remaining for subsequent batches include:
-- `usePasadaState` (local sample buffering)
-- `TabletWorkspacePage` (weighing stages and local discard)
-- Dashboard `ControlChart` (Recharts integration)
-- Export Reports (Excel BLOB downloads)
-
-## Critical Risks
-- None currently identified. The foundation matches the spec perfectly.
-
-## Next Recommended Action
-Proceed to implement **Batch 3** focusing on Tablet Workspace logic and React State buffering for Weighing Samples.
-
-## Status
-**SUCCESS**. The code conforms to the specifications and design established.
+## Next Recommendations
+Proceed with the next implementation slice (Dashboard Grid & ControlChart).

@@ -4,13 +4,14 @@ import { useAuth } from './features/auth/context/AuthContext';
 import { TabletLayout } from './layouts/TabletLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { UsuarioRol } from './shared/types';
+import { TabletWorkspace } from './features/tablet/pages/TabletWorkspace';
 
 function App() {
   const { isAuthenticated, user } = useAuth();
 
   const getDefaultRoute = () => {
     if (!isAuthenticated) return "/login";
-    return user?.rol === UsuarioRol.OPERARIO ? "/tablet" : "/dashboard";
+    return (user?.rol as string) === UsuarioRol.OPERARIO ? "/tablet" : "/dashboard";
   };
 
   return (
@@ -20,7 +21,7 @@ function App() {
         
         {/* Tablet Routes */}
         <Route path="/tablet" element={<TabletLayout />}>
-          <Route index element={<div className="p-4 flex h-full items-center justify-center text-gray-500">Workspace de la Tablet (En construcción)</div>} />
+          <Route index element={<TabletWorkspace />} />
         </Route>
 
         {/* Dashboard Routes */}
