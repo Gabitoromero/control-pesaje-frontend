@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { Factory, ArrowRight, LogOut, Loader2 } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../../../api/axios';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 interface Linea {
   id: number;
@@ -26,8 +27,8 @@ export const SeleccionLineaPage: React.FC = () => {
       } else {
         setError('No se pudo obtener la lista de líneas');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Error al cargar las líneas');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Error al cargar las líneas'));
     } finally {
       setLoading(false);
     }
