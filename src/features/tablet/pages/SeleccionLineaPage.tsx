@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Factory, ArrowRight, LogOut, Loader2 } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../../../api/axios';
@@ -14,31 +15,20 @@ interface Linea {
 export const SeleccionLineaPage: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
-  const [lineas, setLineas] = useState<Linea[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchLineas = async () => {
-    try {
-      setError(null);
+  const { data: lineas = [], isLoading: loading, error, refetch } = useQuery<Linea[]>({
+    queryKey: ['lineas-produccion'],
+    queryFn: async () => {
       const response = await api.get('/lineas-produccion');
       if (response.data?.success) {
-        setLineas(response.data.data);
-      } else {
-        setError('No se pudo obtener la lista de líneas');
+        return response.data.data;
       }
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, 'Error al cargar las líneas'));
-    } finally {
-      setLoading(false);
-    }
-  };
+      throw new Error('No se pudo obtener la lista de líneas');
+    },
+    enabled: isAuthenticated,
+  });
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchLineas();
-    }
-  }, [isAuthenticated]);
+  const errorMessage = error ? getApiErrorMessage(error, 'Error al cargar las líneas') : null;
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
@@ -79,12 +69,12 @@ export const SeleccionLineaPage: React.FC = () => {
             <Loader2 className="animate-spin text-blue-500" size={32} />
             <p>Cargando líneas de producción...</p>
           </div>
-        ) : error ? (
+        ) : errorMessage ? (
           <div className="bg-red-900/30 border border-red-700/50 rounded-2xl p-5 text-red-300 text-sm text-center">
             <p className="font-semibold mb-1 text-base">Error al cargar datos</p>
-            <p className="text-slate-300 mb-4">{error}</p>
+            <p className="text-slate-300 mb-4">{errorMessage}</p>
             <button 
-              onClick={() => { setLoading(true); fetchLineas(); }}
+              onClick={() => refetch()}
               className="px-5 py-2.5 bg-red-700 hover:bg-red-600 active:scale-95 rounded-xl transition-all text-xs font-semibold text-white"
             >
               Reintentar
