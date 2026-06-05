@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Lock, User, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { getApiErrorMessage } from '../utils/errors';
@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '../utils/errors';
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ const Login: React.FC = () => {
   const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!username || !password) {
-      setError('Por favor, ingresá usuario y contraseña');
+      setError('Por favor, ingresá usuario/legajo y contraseña');
       return;
     }
 
@@ -26,9 +27,19 @@ const Login: React.FC = () => {
         nombreUsuario: username,
         contrasena: password,
       });
-      
-      login(response.data.data);
-      navigate('/dashboard');
+
+      const { token } = response.data.data as { token: string };
+      // JWT payload is base64url-encoded — decode it to get user claims
+      const payloadB64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const user = JSON.parse(atob(payloadB64));
+
+      login({ token, user });
+
+      if (user.rol === 'operario') {
+        navigate('/tablet/seleccion-linea');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Error al iniciar sesión'));
     } finally {
@@ -56,7 +67,7 @@ const Login: React.FC = () => {
               <input
                 type="text"
                 className="block w-full pl-12 pr-4 py-4 bg-slate-900 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-600 text-lg"
-                placeholder="Nombre de usuario"
+                placeholder="Usuario o Legajo"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -67,12 +78,20 @@ const Login: React.FC = () => {
                 <KeyRound size={20} />
               </div>
               <input
-                type="password"
-                className="block w-full pl-12 pr-4 py-4 bg-slate-900 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-600 text-lg"
+                type={showPassword ? 'text' : 'password'}
+                className="block w-full pl-12 pr-12 py-4 bg-slate-900 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-600 text-lg"
                 placeholder="Contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             {error && (
