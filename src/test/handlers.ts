@@ -12,11 +12,16 @@ export const articulosMock = [
   { id: 3, codigo: 'ART-003', nombre: 'Sal fina',   descripcion: undefined,                   activo: true },
 ];
 
+export const articulosMockInactivos: typeof articulosMock = [];
+
 export const usuariosMock = [
-  { id: 1, nombreUsuario: 'admin', rol: 'administrador', activo: true },
-  { id: 2, nombreUsuario: 'jefe1', rol: 'jefe', activo: true },
-  { id: 3, nombreUsuario: 'operario1', rol: 'operario', activo: true, datosAdicionales: { pin: '1234' } },
-  { id: 4, nombreUsuario: 'inactivo1', rol: 'operario', activo: false },
+  { id: 1, nombreApellido: 'Admin Istrador', nombreUsuario: 'admin', rol: 'administrador', activo: true, puedeTomarMuestrasLibres: false },
+  { id: 2, nombreApellido: 'José Jefe', nombreUsuario: 'jefe1', rol: 'jefe', activo: true, puedeTomarMuestrasLibres: false },
+  { id: 3, nombreApellido: 'Pedro Operario', nombreUsuario: 'operario1', rol: 'operario', activo: true, puedeTomarMuestrasLibres: true, pin: '1234' },
+];
+
+export const usuariosMockInactivos = [
+  { id: 4, nombreApellido: 'Juan Inactivo', nombreUsuario: 'inactivo1', rol: 'operario', activo: false, puedeTomarMuestrasLibres: false },
 ];
 
 const BASE = 'http://localhost:3000/api';
@@ -65,6 +70,10 @@ export const handlers = [
     HttpResponse.json({ success: true, data: articulosMock })
   ),
 
+  http.get(`${BASE}/articulos/inactive`, () =>
+    HttpResponse.json({ success: true, data: articulosMockInactivos })
+  ),
+
   http.post(`${BASE}/articulos`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;
     return HttpResponse.json({ success: true, data: { id: 99, activo: true, ...body } }, { status: 201 });
@@ -81,6 +90,10 @@ export const handlers = [
 
   http.get(`${BASE}/usuarios`, () =>
     HttpResponse.json({ success: true, data: usuariosMock })
+  ),
+
+  http.get(`${BASE}/usuarios/inactive`, () =>
+    HttpResponse.json({ success: true, data: usuariosMockInactivos })
   ),
 
   http.post(`${BASE}/usuarios`, async ({ request }) => {

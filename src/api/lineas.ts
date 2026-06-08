@@ -22,6 +22,11 @@ export const getLineas = async (): Promise<Linea[]> => {
   return response.data.data;
 };
 
+export const getLineasInactivas = async (): Promise<Linea[]> => {
+  const response = await api.get<ApiEnvelope<Linea[]>>('/lineas-produccion/inactive');
+  return response.data.data;
+};
+
 export const getLinea = async (id: number): Promise<Linea> => {
   const response = await api.get<ApiEnvelope<Linea>>(`/lineas-produccion/${id}`);
   return response.data.data;

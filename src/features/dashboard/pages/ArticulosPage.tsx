@@ -1,29 +1,42 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getArticulos, createArticulo, updateArticulo, deleteArticulo, type Articulo } from '../../../api/articulos';
+import {
+  getArticulos,
+  getArticulosInactivos,
+  createArticulo,
+  updateArticulo,
+  deleteArticulo,
+  type Articulo,
+} from '../../../api/articulos';
 import { Plus, Edit, Trash, X } from 'lucide-react';
+
+const EMPTY_FORM = { codigo: '', nombre: '', descripcion: '', marca: '' };
 
 export const ArticulosPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
-  
-  const [formData, setFormData] = useState({
-    codigo: '',
-    nombre: '',
-    descripcion: '',
-    marca: '',
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const { data: articulos, isLoading, error } = useQuery({
+  const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
     queryKey: ['articulos'],
     queryFn: getArticulos,
   });
+
+  const { data: inactivos = [], isLoading: loadingInactivos, error: errorInactivos } = useQuery({
+    queryKey: ['articulos-inactivos'],
+    queryFn: getArticulosInactivos,
+  });
+
+  const isLoading = loadingActivos || loadingInactivos;
+  const error = errorActivos || errorInactivos;
+  const articulos = [...activos, ...inactivos];
 
   const createMutation = useMutation({
     mutationFn: createArticulo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
   });
@@ -32,6 +45,7 @@ export const ArticulosPage = () => {
     mutationFn: ({ id, data }: { id: number; data: Partial<Articulo> }) => updateArticulo(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
   });
@@ -40,6 +54,7 @@ export const ArticulosPage = () => {
     mutationFn: deleteArticulo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
     },
   });
 
@@ -54,7 +69,7 @@ export const ArticulosPage = () => {
       });
     } else {
       setEditingArticulo(null);
-      setFormData({ codigo: '', nombre: '', descripcion: '', marca: '' });
+      setFormData(EMPTY_FORM);
     }
     setIsModalOpen(true);
   };
@@ -62,7 +77,7 @@ export const ArticulosPage = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingArticulo(null);
-    setFormData({ codigo: '', nombre: '', descripcion: '', marca: '' });
+    setFormData(EMPTY_FORM);
   };
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -79,6 +94,8 @@ export const ArticulosPage = () => {
       deleteMutation.mutate(id);
     }
   };
+
+  const isBusy = createMutation.isPending || updateMutation.isPending;
 
   if (isLoading) return <div className="p-6">Cargando artículos...</div>;
   if (error) return <div className="p-6 text-red-500">Error al cargar artículos</div>;
@@ -103,39 +120,35 @@ export const ArticulosPage = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {articulos?.map((articulo) => (
-              <tr key={articulo.id} className="hover:bg-gray-50">
+            {articulos.map((articulo) => (
+              <tr key={articulo.id} className={`hover:bg-gray-50 ${articulo.activo === false ? 'opacity-60' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{articulo.codigo}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{articulo.nombre}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{articulo.nombre}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{articulo.marca || '-'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{articulo.descripcion}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{articulo.descripcion || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${articulo.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {articulo.activo !== false ? 'Activo' : 'Inactivo'}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => openModal(articulo)}
-                    className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    title="Editar"
-                  >
+                  <button onClick={() => openModal(articulo)} className="text-indigo-600 hover:text-indigo-900 mr-4" title="Editar">
                     <Edit size={18} />
                   </button>
-                  <button
-                    onClick={() => articulo.id && handleDelete(articulo.id)}
-                    className="text-red-600 hover:text-red-900"
-                    title="Eliminar"
-                  >
+                  <button onClick={() => articulo.id && handleDelete(articulo.id)} className="text-red-600 hover:text-red-900" title="Eliminar">
                     <Trash size={18} />
                   </button>
                 </td>
               </tr>
             ))}
-            {articulos?.length === 0 && (
+            {articulos.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                  No hay artículos registrados.
-                </td>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No hay artículos registrados.</td>
               </tr>
             )}
           </tbody>
@@ -143,17 +156,15 @@ export const ArticulosPage = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-5">
               <h2 className="text-xl font-bold">{editingArticulo ? 'Editar Artículo' : 'Nuevo Artículo'}</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
-                <X size={20} />
-              </button>
+              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="articulo-codigo" className="block text-sm font-medium text-gray-700">Código</label>
                   <input
@@ -181,13 +192,12 @@ export const ArticulosPage = () => {
                   <input
                     id="articulo-marca"
                     type="text"
-                    required
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={formData.marca}
                     onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
                   />
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <label htmlFor="articulo-descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
                   <textarea
                     id="articulo-descripcion"
@@ -199,19 +209,11 @@ export const ArticulosPage = () => {
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
+                <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {createMutation.isPending || updateMutation.isPending ? 'Guardando...' : 'Guardar'}
+                <button type="submit" disabled={isBusy} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                  {isBusy ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

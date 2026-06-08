@@ -19,6 +19,11 @@ export const getArticulos = async (): Promise<Articulo[]> => {
   return response.data.data;
 };
 
+export const getArticulosInactivos = async (): Promise<Articulo[]> => {
+  const response = await api.get<ApiEnvelope<Articulo[]>>('/articulos/inactive');
+  return response.data.data;
+};
+
 export const getArticulo = async (id: number): Promise<Articulo> => {
   const response = await api.get<ApiEnvelope<Articulo>>(`/articulos/${id}`);
   return response.data.data;

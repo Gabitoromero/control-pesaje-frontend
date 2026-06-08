@@ -1,35 +1,52 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getEtapas, createEtapa, updateEtapa, deleteEtapa, type Etapa } from '../../../api/etapas';
+import {
+  getEtapas,
+  getEtapasInactivas,
+  createEtapa,
+  updateEtapa,
+  deleteEtapa,
+  type Etapa,
+  type EtapaCreate,
+} from '../../../api/etapas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
+
+const EMPTY_FORM = { nombre: '', descripcion: '' };
 
 export const EtapasPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
-  
-  const [formData, setFormData] = useState({
-    nombre: '',
-    descripcion: '',
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const { data: etapas, isLoading, error } = useQuery({
+  const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
     queryKey: ['etapas'],
     queryFn: getEtapas,
   });
+
+  const { data: inactivas = [], isLoading: loadingInactivas, error: errorInactivas } = useQuery({
+    queryKey: ['etapas-inactivas'],
+    queryFn: getEtapasInactivas,
+  });
+
+  const isLoading = loadingActivas || loadingInactivas;
+  const error = errorActivas || errorInactivas;
+  const etapas = [...activas, ...inactivas];
 
   const createMutation = useMutation({
     mutationFn: createEtapa,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
+      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Etapa> }) => updateEtapa(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<EtapaCreate> }) => updateEtapa(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
+      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
     },
   });
@@ -38,19 +55,17 @@ export const EtapasPage = () => {
     mutationFn: deleteEtapa,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
+      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
     },
   });
 
   const openModal = (etapa?: Etapa) => {
     if (etapa) {
       setEditingEtapa(etapa);
-      setFormData({
-        nombre: etapa.nombre,
-        descripcion: etapa.descripcion || '',
-      });
+      setFormData({ nombre: etapa.nombre, descripcion: etapa.descripcion || '' });
     } else {
       setEditingEtapa(null);
-      setFormData({ nombre: '', descripcion: '' });
+      setFormData(EMPTY_FORM);
     }
     setIsModalOpen(true);
   };
@@ -58,7 +73,7 @@ export const EtapasPage = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingEtapa(null);
-    setFormData({ nombre: '', descripcion: '' });
+    setFormData(EMPTY_FORM);
   };
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -75,6 +90,8 @@ export const EtapasPage = () => {
       deleteMutation.mutate(id);
     }
   };
+
+  const isBusy = createMutation.isPending || updateMutation.isPending;
 
   if (isLoading) return <div className="p-6">Cargando etapas...</div>;
   if (error) return <div className="p-6 text-red-500">Error al cargar etapas</div>;
@@ -97,37 +114,33 @@ export const EtapasPage = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {etapas?.map((etapa) => (
-              <tr key={etapa.id} className="hover:bg-gray-50">
+            {etapas.map((etapa) => (
+              <tr key={etapa.id} className={`hover:bg-gray-50 ${etapa.activo === false ? 'opacity-60' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{etapa.nombre}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{etapa.descripcion || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${etapa.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {etapa.activo !== false ? 'Activa' : 'Inactiva'}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => openModal(etapa)}
-                    className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    title="Editar"
-                  >
+                  <button onClick={() => openModal(etapa)} className="text-indigo-600 hover:text-indigo-900 mr-4" title="Editar">
                     <Edit size={18} />
                   </button>
-                  <button
-                    onClick={() => etapa.id && handleDelete(etapa.id)}
-                    className="text-red-600 hover:text-red-900"
-                    title="Eliminar"
-                  >
+                  <button onClick={() => etapa.id && handleDelete(etapa.id)} className="text-red-600 hover:text-red-900" title="Eliminar">
                     <Trash size={18} />
                   </button>
                 </td>
               </tr>
             ))}
-            {etapas?.length === 0 && (
+            {etapas.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
-                  No hay etapas registradas.
-                </td>
+                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No hay etapas registradas.</td>
               </tr>
             )}
           </tbody>
@@ -135,15 +148,13 @@ export const EtapasPage = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+            <div className="flex justify-between items-center mb-5">
               <h2 className="text-xl font-bold">{editingEtapa ? 'Editar Etapa' : 'Nueva Etapa'}</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
-                <X size={20} />
-              </button>
+              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
@@ -169,19 +180,11 @@ export const EtapasPage = () => {
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
+                <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {createMutation.isPending || updateMutation.isPending ? 'Guardando...' : 'Guardar'}
+                <button type="submit" disabled={isBusy} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                  {isBusy ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

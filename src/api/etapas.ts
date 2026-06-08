@@ -19,6 +19,11 @@ export const getEtapas = async (): Promise<Etapa[]> => {
   return response.data.data;
 };
 
+export const getEtapasInactivas = async (): Promise<Etapa[]> => {
+  const response = await api.get<ApiEnvelope<Etapa[]>>('/etapas/inactive');
+  return response.data.data;
+};
+
 export const getEtapa = async (id: number): Promise<Etapa> => {
   const response = await api.get<ApiEnvelope<Etapa>>(`/etapas/${id}`);
   return response.data.data;
