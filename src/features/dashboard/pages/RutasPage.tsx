@@ -1,97 +1,93 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getArticulos, createArticulo, updateArticulo, deleteArticulo, type Articulo } from '../../../api/articulos';
+import { getRutas, createRuta, updateRuta, deleteRuta, type Ruta } from '../../../api/rutas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
 
-export const ArticulosPage = () => {
+export const RutasPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
+  const [editingRuta, setEditingRuta] = useState<Ruta | null>(null);
   
   const [formData, setFormData] = useState({
-    codigo: '',
     nombre: '',
     descripcion: '',
-    marca: '',
   });
 
-  const { data: articulos, isLoading, error } = useQuery({
-    queryKey: ['articulos'],
-    queryFn: getArticulos,
+  const { data: rutas, isLoading, error } = useQuery({
+    queryKey: ['rutas'],
+    queryFn: getRutas,
   });
 
   const createMutation = useMutation({
-    mutationFn: createArticulo,
+    mutationFn: createRuta,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['rutas'] });
       closeModal();
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Articulo> }) => updateArticulo(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Ruta> }) => updateRuta(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['rutas'] });
       closeModal();
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteArticulo,
+    mutationFn: deleteRuta,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['rutas'] });
     },
   });
 
-  const openModal = (articulo?: Articulo) => {
-    if (articulo) {
-      setEditingArticulo(articulo);
+  const openModal = (ruta?: Ruta) => {
+    if (ruta) {
+      setEditingRuta(ruta);
       setFormData({
-        codigo: articulo.codigo,
-        nombre: articulo.nombre,
-        descripcion: articulo.descripcion || '',
-        marca: articulo.marca || '',
+        nombre: ruta.nombre,
+        descripcion: ruta.descripcion || '',
       });
     } else {
-      setEditingArticulo(null);
-      setFormData({ codigo: '', nombre: '', descripcion: '', marca: '' });
+      setEditingRuta(null);
+      setFormData({ nombre: '', descripcion: '' });
     }
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setEditingArticulo(null);
-    setFormData({ codigo: '', nombre: '', descripcion: '', marca: '' });
+    setEditingRuta(null);
+    setFormData({ nombre: '', descripcion: '' });
   };
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (editingArticulo?.id) {
-      updateMutation.mutate({ id: editingArticulo.id, data: formData });
+    if (editingRuta?.id) {
+      updateMutation.mutate({ id: editingRuta.id, data: formData });
     } else {
       createMutation.mutate(formData);
     }
   };
 
   const handleDelete = (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este artículo?')) {
+    if (window.confirm('¿Está seguro de eliminar esta ruta?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  if (isLoading) return <div className="p-6">Cargando artículos...</div>;
-  if (error) return <div className="p-6 text-red-500">Error al cargar artículos</div>;
+  if (isLoading) return <div className="p-6">Cargando rutas...</div>;
+  if (error) return <div className="p-6 text-red-500">Error al cargar rutas</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Gestión de Artículos</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Gestión de Rutas</h1>
         <button
           onClick={() => openModal()}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
         >
-          <Plus size={18} /> Nuevo Artículo
+          <Plus size={18} /> Nueva Ruta
         </button>
       </div>
 
@@ -99,30 +95,26 @@ export const ArticulosPage = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {articulos?.map((articulo) => (
-              <tr key={articulo.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{articulo.codigo}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{articulo.nombre}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{articulo.marca || '-'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{articulo.descripcion}</td>
+            {rutas?.map((ruta) => (
+              <tr key={ruta.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ruta.nombre}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{ruta.descripcion || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
-                    onClick={() => openModal(articulo)}
+                    onClick={() => openModal(ruta)}
                     className="text-indigo-600 hover:text-indigo-900 mr-4"
                     title="Editar"
                   >
                     <Edit size={18} />
                   </button>
                   <button
-                    onClick={() => articulo.id && handleDelete(articulo.id)}
+                    onClick={() => ruta.id && handleDelete(ruta.id)}
                     className="text-red-600 hover:text-red-900"
                     title="Eliminar"
                   >
@@ -131,10 +123,10 @@ export const ArticulosPage = () => {
                 </td>
               </tr>
             ))}
-            {articulos?.length === 0 && (
+            {rutas?.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                  No hay artículos registrados.
+                <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                  No hay rutas registradas.
                 </td>
               </tr>
             )}
@@ -146,7 +138,7 @@ export const ArticulosPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{editingArticulo ? 'Editar Artículo' : 'Nuevo Artículo'}</h2>
+              <h2 className="text-xl font-bold">{editingRuta ? 'Editar Ruta' : 'Nueva Ruta'}</h2>
               <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
                 <X size={20} />
               </button>
@@ -155,20 +147,9 @@ export const ArticulosPage = () => {
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="articulo-codigo" className="block text-sm font-medium text-gray-700">Código</label>
+                  <label htmlFor="ruta-nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
                   <input
-                    id="articulo-codigo"
-                    type="text"
-                    required
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="articulo-nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input
-                    id="articulo-nombre"
+                    id="ruta-nombre"
                     type="text"
                     required
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -177,20 +158,9 @@ export const ArticulosPage = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="articulo-marca" className="block text-sm font-medium text-gray-700">Marca</label>
-                  <input
-                    id="articulo-marca"
-                    type="text"
-                    required
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={formData.marca}
-                    onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="articulo-descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
+                  <label htmlFor="ruta-descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
                   <textarea
-                    id="articulo-descripcion"
+                    id="ruta-descripcion"
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     rows={3}
                     value={formData.descripcion}

@@ -2,15 +2,51 @@ import type { ReactNode } from 'react';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import type { InitialEntry } from 'react-router-dom';
+import { vi } from 'vitest';
+import { AuthContext } from '../features/auth/context/AuthContext';
+import type { AuthContextType } from '../features/auth/context/AuthContext';
+import type { User } from '../shared/types/auth';
+
+function makeQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
 
 export function renderWithProviders(ui: ReactNode) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  return render(
+    <QueryClientProvider client={makeQueryClient()}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+/**
+ * Renders a component with a mocked AuthContext — no localStorage/cookies touched.
+ * Pass `user` to simulate an authenticated session; omit for an unauthenticated render.
+ */
+export function renderWithAuth(
+  ui: ReactNode,
+  {
+    user,
+    initialEntries = ['/'] as InitialEntry[],
+  }: {
+    user?: User;
+    initialEntries?: InitialEntry[];
+  } = {}
+) {
+  const authValue: AuthContextType = {
+    user: user ?? null,
+    token: user ? 'test-jwt-token' : null,
+    isAuthenticated: !!user,
+    login: vi.fn(),
+    logout: vi.fn(),
+  };
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{ui}</MemoryRouter>
+    <QueryClientProvider client={makeQueryClient()}>
+      <AuthContext.Provider value={authValue}>
+        <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+      </AuthContext.Provider>
     </QueryClientProvider>
   );
 }

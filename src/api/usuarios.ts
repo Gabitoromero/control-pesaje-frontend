@@ -4,6 +4,7 @@ import type { UsuarioRol } from '../shared/types';
 export interface Usuario {
   id?: number;
   nombreUsuario: string;
+  legajo: string;
   rol: UsuarioRol;
   activo?: boolean;
   datosAdicionales?: {

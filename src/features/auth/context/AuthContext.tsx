@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import type { User, AuthResponse } from '../../../shared/types/auth';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
@@ -11,39 +11,39 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => {
-    return Cookies.get('token') || null;
+    try { return Cookies.get('token') || null; } catch { return null; }
   });
 
   const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        return JSON.parse(storedUser);
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('user');
-        return null;
-      }
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return null;
+      return JSON.parse(storedUser);
+    } catch {
+      return null;
     }
-    return null;
   });
 
   const login = (data: AuthResponse) => {
     setToken(data.token);
     setUser(data.user);
-    Cookies.set('token', data.token, { expires: 1, secure: true, sameSite: 'strict' });
-    localStorage.setItem('user', JSON.stringify(data.user));
+    try {
+      Cookies.set('token', data.token, { expires: 1, secure: true, sameSite: 'strict' });
+      localStorage.setItem('user', JSON.stringify(data.user));
+    } catch { /* storage unavailable */ }
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    Cookies.remove('token');
-    localStorage.removeItem('user');
+    try {
+      Cookies.remove('token');
+      localStorage.removeItem('user');
+    } catch { /* storage unavailable */ }
     window.location.href = '/login';
   };
 

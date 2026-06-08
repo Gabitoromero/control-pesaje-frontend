@@ -47,6 +47,14 @@ export const handlers = [
     return HttpResponse.json({ success: false, message: 'Credenciales inválidas' }, { status: 400 });
   }),
 
+  http.post(`${BASE}/auth/activar-sesion`, async ({ request }) => {
+    const body = await request.json() as { legajo: string; pin: string; lineaProduccionId: number };
+    if (body.legajo === '999999' || body.pin === '9999') {
+      return HttpResponse.json({ success: false, message: 'PIN o legajo incorrecto' }, { status: 400 });
+    }
+    return HttpResponse.json({ success: true, data: { sessionActive: true } });
+  }),
+
 
   http.get(`${BASE}/lineas-produccion`, () =>
     HttpResponse.json({ success: true, data: lineasMock })

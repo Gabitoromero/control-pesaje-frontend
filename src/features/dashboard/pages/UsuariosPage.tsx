@@ -12,6 +12,7 @@ const ROL_LABELS: Record<string, string> = {
 };
 
 const EMPTY_FORM = {
+  legajo: '',
   nombreUsuario: '',
   rol: UsuarioRol.OPERARIO as string,
   contrasena: '',
@@ -48,6 +49,7 @@ export const UsuariosPage = () => {
     if (usuario) {
       setEditingUsuario(usuario);
       setFormData({
+        legajo: usuario.legajo || '',
         nombreUsuario: usuario.nombreUsuario,
         rol: usuario.rol,
         contrasena: '',
@@ -71,6 +73,7 @@ export const UsuariosPage = () => {
     const isOperario = formData.rol === UsuarioRol.OPERARIO;
 
     const payload: UsuarioCreate = {
+      legajo: formData.legajo,
       nombreUsuario: formData.nombreUsuario,
       rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
       ...(isOperario
@@ -113,6 +116,7 @@ export const UsuariosPage = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Legajo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -122,7 +126,8 @@ export const UsuariosPage = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {usuarios?.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.nombreUsuario}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.legajo || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.nombreUsuario}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ROL_LABELS[u.rol] ?? u.rol}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -141,7 +146,7 @@ export const UsuariosPage = () => {
             ))}
             {usuarios?.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No hay usuarios registrados.</td>
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay usuarios registrados.</td>
               </tr>
             )}
           </tbody>
@@ -158,6 +163,18 @@ export const UsuariosPage = () => {
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
+                <div>
+                  <label htmlFor="legajo" className="block text-sm font-medium text-gray-700">Legajo</label>
+                  <input
+                    id="legajo"
+                    type="text"
+                    required
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={formData.legajo}
+                    onChange={(e) => setFormData({ ...formData, legajo: e.target.value })}
+                  />
+                </div>
+
                 <div>
                   <label htmlFor="nombreUsuario" className="block text-sm font-medium text-gray-700">Nombre de usuario</label>
                   <input
@@ -231,3 +248,4 @@ export const UsuariosPage = () => {
     </div>
   );
 };
+

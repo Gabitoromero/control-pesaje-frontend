@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
 import type { User } from '../../../shared/types/auth';
 import { SeleccionLineaPage } from './SeleccionLineaPage';
