@@ -13,7 +13,7 @@ interface Linea {
 }
 
 export const SeleccionLineaPage: React.FC = () => {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, deactivateLayer2Session } = useAuth();
   const navigate = useNavigate();
 
   const { data: lineas = [], isLoading: loading, error, refetch } = useQuery<Linea[]>({
@@ -47,7 +47,7 @@ export const SeleccionLineaPage: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={() => deactivateLayer2Session()}
             className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
           >
             <LogOut size={16} />

@@ -40,13 +40,17 @@ export function renderWithAuth(
     isAuthenticated: !!user,
     login: vi.fn(),
     logout: vi.fn(),
+    deactivateLayer2Session: vi.fn().mockResolvedValue(undefined),
   };
 
-  return render(
-    <QueryClientProvider client={makeQueryClient()}>
-      <AuthContext.Provider value={authValue}>
-        <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-      </AuthContext.Provider>
-    </QueryClientProvider>
-  );
+  return {
+    ...render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthContext.Provider value={authValue}>
+          <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+        </AuthContext.Provider>
+      </QueryClientProvider>
+    ),
+    authValue,
+  };
 }

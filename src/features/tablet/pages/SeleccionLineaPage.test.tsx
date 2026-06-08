@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
+import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
 import { SeleccionLineaPage } from './SeleccionLineaPage';
 import { setupServer } from 'msw/node';
@@ -63,5 +64,12 @@ describe('SeleccionLineaPage', () => {
     const linea2 = button2.closest('button');
     expect(linea1?.querySelector('svg')).toBeInTheDocument();
     expect(linea2?.querySelector('svg')).not.toBeInTheDocument();
+  });
+
+  it('llama a deactivateLayer2Session al hacer click en Salir', async () => {
+    const { authValue } = renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+    const btnSalir = await screen.findByRole('button', { name: /salir/i });
+    await userEvent.click(btnSalir);
+    expect(authValue.deactivateLayer2Session).toHaveBeenCalled();
   });
 });

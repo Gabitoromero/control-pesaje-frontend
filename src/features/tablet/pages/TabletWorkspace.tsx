@@ -16,7 +16,7 @@ const ETAPA_MOCK: RutaPasadaEtapa = {
 };
 
 export const TabletWorkspace: React.FC = () => {
-  const { user } = useAuth();
+  const { user, deactivateLayer2Session } = useAuth();
   
   // En producción real, lineaId vendría de la sesión del operario o configuración del dispositivo.
   const lineaId = user?.lineaId ?? 1;
@@ -59,13 +59,21 @@ export const TabletWorkspace: React.FC = () => {
           <h2 className="text-xl font-bold text-slate-800">Línea {lineaId}</h2>
           <p className="text-slate-500">Operario: {user?.nombreUsuario ?? 'Desconocido'}</p>
         </div>
-        <div className="text-right">
-          <h3 className="text-lg font-semibold text-slate-700">
-            {etapaActiva?.nombre ?? 'Sin Etapa'}
-          </h3>
-          <p className="text-slate-500">
-            Muestras: {muestras.length} / {etapaActiva?.cantidad_muestras_requeridas ?? 0}
-          </p>
+        <div className="flex items-center gap-6 text-right">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-700">
+              {etapaActiva?.nombre ?? 'Sin Etapa'}
+            </h3>
+            <p className="text-slate-500">
+              Muestras: {muestras.length} / {etapaActiva?.cantidad_muestras_requeridas ?? 0}
+            </p>
+          </div>
+          <button
+            onClick={() => deactivateLayer2Session(lineaId)}
+            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold transition-colors"
+          >
+            Salir
+          </button>
         </div>
       </div>
 

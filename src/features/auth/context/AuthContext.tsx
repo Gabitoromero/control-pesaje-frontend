@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import type { User, AuthResponse } from '../../../shared/types/auth';
+import api from '../../../api/axios';
 
 export interface AuthContextType {
   user: User | null;
@@ -9,6 +10,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (data: AuthResponse) => void;
   logout: () => void;
+  deactivateLayer2Session: (lineaId?: number) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,7 +34,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setToken(data.token);
     setUser(data.user);
     try {
-      Cookies.set('token', data.token, { expires: 1, secure: true, sameSite: 'strict' });
+      const isHttps = window.location.protocol === 'https:';
+      Cookies.set('token', data.token, { expires: 1, secure: isHttps, sameSite: 'strict' });
       localStorage.setItem('user', JSON.stringify(data.user));
     } catch { /* storage unavailable */ }
   };
@@ -47,6 +50,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     window.location.href = '/login';
   };
 
+  const deactivateLayer2Session = async (lineaId?: number) => {
+    try {
+      await api.post('/auth/cerrar-sesion', { lineaProduccionId: lineaId });
+    } catch (error) {
+      console.error('Failed to close layer 2 session:', error);
+      alert('Error al cerrar la sesión de la línea');
+    }
+
+    if (user?.rol === 'administrador' || user?.rol === 'jefe') {
+      window.location.href = '/dashboard';
+    } else {
+      logout();
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -55,6 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!token,
         login,
         logout,
+        deactivateLayer2Session,
       }}
     >
       {children}
