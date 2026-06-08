@@ -1,12 +1,21 @@
-import React from 'react';
-import { Outlet, Navigate, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Outlet, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
-import { LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory, Layers, Route as RouteIcon, GitMerge } from 'lucide-react';
+import { 
+  LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory, 
+  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings 
+} from 'lucide-react';
 import { UsuarioRol } from '../shared/types';
 
 export const DashboardLayout: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [isGestionOpen, setIsGestionOpen] = useState(() => {
+    return ['/articulos', '/etapas', '/lineas', '/rutas', '/usuarios']
+      .some(path => location.pathname.includes(path));
+  });
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -42,61 +51,66 @@ export const DashboardLayout: React.FC = () => {
           <h1 className="text-xl font-bold text-gray-800">Control de Pesaje</h1>
         </div>
 
-        <nav className="flex-1 py-6 px-3 space-y-6">
-          <div className="space-y-1">
-            <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Monitoreo</div>
-            <NavLink to="/dashboard" end className={navClass}>
-              <LayoutDashboard className="w-5 h-5 mr-3" />
-              En vivo
-            </NavLink>
-          </div>
+        <nav className="flex-1 py-6 px-3 space-y-2">
+          <NavLink to="/dashboard" end className={navClass}>
+            <LayoutDashboard className="w-5 h-5 mr-3" />
+            Monitoreo
+          </NavLink>
 
           {isJefe && (
-            <div className="space-y-1">
-              <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Planta</div>
-              <NavLink to="/dashboard/planta" className={navClass}>
-                <Factory className="w-5 h-5 mr-3" />
-                Operación
-              </NavLink>
-            </div>
+            <NavLink to="/dashboard/planta" className={navClass}>
+              <Factory className="w-5 h-5 mr-3" />
+              Planta
+            </NavLink>
           )}
 
           {isJefe && (
-            <div className="space-y-1">
-              <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Gestión</div>
-              <NavLink to="/dashboard/articulos" className={navClass}>
-                <Package className="w-5 h-5 mr-3" />
-                Artículos
-              </NavLink>
-              <NavLink to="/dashboard/etapas" className={navClass}>
-                <Layers className="w-5 h-5 mr-3" />
-                Etapas
-              </NavLink>
-              <NavLink to="/dashboard/lineas" className={navClass}>
-                <GitMerge className="w-5 h-5 mr-3" />
-                Líneas
-              </NavLink>
-              <NavLink to="/dashboard/rutas" className={navClass}>
-                <RouteIcon className="w-5 h-5 mr-3" />
-                Rutas
-              </NavLink>
-              {isAdmin && (
-                <NavLink to="/dashboard/usuarios" className={navClass}>
-                  <Users className="w-5 h-5 mr-3" />
-                  Usuarios
-                </NavLink>
+            <div>
+              <button
+                onClick={() => setIsGestionOpen(!isGestionOpen)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors text-gray-700 hover:bg-gray-100 hover:text-gray-900`}
+              >
+                <div className="flex items-center">
+                  <Settings className="w-5 h-5 mr-3" />
+                  Gestión
+                </div>
+                {isGestionOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
+              
+              {isGestionOpen && (
+                <div className="mt-1 ml-6 space-y-1">
+                  <NavLink to="/dashboard/articulos" className={navClass}>
+                    <Package className="w-5 h-5 mr-3" />
+                    Artículos
+                  </NavLink>
+                  <NavLink to="/dashboard/etapas" className={navClass}>
+                    <Layers className="w-5 h-5 mr-3" />
+                    Etapas
+                  </NavLink>
+                  <NavLink to="/dashboard/lineas" className={navClass}>
+                    <GitMerge className="w-5 h-5 mr-3" />
+                    Líneas
+                  </NavLink>
+                  <NavLink to="/dashboard/rutas" className={navClass}>
+                    <RouteIcon className="w-5 h-5 mr-3" />
+                    Rutas
+                  </NavLink>
+                  {isAdmin && (
+                    <NavLink to="/dashboard/usuarios" className={navClass}>
+                      <Users className="w-5 h-5 mr-3" />
+                      Usuarios
+                    </NavLink>
+                  )}
+                </div>
               )}
             </div>
           )}
 
           {!isVisualizacion && (
-            <div className="space-y-1">
-              <div className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Reportes</div>
-              <NavLink to="/dashboard/reportes" className={navClass}>
-                <FileBarChart className="w-5 h-5 mr-3" />
-                Informes
-              </NavLink>
-            </div>
+            <NavLink to="/dashboard/reportes" className={navClass}>
+              <FileBarChart className="w-5 h-5 mr-3" />
+              Reportes
+            </NavLink>
           )}
         </nav>
 
