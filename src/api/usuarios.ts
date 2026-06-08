@@ -3,13 +3,13 @@ import type { UsuarioRol } from '../shared/types';
 
 export interface Usuario {
   id?: number;
+  nombreApellido: string;
   nombreUsuario: string;
   legajo: string;
   rol: UsuarioRol;
   activo?: boolean;
-  datosAdicionales?: {
-    pin?: string;
-  };
+  puedeTomarMuestrasLibres?: boolean;
+  pin?: string;
 }
 
 export interface UsuarioCreate extends Omit<Usuario, 'id'> {
@@ -18,6 +18,11 @@ export interface UsuarioCreate extends Omit<Usuario, 'id'> {
 
 export const getUsuarios = async (): Promise<Usuario[]> => {
   const response = await api.get<{ success: boolean; data: Usuario[] }>('/usuarios');
+  return response.data.data;
+};
+
+export const getUsuariosInactivos = async (): Promise<Usuario[]> => {
+  const response = await api.get<{ success: boolean; data: Usuario[] }>('/usuarios/inactive');
   return response.data.data;
 };
 

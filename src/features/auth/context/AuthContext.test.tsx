@@ -65,7 +65,7 @@ describe('AuthContext - deactivateLayer2Session', () => {
     await userEvent.click(screen.getByText('Salir'));
 
     // Verifica que llame al backend con el lineaId
-    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaId: 5 });
+    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaProduccionId: 5 });
     
     // Verifica que haya hecho logout (cookies borradas, localStorage borrado, redirect a login)
     expect(Cookies.remove).toHaveBeenCalledWith('token');
@@ -87,7 +87,7 @@ describe('AuthContext - deactivateLayer2Session', () => {
     await userEvent.click(screen.getByText('Salir'));
 
     // Verifica que llame al backend (lineaId undefined)
-    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaId: undefined });
+    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaProduccionId: undefined });
     
     // Verifica que NO haya hecho logout
     expect(Cookies.remove).not.toHaveBeenCalled();
@@ -110,7 +110,7 @@ describe('AuthContext - deactivateLayer2Session', () => {
 
     await userEvent.click(screen.getByText('Salir'));
 
-    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaId: undefined });
+    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaProduccionId: undefined });
     expect(window.location.href).toBe('/dashboard');
   });
 });

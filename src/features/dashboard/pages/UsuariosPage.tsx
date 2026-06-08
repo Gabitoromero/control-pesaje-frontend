@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, type Usuario, type UsuarioCreate } from '../../../api/usuarios';
+import {
+  getUsuarios,
+  getUsuariosInactivos,
+  createUsuario,
+  updateUsuario,
+  deleteUsuario,
+  type Usuario,
+  type UsuarioCreate,
+} from '../../../api/usuarios';
 import { UsuarioRol } from '../../../shared/types';
-import { Plus, Edit, Trash, X } from 'lucide-react';
+import { Plus, Edit, Trash, X, Eye, EyeOff } from 'lucide-react';
 
 const ROL_LABELS: Record<string, string> = {
   [UsuarioRol.ADMINISTRADOR]: 'Administrador',
@@ -13,10 +21,12 @@ const ROL_LABELS: Record<string, string> = {
 
 const EMPTY_FORM = {
   legajo: '',
+  nombreApellido: '',
   nombreUsuario: '',
   rol: UsuarioRol.OPERARIO as string,
   contrasena: '',
   pin: '',
+  puedeTomarMuestrasLibres: false,
 };
 
 export const UsuariosPage = () => {
@@ -24,25 +34,46 @@ export const UsuariosPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const { data: usuarios, isLoading, error } = useQuery({
+  const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
     queryKey: ['usuarios'],
     queryFn: getUsuarios,
   });
 
+  const { data: inactivos = [], isLoading: loadingInactivos, error: errorInactivos } = useQuery({
+    queryKey: ['usuarios-inactivos'],
+    queryFn: getUsuariosInactivos,
+  });
+
+  const isLoading = loadingActivos || loadingInactivos;
+  const error = errorActivos || errorInactivos;
+  const usuarios = [...activos, ...inactivos];
+
   const createMutation = useMutation({
     mutationFn: createUsuario,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['usuarios'] }); closeModal(); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
+      closeModal();
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<UsuarioCreate> }) => updateUsuario(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['usuarios'] }); closeModal(); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
+      closeModal();
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteUsuario,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
+    },
   });
 
   const openModal = (usuario?: Usuario) => {
@@ -50,10 +81,12 @@ export const UsuariosPage = () => {
       setEditingUsuario(usuario);
       setFormData({
         legajo: usuario.legajo || '',
+        nombreApellido: usuario.nombreApellido || '',
         nombreUsuario: usuario.nombreUsuario,
         rol: usuario.rol,
         contrasena: '',
-        pin: usuario.datosAdicionales?.pin ?? '',
+        pin: usuario.pin ?? '',
+        puedeTomarMuestrasLibres: usuario.puedeTomarMuestrasLibres ?? false,
       });
     } else {
       setEditingUsuario(null);
@@ -66,19 +99,20 @@ export const UsuariosPage = () => {
     setIsModalOpen(false);
     setEditingUsuario(null);
     setFormData(EMPTY_FORM);
+    setShowPassword(false);
   };
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const isOperario = formData.rol === UsuarioRol.OPERARIO;
 
     const payload: UsuarioCreate = {
       legajo: formData.legajo,
+      nombreApellido: formData.nombreApellido,
       nombreUsuario: formData.nombreUsuario,
       rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
-      ...(isOperario
-        ? { datosAdicionales: { pin: formData.pin } }
-        : formData.contrasena ? { contrasena: formData.contrasena } : {}),
+      puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
+      ...(formData.contrasena ? { contrasena: formData.contrasena } : {}),
+      ...(formData.pin ? { pin: formData.pin } : {}),
     };
 
     if (editingUsuario?.id) {
@@ -94,7 +128,6 @@ export const UsuariosPage = () => {
     }
   };
 
-  const isOperario = formData.rol === UsuarioRol.OPERARIO;
   const isBusy = createMutation.isPending || updateMutation.isPending;
 
   if (isLoading) return <div className="p-6">Cargando usuarios...</div>;
@@ -117,6 +150,7 @@ export const UsuariosPage = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Legajo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -124,10 +158,11 @@ export const UsuariosPage = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {usuarios?.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50">
+            {usuarios.map((u) => (
+              <tr key={u.id} className={`hover:bg-gray-50 ${u.activo === false ? 'opacity-60' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.legajo || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.nombreUsuario}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.nombreApellido || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.nombreUsuario}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ROL_LABELS[u.rol] ?? u.rol}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -144,9 +179,9 @@ export const UsuariosPage = () => {
                 </td>
               </tr>
             ))}
-            {usuarios?.length === 0 && (
+            {usuarios.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay usuarios registrados.</td>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No hay usuarios registrados.</td>
               </tr>
             )}
           </tbody>
@@ -154,15 +189,16 @@ export const UsuariosPage = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-5">
               <h2 className="text-xl font-bold">{editingUsuario ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
               <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
                 <div>
                   <label htmlFor="legajo" className="block text-sm font-medium text-gray-700">Legajo</label>
                   <input
@@ -172,6 +208,18 @@ export const UsuariosPage = () => {
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={formData.legajo}
                     onChange={(e) => setFormData({ ...formData, legajo: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="nombreApellido" className="block text-sm font-medium text-gray-700">Nombre completo</label>
+                  <input
+                    id="nombreApellido"
+                    type="text"
+                    required
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={formData.nombreApellido}
+                    onChange={(e) => setFormData({ ...formData, nombreApellido: e.target.value })}
                   />
                 </div>
 
@@ -201,36 +249,59 @@ export const UsuariosPage = () => {
                   </select>
                 </div>
 
-                {isOperario ? (
-                  <div>
-                    <label htmlFor="pin" className="block text-sm font-medium text-gray-700">PIN (4–6 dígitos)</label>
-                    <input
-                      id="pin"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="\d{4,6}"
-                      maxLength={6}
-                      required={!editingUsuario}
-                      placeholder={editingUsuario ? 'Dejar vacío para no cambiar' : ''}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      value={formData.pin}
-                      onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label htmlFor="contrasena" className="block text-sm font-medium text-gray-700">Contraseña</label>
+                <div>
+                  <label htmlFor="pin" className="block text-sm font-medium text-gray-700">PIN (4–6 dígitos)</label>
+                  <input
+                    id="pin"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{4,6}"
+                    maxLength={6}
+                    placeholder={editingUsuario ? 'Dejar vacío para no cambiar' : ''}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={formData.pin}
+                    onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="contrasena" className="block text-sm font-medium text-gray-700">Contraseña</label>
+                  <div className="relative mt-1">
                     <input
                       id="contrasena"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
+                      minLength={4}
                       required={!editingUsuario}
                       placeholder={editingUsuario ? 'Dejar vacío para no cambiar' : ''}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       value={formData.contrasena}
                       onChange={(e) => setFormData({ ...formData, contrasena: e.target.value })}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
-                )}
+                </div>
+
+                <div className="sm:col-span-2 flex items-center gap-3 pt-1">
+                  <input
+                    id="puedeTomarMuestrasLibres"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={formData.puedeTomarMuestrasLibres}
+                    onChange={(e) => setFormData({ ...formData, puedeTomarMuestrasLibres: e.target.checked })}
+                  />
+                  <label htmlFor="puedeTomarMuestrasLibres" className="text-sm font-medium text-gray-700">
+                    Puede tomar muestras libres
+                  </label>
+                </div>
+
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
@@ -248,4 +319,3 @@ export const UsuariosPage = () => {
     </div>
   );
 };
-
