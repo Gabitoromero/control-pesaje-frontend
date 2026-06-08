@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../../../api/axios';
+import { User, Lock } from 'lucide-react';
 
 type Step = 'legajo' | 'pin';
 
@@ -76,6 +77,32 @@ export function ActivarSesionPage() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans text-white">
       <div className="w-full max-w-sm space-y-6">
+
+        {/* Stepper UI */}
+        <div className="flex items-center justify-center" data-testid="stepper-ui">
+          <div
+            data-testid="stepper-step-legajo"
+            className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-blue-500 bg-blue-500/20 text-blue-400 transition-all duration-300"
+          >
+            <User size={24} />
+          </div>
+          <div
+            data-testid="stepper-line"
+            className={`w-16 h-1 transition-colors duration-300 ${
+              isLegajoStep ? 'bg-slate-700' : 'bg-blue-500'
+            }`}
+          />
+          <div
+            data-testid="stepper-step-pin"
+            className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+              isLegajoStep
+                ? 'border-slate-700 bg-slate-800 text-slate-500'
+                : 'border-blue-500 bg-blue-500/20 text-blue-400'
+            }`}
+          >
+            <Lock size={24} />
+          </div>
+        </div>
 
         <div className="text-center">
           <h1 className="text-xl font-bold text-slate-200">{lineaNombre}</h1>

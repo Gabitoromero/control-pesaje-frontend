@@ -52,6 +52,33 @@ describe('ActivarSesionPage', () => {
     expect(screen.getByRole('button', { name: /continuar/i })).toBeInTheDocument();
   });
 
+  it('el stepper muestra el paso inicial de legajo correctamente', () => {
+    renderWithAuth(<ActivarSesionPage />, withLineaState);
+    const stepperUi = screen.getByTestId('stepper-ui');
+    expect(stepperUi).toBeInTheDocument();
+    
+    const stepLegajo = screen.getByTestId('stepper-step-legajo');
+    const stepPin = screen.getByTestId('stepper-step-pin');
+    const line = screen.getByTestId('stepper-line');
+    
+    expect(stepLegajo).toHaveClass('border-blue-500', 'bg-blue-500/20', 'text-blue-400');
+    expect(stepPin).toHaveClass('border-slate-700', 'bg-slate-800', 'text-slate-500');
+    expect(line).toHaveClass('bg-slate-700');
+  });
+
+  it('el stepper actualiza su estado al avanzar al paso de PIN', async () => {
+    renderWithAuth(<ActivarSesionPage />, withLineaState);
+    
+    await userEvent.click(screen.getByRole('button', { name: '1' }));
+    await userEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    
+    const stepPin = screen.getByTestId('stepper-step-pin');
+    const line = screen.getByTestId('stepper-line');
+    
+    expect(stepPin).toHaveClass('border-blue-500', 'bg-blue-500/20', 'text-blue-400');
+    expect(line).toHaveClass('bg-blue-500');
+  });
+
   it('el botón Continuar está deshabilitado sin legajo', () => {
     renderWithAuth(<ActivarSesionPage />, withLineaState);
     expect(screen.getByRole('button', { name: /continuar/i })).toBeDisabled();
