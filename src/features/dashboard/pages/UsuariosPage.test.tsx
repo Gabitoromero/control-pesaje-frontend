@@ -189,4 +189,63 @@ describe('UsuariosPage', () => {
 
     await screen.findByText(/Error al cargar usuarios/);
   });
+
+  it('no muestra el boton "Activar Usuario" al editar un usuario activo', async () => {
+    renderWithProviders(<UsuariosPage />);
+
+    const pedroText = await screen.findByText('Pedro Operario');
+    const pedroRow = pedroText.closest('tr')!;
+    const editButton = within(pedroRow).getByTitle('Editar');
+    await userEvent.click(editButton);
+
+    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activar Usuario' })).not.toBeInTheDocument();
+  });
+
+  it('muestra el boton "Activar Usuario" al editar un usuario inactivo', async () => {
+    renderWithProviders(<UsuariosPage />);
+
+    const juanText = await screen.findByText('Juan Inactivo');
+    const juanRow = juanText.closest('tr')!;
+    const editButton = within(juanRow).getByTitle('Editar');
+    await userEvent.click(editButton);
+
+    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activar Usuario' })).toBeInTheDocument();
+  });
+
+  it('al hacer click en "Activar Usuario" envia la peticion PUT con activo: true y los valores del formulario', async () => {
+    let requestPayload: any = null;
+    server.use(
+      http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...requestPayload } });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+
+    const juanText = await screen.findByText('Juan Inactivo');
+    const juanRow = juanText.closest('tr')!;
+    const editButton = within(juanRow).getByTitle('Editar');
+    await userEvent.click(editButton);
+
+    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
+
+    const legajoInput = screen.getByLabelText(/Legajo/);
+    await userEvent.type(legajoInput, '777777');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activar Usuario' }));
+
+    await waitFor(() => {
+      expect(requestPayload).toEqual({
+        legajo: '777777',
+        nombreApellido: 'Juan Inactivo',
+        nombreUsuario: 'inactivo1',
+        rol: 'operario',
+        puedeTomarMuestrasLibres: false,
+        activo: true,
+      });
+    });
+  });
 });

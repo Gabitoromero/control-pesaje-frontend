@@ -122,6 +122,23 @@ export const UsuariosPage = () => {
     }
   };
 
+  const handleActivar = () => {
+    if (!editingUsuario?.id) return;
+
+    const payload: UsuarioCreate = {
+      legajo: formData.legajo,
+      nombreApellido: formData.nombreApellido,
+      nombreUsuario: formData.nombreUsuario,
+      rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
+      puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
+      activo: true,
+      ...(formData.contrasena ? { contrasena: formData.contrasena } : {}),
+      ...(formData.pin ? { pin: formData.pin } : {}),
+    };
+
+    updateMutation.mutate({ id: editingUsuario.id, data: payload });
+  };
+
   const handleDelete = (id: number) => {
     if (window.confirm('¿Está seguro de eliminar este usuario?')) {
       deleteMutation.mutate(id);
@@ -305,6 +322,16 @@ export const UsuariosPage = () => {
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
+                {editingUsuario && editingUsuario.activo === false && (
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={handleActivar}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto"
+                  >
+                    Activar Usuario
+                  </button>
+                )}
                 <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>
