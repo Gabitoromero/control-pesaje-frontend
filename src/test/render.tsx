@@ -28,19 +28,23 @@ export function renderWithAuth(
   ui: ReactNode,
   {
     user,
+    activeLineaId = null,
     initialEntries = ['/'] as InitialEntry[],
   }: {
     user?: User;
+    activeLineaId?: number | null;
     initialEntries?: InitialEntry[];
   } = {}
 ) {
   const authValue: AuthContextType = {
     user: user ?? null,
     token: user ? 'test-jwt-token' : null,
+    activeLineaId,
     isAuthenticated: !!user,
     login: vi.fn(),
     logout: vi.fn(),
-    deactivateLayer2Session: vi.fn().mockResolvedValue(undefined),
+    openLineSession: vi.fn(),
+    closeLineSession: vi.fn().mockResolvedValue(undefined),
   };
 
   return {

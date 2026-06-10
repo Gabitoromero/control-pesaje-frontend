@@ -6,6 +6,11 @@ const api = axios.create({
   timeout: 5000,
 });
 
+let _logout: (() => void) | null = null;
+export const setLogoutHandler = (fn: () => void) => {
+  _logout = fn;
+};
+
 // Interceptor para agregar el token JWT a cada request
 api.interceptors.request.use((config) => {
   const token = Cookies.get('token');
@@ -19,13 +24,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isAuthEndpoint = error.config?.url?.includes('/auth/');
-    if (error.response?.status === 401 && !isAuthEndpoint) {
-      try {
-        Cookies.remove('token');
-        localStorage.removeItem('user');
-      } catch { /* storage unavailable */ }
-      window.location.href = '/login';
+    if (error.response?.status === 401) {
+      if (_logout) {
+        _logout();
+      } else {
+        // Fallback for before AuthProvider is mounted or if not used
+        try {
+          Cookies.remove('token');
+          localStorage.removeItem('user');
+        } catch { /* storage unavailable */ }
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { usePasadaState } from '../hooks/usePasadaState';
+import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import type { RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, Trash2, CheckCircle2 } from 'lucide-react';
 
@@ -16,10 +18,16 @@ const ETAPA_MOCK: RutaPasadaEtapa = {
 };
 
 export const TabletWorkspace: React.FC = () => {
-  const { user, deactivateLayer2Session } = useAuth();
+  const { user, closeLineSession, activeLineaId } = useAuth();
   
-  // En producción real, lineaId vendría de la sesión del operario o configuración del dispositivo.
-  const lineaId = user?.lineaId ?? 1;
+  // Heartbeat para mantener sesión viva en backend
+  useActividadHeartbeat(activeLineaId || 0);
+
+  if (!activeLineaId) {
+    return <Navigate to="/tablet/seleccion-linea" replace />;
+  }
+
+  const lineaId = activeLineaId;
 
   const { pesoNeto, isEstable, isConnected } = useBalanzaWebSocket(lineaId);
 
@@ -69,7 +77,7 @@ export const TabletWorkspace: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => deactivateLayer2Session(lineaId)}
+            onClick={() => closeLineSession()}
             className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold transition-colors"
           >
             Salir

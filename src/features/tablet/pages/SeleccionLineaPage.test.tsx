@@ -66,10 +66,10 @@ describe('SeleccionLineaPage', () => {
     expect(linea2?.querySelector('svg')).not.toBeInTheDocument();
   });
 
-  it('llama a deactivateLayer2Session al hacer click en Salir', async () => {
+  it('llama a logout al hacer click en Salir', async () => {
     const { authValue } = renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
     const btnSalir = await screen.findByRole('button', { name: /salir/i });
     await userEvent.click(btnSalir);
-    expect(authValue.deactivateLayer2Session).toHaveBeenCalled();
+    expect(authValue.logout).toHaveBeenCalled();
   });
 });

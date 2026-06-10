@@ -5,6 +5,7 @@ import { Factory, ArrowRight, LogOut, Loader2 } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../../../api/axios';
 import { getApiErrorMessage } from '../../../utils/errors';
+import { abrirSesionLinea } from '../../../api/auth';
 
 interface Linea {
   id: number;
@@ -13,8 +14,10 @@ interface Linea {
 }
 
 export const SeleccionLineaPage: React.FC = () => {
-  const { isAuthenticated, user, deactivateLayer2Session } = useAuth();
+  const { isAuthenticated, user, logout, openLineSession } = useAuth();
   const navigate = useNavigate();
+  const [activatingId, setActivatingId] = React.useState<number | null>(null);
+  const [activarError, setActivarError] = React.useState<string | null>(null);
 
   const { data: lineas = [], isLoading: loading, error, refetch } = useQuery<Linea[]>({
     queryKey: ['lineas-produccion'],
@@ -32,6 +35,25 @@ export const SeleccionLineaPage: React.FC = () => {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
+  const handleSeleccionarLinea = async (linea: Linea) => {
+    if (linea.estado === 'ocupada') return;
+    try {
+      setActivatingId(linea.id);
+      setActivarError(null);
+      await abrirSesionLinea(linea.id);
+      openLineSession(linea.id);
+      navigate('/tablet', { state: { lineaId: linea.id, lineaNombre: linea.nombre } });
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        setActivarError(err.response.data?.mensaje || 'Línea ocupada');
+      } else {
+        setActivarError('Error al activar la línea');
+      }
+    } finally {
+      setActivatingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans text-white">
       <div className="w-full max-w-lg">
@@ -47,7 +69,7 @@ export const SeleccionLineaPage: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={() => deactivateLayer2Session()}
+            onClick={() => logout()}
             className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
           >
             <LogOut size={16} />
@@ -86,11 +108,16 @@ export const SeleccionLineaPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
+            {activarError && (
+              <div className="bg-red-900/30 border border-red-700/50 rounded-2xl p-4 text-red-300 text-sm text-center mb-4">
+                {activarError}
+              </div>
+            )}
             {lineas.map((linea) => (
               <button
                 key={linea.id}
-                onClick={() => navigate('/tablet/activar-sesion', { state: { lineaId: linea.id, lineaNombre: linea.nombre } })}
-                disabled={linea.estado === 'ocupada'}
+                onClick={() => handleSeleccionarLinea(linea)}
+                disabled={linea.estado === 'ocupada' || activatingId !== null}
                 className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all
                   ${linea.estado === 'disponible'
                     ? 'bg-slate-800 border-slate-700 hover:border-blue-500 hover:bg-slate-750 active:scale-99'
@@ -104,7 +131,11 @@ export const SeleccionLineaPage: React.FC = () => {
                   </p>
                 </div>
                 {linea.estado === 'disponible' && (
-                  <ArrowRight size={20} className="text-slate-400" />
+                  activatingId === linea.id ? (
+                    <Loader2 size={20} className="text-blue-400 animate-spin" />
+                  ) : (
+                    <ArrowRight size={20} className="text-slate-400" />
+                  )
                 )}
               </button>
             ))}

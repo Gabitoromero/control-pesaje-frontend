@@ -2,17 +2,21 @@ import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import type { User, AuthResponse } from '../../../shared/types/auth';
-import api from '../../../api/axios';
+import { setLogoutHandler } from '../../../api/axios';
+import { cerrarSesionLinea } from '../../../api/auth';
+import { useCallback, useEffect } from 'react';
 
 export interface AuthContextType {
   user: User | null;
   token: string | null;
+  activeLineaId: number | null;
   isAuthenticated: boolean;
   login: (data: AuthResponse) => void;
   logout: () => void;
-  deactivateLayer2Session: (lineaId?: number) => Promise<void>;
+  openLineSession: (lineaId: number) => void;
+  closeLineSession: () => Promise<void>;
 }
-
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -22,58 +26,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const storedUser = localStorage.getItem('user');
-      if (!storedUser) return null;
-      return JSON.parse(storedUser);
+      const tokenStr = Cookies.get('token');
+      if (!tokenStr) return null;
+      const payload = JSON.parse(atob(tokenStr.split('.')[1]));
+      return {
+        id: payload.id,
+        legajo: payload.legajo,
+        nombreUsuario: payload.nombreUsuario,
+        rol: payload.rol,
+        puedeTomarMuestrasLibres: payload.puedeTomarMuestrasLibres,
+      };
     } catch {
       return null;
     }
   });
 
-  const login = (data: AuthResponse) => {
+  const [activeLineaId, setActiveLineaId] = useState<number | null>(null);
+
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setActiveLineaId(null);
+    try {
+      Cookies.remove('token');
+    } catch { /* storage unavailable */ }
+    window.location.href = '/login';
+  }, []);
+
+  useEffect(() => {
+    setLogoutHandler(logout);
+  }, [logout]);
+
+  const login = useCallback((data: AuthResponse) => {
     setToken(data.token);
     setUser(data.user);
+    setActiveLineaId(null);
     try {
       const isHttps = window.location.protocol === 'https:';
       Cookies.set('token', data.token, { expires: 1, secure: isHttps, sameSite: 'strict' });
-      localStorage.setItem('user', JSON.stringify(data.user));
     } catch { /* storage unavailable */ }
-  };
+  }, []);
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    try {
-      Cookies.remove('token');
-      localStorage.removeItem('user');
-    } catch { /* storage unavailable */ }
-    window.location.href = '/login';
-  };
+  const openLineSession = useCallback((lineaId: number) => {
+    setActiveLineaId(lineaId);
+  }, []);
 
-  const deactivateLayer2Session = async (lineaId?: number) => {
+  const closeLineSession = useCallback(async () => {
     try {
-      await api.post('/auth/cerrar-sesion', { lineaProduccionId: lineaId });
+      if (activeLineaId) await cerrarSesionLinea(activeLineaId);
     } catch (error) {
-      console.error('Failed to close layer 2 session:', error);
-      alert('Error al cerrar la sesión de la línea');
+      console.error('Failed to close line session:', error);
+      // Even if API fails, clear local state
     }
-
-    if (user?.rol === 'administrador' || user?.rol === 'jefe') {
-      window.location.href = '/dashboard';
-    } else {
-      logout();
-    }
-  };
+    setActiveLineaId(null);
+  }, [activeLineaId]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
+        activeLineaId,
         isAuthenticated: !!token,
         login,
         logout,
-        deactivateLayer2Session,
+        openLineSession,
+        closeLineSession,
       }}
     >
       {children}
