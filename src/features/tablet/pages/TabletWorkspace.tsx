@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { usePasadaState } from '../hooks/usePasadaState';
@@ -18,16 +18,13 @@ const ETAPA_MOCK: RutaPasadaEtapa = {
 };
 
 export const TabletWorkspace: React.FC = () => {
-  const { user, closeLineSession, activeLineaId } = useAuth();
+  const { user, activeLineaId } = useAuth();
+  const navigate = useNavigate();
   
+  const lineaId = activeLineaId ?? 0;
+
   // Heartbeat para mantener sesión viva en backend
-  useActividadHeartbeat(activeLineaId || 0);
-
-  if (!activeLineaId) {
-    return <Navigate to="/tablet/seleccion-linea" replace />;
-  }
-
-  const lineaId = activeLineaId;
+  useActividadHeartbeat(lineaId);
 
   const { pesoNeto, isEstable, isConnected } = useBalanzaWebSocket(lineaId);
 
@@ -45,6 +42,10 @@ export const TabletWorkspace: React.FC = () => {
     etapaActiva,
     articuloId: 1, // Mock
   });
+
+  if (!activeLineaId) {
+    return <Navigate to="/tablet/seleccion-linea" replace />;
+  }
 
   const handleRegistrarMuestra = () => {
     if (isEstable && isConnected) {
@@ -77,10 +78,10 @@ export const TabletWorkspace: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => closeLineSession()}
-            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold transition-colors"
+            onClick={() => navigate('/tablet/pasadas')}
+            className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg font-bold transition-colors"
           >
-            Salir
+            Volver
           </button>
         </div>
       </div>

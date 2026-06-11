@@ -60,6 +60,10 @@ export const handlers = [
     return HttpResponse.json({ success: true, data: { sessionActive: true } });
   }),
 
+  http.post(`${BASE}/auth/sesion-linea`, () => {
+    return HttpResponse.json({ success: true, data: { sessionActive: true } });
+  }),
+
 
   http.get(`${BASE}/lineas-produccion`, () =>
     HttpResponse.json({ success: true, data: lineasMock })

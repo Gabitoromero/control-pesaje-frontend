@@ -43,7 +43,7 @@ export const SeleccionLineaPage: React.FC = () => {
       setActivarError(null);
       await abrirSesionLinea(linea.id);
       openLineSession(linea.id);
-      navigate('/tablet', { state: { lineaId: linea.id, lineaNombre: linea.nombre } });
+      navigate('/tablet/pasadas', { state: { lineaId: linea.id, lineaNombre: linea.nombre } });
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
         setActivarError(err.response.data?.error?.message || 'Línea ocupada');
@@ -69,7 +69,13 @@ export const SeleccionLineaPage: React.FC = () => {
           </div>
         </div>
         <button
-          onClick={() => logout()}
+          onClick={() => {
+            if (user?.rol === 'jefe' || user?.rol === 'administrador') {
+              navigate('/dashboard');
+            } else {
+              logout();
+            }
+          }}
           className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium bg-slate-700/50 hover:bg-slate-700 px-4 py-2 rounded-lg"
         >
           <LogOut size={16} />

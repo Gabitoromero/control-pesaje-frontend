@@ -6,6 +6,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { UsuarioRol } from './shared/types';
 import { TabletWorkspace } from './features/tablet/pages/TabletWorkspace';
 import { SeleccionLineaPage } from './features/tablet/pages/SeleccionLineaPage';
+import { GestionPasadasPage } from './features/tablet/pages/GestionPasadasPage';
 
 
 import { ArticulosPage } from './features/dashboard/pages/ArticulosPage';
@@ -32,6 +33,8 @@ function App() {
         {/* Tablet Layer 2 flow (before workspace) */}
         <Route path="/tablet/seleccion-linea" element={<SeleccionLineaPage />} />
 
+        {/* Pasadas Management */}
+        <Route path="/tablet/pasadas" element={<GestionPasadasPage />} />
 
         {/* Tablet workspace (after Layer 2 activated) */}
         <Route path="/tablet" element={<TabletLayout />}>

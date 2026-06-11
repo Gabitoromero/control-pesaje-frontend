@@ -48,7 +48,7 @@ describe('AuthContext', () => {
       result.current.login({
         token: 'jwt-123',
         user: {
-          id: 1, legajo: 'L1', nombreUsuario: 'Juan', rol: 'OPERARIO', puedeTomarMuestrasLibres: true
+          id: 1, legajo: 'L1', nombreUsuario: 'Juan', rol: 'operario', puedeTomarMuestrasLibres: true
         }
       });
     });
@@ -93,7 +93,7 @@ describe('AuthContext', () => {
       result.current.login({
         token: 'jwt-123',
         user: {
-          id: 1, legajo: 'L1', nombreUsuario: 'Juan', rol: 'OPERARIO', puedeTomarMuestrasLibres: true
+          id: 1, legajo: 'L1', nombreUsuario: 'Juan', rol: 'operario', puedeTomarMuestrasLibres: true
         }
       });
       result.current.openLineSession(5);

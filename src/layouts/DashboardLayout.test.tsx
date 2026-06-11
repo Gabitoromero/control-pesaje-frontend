@@ -4,9 +4,9 @@ import { renderWithAuth } from '../test/render';
 import type { User } from '../shared/types/auth';
 import { DashboardLayout } from './DashboardLayout';
 
-const admin: User    = { id: 1, nombreUsuario: 'admin',  rol: 'administrador' };
-const jefe: User     = { id: 2, nombreUsuario: 'jefe1',  rol: 'jefe'          };
-const visual: User   = { id: 5, nombreUsuario: 'view1',  rol: 'visualizacion' };
+const admin: User    = { id: 1, legajo: 'A1', nombreUsuario: 'admin',  rol: 'administrador', puedeTomarMuestrasLibres: true };
+const jefe: User     = { id: 2, legajo: 'J1', nombreUsuario: 'jefe1',  rol: 'jefe', puedeTomarMuestrasLibres: true };
+const visual: User   = { id: 5, legajo: 'V1', nombreUsuario: 'view1',  rol: 'visualizacion', puedeTomarMuestrasLibres: false };
 
 describe('DashboardLayout — visibilidad del menú por rol', () => {
   it('administrador ve todos los items de navegación principales', () => {
