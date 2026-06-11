@@ -34,37 +34,37 @@ describe('auth API', () => {
     expect(result).toEqual({ token: 'jwt-123' });
   });
 
-  it('abrirSesionLinea llama a POST /sesion-linea', async () => {
+  it('abrirSesionLinea llama a POST /auth/sesion-linea', async () => {
     vi.mocked(api.post).mockResolvedValue({ status: 201 });
 
     await abrirSesionLinea(3);
 
-    expect(api.post).toHaveBeenCalledWith('/sesion-linea', { lineaProduccionId: 3 });
+    expect(api.post).toHaveBeenCalledWith('/auth/sesion-linea', { lineaProduccionId: 3 });
   });
 
-  it('actualizarActividad llama a PATCH /auth/actividad', async () => {
+  it('actualizarActividad llama a PATCH /auth/actividad con lineaId', async () => {
     vi.mocked(api.patch).mockResolvedValue({ status: 200 });
 
-    await actualizarActividad();
+    await actualizarActividad(1);
 
-    expect(api.patch).toHaveBeenCalledWith('/auth/actividad');
+    expect(api.patch).toHaveBeenCalledWith('/auth/actividad', { lineaProduccionId: 1 });
   });
 
-  it('getSesionActiva llama a GET /sesion-activa y retorna SesionActiva', async () => {
+  it('getSesionActiva llama a GET /auth/sesion-activa/:id y retorna SesionActiva', async () => {
     const mockSesion = { lineaProduccionId: 1, usuarioId: 2, usuarioRol: 'OPERARIO', ultimaActividadAt: '2023' };
     vi.mocked(api.get).mockResolvedValue({ data: mockSesion });
 
-    const result = await getSesionActiva();
+    const result = await getSesionActiva(1);
 
-    expect(api.get).toHaveBeenCalledWith('/sesion-activa');
+    expect(api.get).toHaveBeenCalledWith('/auth/sesion-activa/1');
     expect(result).toEqual(mockSesion);
   });
 
-  it('cerrarSesionLinea llama a POST /cerrar-sesion', async () => {
+  it('cerrarSesionLinea llama a POST /auth/cerrar-sesion', async () => {
     vi.mocked(api.post).mockResolvedValue({ status: 200 });
 
     await cerrarSesionLinea(3);
 
-    expect(api.post).toHaveBeenCalledWith('/cerrar-sesion', { lineaProduccionId: 3 });
+    expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaProduccionId: 3 });
   });
 });

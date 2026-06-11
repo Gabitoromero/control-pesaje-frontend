@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Factory, ArrowRight, LogOut, Loader2 } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../../../api/axios';
+import { isAxiosError } from 'axios';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { abrirSesionLinea } from '../../../api/auth';
 
@@ -43,9 +44,9 @@ export const SeleccionLineaPage: React.FC = () => {
       await abrirSesionLinea(linea.id);
       openLineSession(linea.id);
       navigate('/tablet', { state: { lineaId: linea.id, lineaNombre: linea.nombre } });
-    } catch (err: any) {
-      if (err?.response?.status === 409) {
-        setActivarError(err.response.data?.mensaje || 'Línea ocupada');
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 409) {
+        setActivarError(err.response.data?.error?.message || 'Línea ocupada');
       } else {
         setActivarError('Error al activar la línea');
       }
@@ -55,37 +56,29 @@ export const SeleccionLineaPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans text-white">
-      <div className="w-full max-w-lg">
-
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Factory size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Selección de Línea</h1>
-              <p className="text-slate-400 text-sm">{user?.nombreUsuario}</p>
-            </div>
+    <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-white">
+      {/* Header */}
+      <header className="bg-slate-800 border-b border-slate-700 p-4 md:px-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+            <Factory size={24} />
           </div>
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
-          >
-            <LogOut size={16} />
-            Salir
-          </button>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Selección de Línea</h1>
+            <p className="text-slate-400 text-sm">{user?.nombreUsuario}</p>
+          </div>
         </div>
+        <button
+          onClick={() => logout()}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium bg-slate-700/50 hover:bg-slate-700 px-4 py-2 rounded-lg"
+        >
+          <LogOut size={16} />
+          <span className="hidden sm:inline">Salir</span>
+        </button>
+      </header>
 
-        {/* Info box */}
-        <div className="bg-blue-900/30 border border-blue-700/50 rounded-2xl p-4 mb-6 text-blue-300 text-sm">
-          <p className="font-semibold mb-1">Capa 2 — Paso 1: Selección de Línea</p>
-          <p>
-            El operario elige en qué línea de producción va a trabajar.
-            La lista se carga en tiempo real desde el backend, mostrando el estado ocupado/disponible.
-          </p>
-        </div>
-
+      {/* Main Content */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
             <Loader2 className="animate-spin text-blue-500" size={32} />
@@ -107,42 +100,49 @@ export const SeleccionLineaPage: React.FC = () => {
             <p>No hay líneas de producción activas en este momento.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {activarError && (
-              <div className="bg-red-900/30 border border-red-700/50 rounded-2xl p-4 text-red-300 text-sm text-center mb-4">
+              <div className="bg-red-900/30 border border-red-700/50 rounded-2xl p-4 text-red-300 text-sm text-center max-w-lg mx-auto">
                 {activarError}
               </div>
             )}
-            {lineas.map((linea) => (
-              <button
-                key={linea.id}
-                onClick={() => handleSeleccionarLinea(linea)}
-                disabled={linea.estado === 'ocupada' || activatingId !== null}
-                className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all
-                  ${linea.estado === 'disponible'
-                    ? 'bg-slate-800 border-slate-700 hover:border-blue-500 hover:bg-slate-750 active:scale-99'
-                    : 'bg-slate-800/50 border-slate-800 opacity-50 cursor-not-allowed'
-                  }`}
-              >
-                <div className="text-left">
-                  <p className="font-semibold text-lg">{linea.nombre}</p>
-                  <p className={`text-sm capitalize mt-0.5 ${linea.estado === 'disponible' ? 'text-green-400' : 'text-amber-400'}`}>
-                    {linea.estado}
-                  </p>
-                </div>
-                {linea.estado === 'disponible' && (
-                  activatingId === linea.id ? (
-                    <Loader2 size={20} className="text-blue-400 animate-spin" />
-                  ) : (
-                    <ArrowRight size={20} className="text-slate-400" />
-                  )
-                )}
-              </button>
-            ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {lineas.map((linea) => (
+                <button
+                  key={linea.id}
+                  onClick={() => handleSeleccionarLinea(linea)}
+                  disabled={linea.estado === 'ocupada' || activatingId !== null}
+                  className={`w-full flex items-center justify-between p-6 rounded-2xl border transition-all
+                    ${linea.estado === 'disponible'
+                      ? 'bg-slate-800 border-slate-700 hover:border-blue-500 hover:bg-slate-750 active:scale-95 shadow-md hover:shadow-blue-900/20'
+                      : 'bg-slate-800/50 border-slate-800 opacity-50 cursor-not-allowed'
+                    }`}
+                >
+                  <div className="text-left">
+                    <p className="font-semibold text-xl">{linea.nombre}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className={`w-2 h-2 rounded-full ${linea.estado === 'disponible' ? 'bg-green-400' : 'bg-amber-400'}`} />
+                      <p className={`text-sm font-medium ${linea.estado === 'disponible' ? 'text-green-400' : 'text-amber-400'}`}>
+                        {linea.estado === 'disponible' ? 'Disponible' : 'Ocupada'}
+                      </p>
+                    </div>
+                  </div>
+                  {linea.estado === 'disponible' && (
+                    activatingId === linea.id ? (
+                      <Loader2 size={24} className="text-blue-400 animate-spin" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <ArrowRight size={20} />
+                      </div>
+                    )
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-      </div>
+      </main>
     </div>
   );
 };

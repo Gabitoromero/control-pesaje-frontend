@@ -6,7 +6,7 @@ export const useActividadHeartbeat = (lineaId: number | null) => {
     if (lineaId === null) return;
 
     const intervalId = setInterval(() => {
-      actualizarActividad().catch((err) => {
+      actualizarActividad(lineaId).catch((err) => {
         console.error('Failed to update heartbeat:', err);
       });
     }, 120000); // 2 minutos

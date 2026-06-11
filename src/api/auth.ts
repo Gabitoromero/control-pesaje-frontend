@@ -7,18 +7,18 @@ export const loginApi = async (credentials: { legajo: string; pin: string }): Pr
 };
 
 export const abrirSesionLinea = async (lineaId: number) => {
-  await api.post('/sesion-linea', { lineaProduccionId: lineaId });
+  await api.post('/auth/sesion-linea', { lineaProduccionId: lineaId });
 };
 
-export const actualizarActividad = async () => {
-  await api.patch('/auth/actividad');
+export const actualizarActividad = async (lineaId: number) => {
+  await api.patch('/auth/actividad', { lineaProduccionId: lineaId });
 };
 
-export const getSesionActiva = async (): Promise<SesionActiva> => {
-  const response = await api.get('/sesion-activa');
+export const getSesionActiva = async (lineaId: number): Promise<SesionActiva> => {
+  const response = await api.get(`/auth/sesion-activa/${lineaId}`);
   return response.data;
 };
 
 export const cerrarSesionLinea = async (lineaId?: number) => {
-  await api.post('/cerrar-sesion', { lineaProduccionId: lineaId });
+  await api.post('/auth/cerrar-sesion', { lineaProduccionId: lineaId });
 };

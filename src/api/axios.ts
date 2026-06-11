@@ -31,7 +31,7 @@ api.interceptors.response.use(
         // Fallback for before AuthProvider is mounted or if not used
         try {
           Cookies.remove('token');
-          localStorage.removeItem('user');
+          localStorage.removeItem('activeLineaId');
         } catch { /* storage unavailable */ }
         window.location.href = '/login';
       }

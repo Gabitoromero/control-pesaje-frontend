@@ -41,13 +41,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   });
 
-  const [activeLineaId, setActiveLineaId] = useState<number | null>(null);
+  const [activeLineaId, setActiveLineaId] = useState<number | null>(() => {
+    try {
+      const stored = localStorage.getItem('activeLineaId');
+      return stored ? parseInt(stored, 10) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     setActiveLineaId(null);
     try {
+      localStorage.removeItem('activeLineaId');
       Cookies.remove('token');
     } catch { /* storage unavailable */ }
     window.location.href = '/login';
@@ -62,6 +70,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(data.user);
     setActiveLineaId(null);
     try {
+      localStorage.removeItem('activeLineaId');
       const isHttps = window.location.protocol === 'https:';
       Cookies.set('token', data.token, { expires: 1, secure: isHttps, sameSite: 'strict' });
     } catch { /* storage unavailable */ }
@@ -69,6 +78,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const openLineSession = useCallback((lineaId: number) => {
     setActiveLineaId(lineaId);
+    try {
+      localStorage.setItem('activeLineaId', lineaId.toString());
+    } catch { /* storage unavailable */ }
   }, []);
 
   const closeLineSession = useCallback(async () => {
@@ -79,6 +91,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Even if API fails, clear local state
     }
     setActiveLineaId(null);
+    try {
+      localStorage.removeItem('activeLineaId');
+    } catch { /* storage unavailable */ }
   }, [activeLineaId]);
 
   return (

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock } from 'lucide-react';
+import { User, Lock, Factory } from 'lucide-react';
+import { isAxiosError } from 'axios';
 import { loginApi } from '../api/auth';
 import { useAuth } from '../features/auth/context/AuthContext';
 
@@ -60,8 +61,12 @@ const Login: React.FC = () => {
       } else {
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      setError('PIN o legajo incorrecto');
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.data?.error?.message) {
+        setError(err.response.data.error.message);
+      } else {
+        setError('PIN o legajo incorrecto');
+      }
       setStep('legajo');
       setPin('');
     } finally {
@@ -95,19 +100,38 @@ const Login: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans text-white">
-      <div className="w-full max-w-sm space-y-6">
-
-        {/* Header UI */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/20">
-            <Lock size={32} />
+    <div className="min-h-screen bg-slate-900 flex flex-col md:flex-row font-sans text-white">
+      {/* Branding Side - Hidden on mobile, visible on md and up */}
+      <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-slate-800 flex-col items-center justify-center p-12 relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-slate-900/50 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-cyan-400" />
+        
+        <div className="z-10 text-center max-w-lg">
+          <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-blue-900/40">
+            <Factory size={48} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold mb-1">Control de Pesaje</h1>
-          <p className="text-slate-400">Ingreso al sistema</p>
+          <h1 className="text-4xl lg:text-5xl font-bold mb-4 tracking-tight">Controlador de Pesaje</h1>
+          <p className="text-slate-400 text-lg lg:text-xl leading-relaxed">
+            Plataforma integral para gestión y monitoreo de líneas de producción en tiempo real.
+          </p>
         </div>
+      </div>
 
-        {/* Stepper UI */}
+      {/* Login Form Side */}
+      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col items-center justify-center p-6 sm:p-12 min-h-screen md:min-h-0 bg-slate-900">
+        <div className="w-full max-w-sm space-y-6">
+
+          {/* Header UI - Only visible on mobile since branding side handles desktop */}
+          <div className="text-center mb-8 md:hidden">
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/20">
+              <Lock size={32} />
+            </div>
+            <h1 className="text-2xl font-bold mb-1">Controlador de Pesaje</h1>
+            <p className="text-slate-400">Ingreso al sistema</p>
+          </div>
+
+          {/* Stepper UI */}
         <div className="flex items-center justify-center" data-testid="stepper-ui">
           <div
             data-testid="stepper-step-legajo"
@@ -201,10 +225,10 @@ const Login: React.FC = () => {
             </button>
           </div>
         )}
-
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Login;
