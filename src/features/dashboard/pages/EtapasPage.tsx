@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getEtapas,
@@ -10,14 +10,25 @@ import {
   type EtapaCreate,
 } from '../../../api/etapas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
+import { isAxiosError } from 'axios';
+import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
 const EMPTY_FORM = { nombre: '', descripcion: '' };
+
+const ETAPA_FIELDS: SearchField[] = [
+  { value: 'nombre', label: 'Nombre' },
+  { value: 'descripcion', label: 'Descripción' },
+];
 
 export const EtapasPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+
+  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
+  const [field, setField] = useState('nombre');
+  const [query, setQuery] = useState('');
 
   const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
     queryKey: ['etapas'],
@@ -31,7 +42,20 @@ export const EtapasPage = () => {
 
   const isLoading = loadingActivas || loadingInactivas;
   const error = errorActivas || errorInactivas;
-  const etapas = [...activas, ...inactivas];
+
+  const etapasFiltradas = useMemo(() => {
+    const base = status === 'activo' ? activas : inactivas;
+    const q = query.trim().toLowerCase();
+    
+    let result = base;
+    if (q) {
+      result = base.filter((e) =>
+        String(e[field as keyof Etapa] ?? '').toLowerCase().includes(q)
+      );
+    }
+    
+    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [activas, inactivas, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createEtapa,
@@ -43,7 +67,7 @@ export const EtapasPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<EtapaCreate> }) => updateEtapa(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<EtapaCreate> & { activo?: boolean } }) => updateEtapa(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
       queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
@@ -56,7 +80,17 @@ export const EtapasPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
       queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
+      closeModal();
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo eliminar la etapa:\n${msg}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Rutas en el sistema.`);
+    }
   });
 
   const openModal = (etapa?: Etapa) => {
@@ -85,10 +119,22 @@ export const EtapasPage = () => {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar esta etapa?')) {
-      deleteMutation.mutate(id);
+  const handleDelete = () => {
+    if (editingEtapa?.id && window.confirm('¿Está seguro de eliminar esta etapa?')) {
+      deleteMutation.mutate(editingEtapa.id);
     }
+  };
+
+  const handleActivar = () => {
+    if (!editingEtapa?.id) return;
+    updateMutation.mutate({
+      id: editingEtapa.id,
+      data: {
+        nombre: formData.nombre,
+        descripcion: formData.descripcion || undefined,
+        activo: true,
+      },
+    });
   };
 
   const isBusy = createMutation.isPending || updateMutation.isPending;
@@ -108,6 +154,16 @@ export const EtapasPage = () => {
         </button>
       </div>
 
+      <SearchToolbar
+        status={status}
+        onStatusChange={setStatus}
+        fields={ETAPA_FIELDS}
+        field={field}
+        onFieldChange={setField}
+        query={query}
+        onQueryChange={setQuery}
+      />
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -119,7 +175,7 @@ export const EtapasPage = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {etapas.map((etapa) => (
+            {etapasFiltradas.map((etapa) => (
               <tr key={etapa.id} className={`hover:bg-gray-50 ${etapa.activo === false ? 'opacity-60' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{etapa.nombre}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{etapa.descripcion || '-'}</td>
@@ -129,16 +185,13 @@ export const EtapasPage = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(etapa)} className="text-indigo-600 hover:text-indigo-900 mr-4" title="Editar">
+                  <button onClick={() => openModal(etapa)} className="text-indigo-600 hover:text-indigo-900" title="Editar">
                     <Edit size={18} />
-                  </button>
-                  <button onClick={() => etapa.id && handleDelete(etapa.id)} className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <Trash size={18} />
                   </button>
                 </td>
               </tr>
             ))}
-            {etapas.length === 0 && (
+            {etapasFiltradas.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No hay etapas registradas.</td>
               </tr>
@@ -180,6 +233,18 @@ export const EtapasPage = () => {
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
+                {editingEtapa?.activo === false && (
+                  <button type="button" disabled={isBusy} onClick={handleActivar}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto">
+                    Activar Etapa
+                  </button>
+                )}
+                {editingEtapa?.id && editingEtapa?.activo !== false && (
+                  <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 mr-auto flex items-center gap-2">
+                    <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Etapa'}
+                  </button>
+                )}
                 <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>
@@ -194,3 +259,4 @@ export const EtapasPage = () => {
     </div>
   );
 };
+

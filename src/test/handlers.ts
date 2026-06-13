@@ -24,6 +24,17 @@ export const usuariosMockInactivos = [
   { id: 4, nombreApellido: 'Juan Inactivo', nombreUsuario: 'inactivo1', rol: 'operario', activo: false, puedeTomarMuestrasLibres: false },
 ];
 
+export const etapasMock = [
+  { id: 1, nombre: 'Amasado', descripcion: 'Proceso de amasado', activo: true },
+  { id: 2, nombre: 'Horneado', descripcion: 'Proceso de horneado', activo: true },
+  { id: 3, nombre: 'Envasado', descripcion: 'Proceso de envasado', activo: true },
+];
+
+export const etapasMockInactivos = [
+  { id: 4, nombre: 'Reposo', descripcion: 'Reposo inactivo', activo: false },
+  { id: 5, nombre: 'Corte', descripcion: 'Corte inactivo', activo: false },
+];
+
 const BASE = 'http://localhost:3000/api';
 
 function makeFakeJwt(payload: object): string {
@@ -111,6 +122,28 @@ export const handlers = [
   }),
 
   http.delete(`${BASE}/usuarios/:id`, () =>
+    new HttpResponse(null, { status: 204 })
+  ),
+
+  http.get(`${BASE}/etapas`, () =>
+    HttpResponse.json({ success: true, data: etapasMock })
+  ),
+
+  http.get(`${BASE}/etapas/inactive`, () =>
+    HttpResponse.json({ success: true, data: etapasMockInactivos })
+  ),
+
+  http.post(`${BASE}/etapas`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({ success: true, data: { id: 99, activo: true, ...body } }, { status: 201 });
+  }),
+
+  http.put(`${BASE}/etapas/:id`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({ success: true, data: { activo: true, ...body } });
+  }),
+
+  http.delete(`${BASE}/etapas/:id`, () =>
     new HttpResponse(null, { status: 204 })
   ),
 ];

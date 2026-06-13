@@ -7,7 +7,7 @@ export interface Etapa {
   activo?: boolean;
 }
 
-export interface EtapaCreate extends Omit<Etapa, 'id'> {}
+export type EtapaCreate = Omit<Etapa, 'id'>;
 
 interface ApiEnvelope<T> {
   success: boolean;
