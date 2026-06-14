@@ -64,6 +64,15 @@ export const ArticulosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo crear el artículo:\n${msg}`);
+    },
   });
 
   const updateMutation = useMutation({

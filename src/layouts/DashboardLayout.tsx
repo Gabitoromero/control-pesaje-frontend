@@ -1,21 +1,12 @@
-import React, { useState } from 'react';
-import { Outlet, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useRef } from 'react';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
-import { 
-  LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory, 
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings 
-} from 'lucide-react';
-import { UsuarioRol } from '../shared/types';
+import { Menu, X } from 'lucide-react';
+import { Sidebar } from '../components/ui/Sidebar';
 
 export const DashboardLayout: React.FC = () => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const [isGestionOpen, setIsGestionOpen] = useState(() => {
-    return ['/articulos', '/etapas', '/lineas', '/rutas', '/usuarios']
-      .some(path => location.pathname.includes(path));
-  });
+  const { user, isAuthenticated } = useAuth();
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -26,114 +17,58 @@ export const DashboardLayout: React.FC = () => {
     return <Navigate to="/tablet" replace />;
   }
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const openDrawer = () => {
+    dialogRef.current?.showModal();
   };
 
-  const rol = user?.rol;
-  const isAdmin = rol === UsuarioRol.ADMINISTRADOR;
-  const isJefe = rol === UsuarioRol.JEFE || isAdmin;
-  const isVisualizacion = rol === UsuarioRol.VISUALIZACION;
-
-  const navClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center px-3 py-2.5 rounded-md transition-colors ${
-      isActive
-        ? 'bg-blue-50 text-blue-700 font-medium'
-        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-    }`;
+  const closeDrawer = () => {
+    dialogRef.current?.close();
+  };
 
   return (
-    <div className="flex h-screen w-screen bg-gray-100 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm flex-shrink-0">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-800">Control de Pesaje</h1>
+    <div className="grid h-screen w-screen bg-gray-100 font-sans overflow-hidden grid-cols-1 md:grid-cols-[16rem_1fr] grid-rows-[auto_1fr] md:grid-rows-1">
+      {/* Mobile Top Bar */}
+      <header className="md:hidden flex items-center justify-between px-4 h-16 bg-white border-b border-gray-200 shadow-sm col-span-1">
+        <h1 className="text-xl font-bold text-gray-800">Control de Pesaje</h1>
+        <button
+          onClick={openDrawer}
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+          aria-label="Abrir menú"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      </header>
+
+      {/* Desktop Sidebar (Persistent) */}
+      <div className="hidden md:block h-full col-start-1 col-span-1 row-start-1 row-span-1">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Navigation Drawer */}
+      <dialog 
+        ref={dialogRef}
+        className="md:hidden p-0 m-0 h-full max-h-screen w-64 backdrop:bg-black/50 open:flex flex-col border-none shadow-xl transform transition-transform"
+        onClick={(e) => {
+          if (e.target === dialogRef.current) closeDrawer();
+        }}
+      >
+        <div className="flex-1 overflow-hidden relative">
+          <Sidebar onNavClick={closeDrawer} />
+          {/* Close Button overlayed inside the drawer if needed, though Sidebar handles it. 
+              Let's add a close button inside the drawer just in case */}
+          <button
+            onClick={closeDrawer}
+            className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            aria-label="Cerrar menú"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-
-        <nav className="flex-1 py-6 px-3 space-y-2">
-          <NavLink to="/dashboard" end className={navClass}>
-            <LayoutDashboard className="w-5 h-5 mr-3" />
-            Monitoreo
-          </NavLink>
-
-          {isJefe && (
-            <NavLink to="/dashboard/planta" className={navClass}>
-              <Factory className="w-5 h-5 mr-3" />
-              Planta
-            </NavLink>
-          )}
-
-          {isJefe && (
-            <div>
-              <button
-                onClick={() => setIsGestionOpen(!isGestionOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors text-gray-700 hover:bg-gray-100 hover:text-gray-900`}
-              >
-                <div className="flex items-center">
-                  <Settings className="w-5 h-5 mr-3" />
-                  Gestión
-                </div>
-                {isGestionOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </button>
-              
-              {isGestionOpen && (
-                <div className="mt-1 ml-6 space-y-1">
-                  <NavLink to="/dashboard/articulos" className={navClass}>
-                    <Package className="w-5 h-5 mr-3" />
-                    Artículos
-                  </NavLink>
-                  <NavLink to="/dashboard/etapas" className={navClass}>
-                    <Layers className="w-5 h-5 mr-3" />
-                    Etapas
-                  </NavLink>
-                  <NavLink to="/dashboard/lineas" className={navClass}>
-                    <GitMerge className="w-5 h-5 mr-3" />
-                    Líneas
-                  </NavLink>
-                  <NavLink to="/dashboard/rutas" className={navClass}>
-                    <RouteIcon className="w-5 h-5 mr-3" />
-                    Rutas
-                  </NavLink>
-                  {isAdmin && (
-                    <NavLink to="/dashboard/usuarios" className={navClass}>
-                      <Users className="w-5 h-5 mr-3" />
-                      Usuarios
-                    </NavLink>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {!isVisualizacion && (
-            <NavLink to="/dashboard/reportes" className={navClass}>
-              <FileBarChart className="w-5 h-5 mr-3" />
-              Reportes
-            </NavLink>
-          )}
-        </nav>
-
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900">{user?.nombreUsuario}</span>
-              <span className="text-xs text-gray-500 capitalize">{user?.rol}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-              title="Cerrar sesión"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </aside>
+      </dialog>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gray-50">
-        <div className="p-8">
+      <main className="flex-1 overflow-auto bg-gray-50 col-start-1 md:col-start-2 row-start-2 md:row-start-1 h-full" style={{ containerType: 'inline-size' }}>
+        <div className="p-4 md:p-8">
           <Outlet />
         </div>
       </main>

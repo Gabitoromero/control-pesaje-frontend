@@ -3,7 +3,7 @@ import api from './axios';
 export interface Ruta {
   id?: number;
   nombre: string;
-  descripcion?: string;
+  descripcion?: string | null;
   activo?: boolean;
 }
 

@@ -2,11 +2,24 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithAuth } from '../test/render';
 import type { User } from '../shared/types/auth';
+import { vi, describe, it, expect, beforeAll } from 'vitest';
 import { DashboardLayout } from './DashboardLayout';
-
 const admin: User    = { id: 1, legajo: 'A1', nombreUsuario: 'admin',  rol: 'administrador', puedeTomarMuestrasLibres: true };
 const jefe: User     = { id: 2, legajo: 'J1', nombreUsuario: 'jefe1',  rol: 'jefe', puedeTomarMuestrasLibres: true };
 const visual: User   = { id: 5, legajo: 'V1', nombreUsuario: 'view1',  rol: 'visualizacion', puedeTomarMuestrasLibres: false };
+
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function mock(
+    this: HTMLDialogElement
+  ) {
+    this.open = true;
+  });
+  HTMLDialogElement.prototype.close = vi.fn(function mock(
+    this: HTMLDialogElement
+  ) {
+    this.open = false;
+  });
+});
 
 describe('DashboardLayout — visibilidad del menú por rol', () => {
   it('administrador ve todos los items de navegación principales', () => {
@@ -65,7 +78,30 @@ describe('DashboardLayout — visibilidad del menú por rol', () => {
 
   it('muestra el nombre de usuario y rol en el footer del sidebar', () => {
     renderWithAuth(<DashboardLayout />, { user: jefe, initialEntries: ['/dashboard'] });
-    expect(screen.getByText('jefe1')).toBeInTheDocument();
-    expect(screen.getByText('jefe')).toBeInTheDocument();
+    expect(screen.getAllByText('jefe1')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('jefe')[0]).toBeInTheDocument();
+  });
+
+  it('abre y cierra el sidebar móvil usando el menú hamburguesa', async () => {
+    const userEventSetup = userEvent.setup();
+    renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
+    
+    // El drawer debería estar cerrado/oculto inicialmente
+    const dialog = screen.getByRole('dialog', { hidden: true });
+    expect(dialog).not.toBeVisible();
+    
+    // Clickeamos el menú hamburguesa
+    const menuButton = screen.getByRole('button', { name: /abrir menú/i });
+    await userEventSetup.click(menuButton);
+    
+    // Ahora el dialog debería mostrarse
+    expect(dialog).toBeVisible();
+    
+    // Clickeamos un enlace para probar que se cierra
+    const monitoreoLink = screen.getAllByRole('link', { name: /monitoreo/i })[1]; // El del dialog
+    await userEventSetup.click(monitoreoLink);
+    
+    // Debería estar cerrado de nuevo
+    expect(dialog).not.toBeVisible();
   });
 });

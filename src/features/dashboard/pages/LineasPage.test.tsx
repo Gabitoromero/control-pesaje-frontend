@@ -1,0 +1,238 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
+import { handlers, lineasMock } from '../../../test/handlers';
+import { renderWithProviders } from '../../../test/render';
+import { LineasPage } from './LineasPage';
+
+const server = setupServer(...handlers);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('LineasPage', () => {
+  it('default mount shows only activos', async () => {
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    expect(screen.getByText('Línea 2 — Envasado B')).toBeInTheDocument();
+    expect(screen.getByText('Línea 3 — Fraccionado')).toBeInTheDocument();
+
+    expect(screen.queryByText('Línea 4 — Inactiva A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Línea 5 — Inactiva B')).not.toBeInTheDocument();
+  });
+
+  it('switching to inactivos shows only inactivos', async () => {
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 4 — Inactiva A')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Línea 4 — Inactiva A')).toBeInTheDocument();
+    expect(screen.getByText('Línea 5 — Inactiva B')).toBeInTheDocument();
+
+    expect(screen.queryByText('Línea 1 — Envasado A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Línea 2 — Envasado B')).not.toBeInTheDocument();
+    expect(screen.queryByText('Línea 3 — Fraccionado')).not.toBeInTheDocument();
+  });
+
+  it('typing search text filters activos by nombre; clearing restores full list', async () => {
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Buscar...');
+
+    await userEvent.type(searchInput, 'envasado a');
+
+    expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    expect(screen.queryByText('Línea 2 — Envasado B')).not.toBeInTheDocument();
+    expect(screen.queryByText('Línea 3 — Fraccionado')).not.toBeInTheDocument();
+
+    await userEvent.clear(searchInput);
+
+    expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    expect(screen.getByText('Línea 2 — Envasado B')).toBeInTheDocument();
+    expect(screen.getByText('Línea 3 — Fraccionado')).toBeInTheDocument();
+  });
+
+  it('"Activar Línea" button is visible when editing an inactive linea', async () => {
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 4 — Inactiva A')).toBeInTheDocument();
+    });
+
+    const lineaText = await screen.findByText('Línea 4 — Inactiva A');
+    const lineaRow = lineaText.closest('tr')!;
+    await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+    expect(screen.getByRole('heading', { name: 'Editar Línea' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activar Línea' })).toBeInTheDocument();
+  });
+
+  it('"Activar Línea" button is NOT visible when editing an active linea', async () => {
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const lineaText = await screen.findByText('Línea 1 — Envasado A');
+    const lineaRow = lineaText.closest('tr')!;
+    await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+    expect(screen.getByRole('heading', { name: 'Editar Línea' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activar Línea' })).not.toBeInTheDocument();
+  });
+
+  it('clicking "Activar Línea" sends PUT with activo:true; modal closes on success', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/lineas-produccion/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
+      })
+    );
+
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 4 — Inactiva A')).toBeInTheDocument();
+    });
+
+    const lineaText = await screen.findByText('Línea 4 — Inactiva A');
+    const lineaRow = lineaText.closest('tr')!;
+    await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activar Línea' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).activo).toBe(true);
+      expect(screen.queryByRole('heading', { name: 'Editar Línea' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('editing and clearing rutaPasadaActiva on an active linea sends PUT with rutaPasadaActiva: null', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/lineas-produccion/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 1, ...(requestPayload as object) } });
+      })
+    );
+
+    // Override lineasMock GET to return a linea with rutaPasadaActiva set
+    server.use(
+      http.get('http://localhost:3000/api/lineas-produccion', () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: 1 },
+            ...lineasMock.slice(1),
+          ],
+        })
+      )
+    );
+
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const lineaText = await screen.findByText('Línea 1 — Envasado A');
+    const lineaRow = lineaText.closest('tr')!;
+    await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+    // Clear the rutaPasadaActiva select by choosing "-- Sin ruta --"
+    const rutaSelect = screen.getByRole('combobox', { name: /ruta activa/i });
+    await userEvent.selectOptions(rutaSelect, '');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).rutaPasadaActiva).toBeNull();
+    });
+  });
+
+  it('editing and clearing rutaPasadaActiva on an inactive linea sends PUT with rutaPasadaActiva: null', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/lineas-produccion/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
+      })
+    );
+
+    // Override inactive GET to include a rutaPasadaActiva
+    server.use(
+      http.get('http://localhost:3000/api/lineas-produccion/inactive', () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            { id: 4, nombre: 'Línea 4 — Inactiva A', activo: false, numeroBalanza: 4, rutaPasadaActiva: 1 },
+            { id: 5, nombre: 'Línea 5 — Inactiva B', activo: false, numeroBalanza: 5 },
+          ],
+        })
+      )
+    );
+
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 4 — Inactiva A')).toBeInTheDocument();
+    });
+
+    const lineaText = await screen.findByText('Línea 4 — Inactiva A');
+    const lineaRow = lineaText.closest('tr')!;
+    await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+    // Clear the rutaPasadaActiva select by choosing "-- Sin ruta --"
+    const rutaSelect = screen.getByRole('combobox', { name: /ruta activa/i });
+    await userEvent.selectOptions(rutaSelect, '');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).rutaPasadaActiva).toBeNull();
+    });
+  });
+});

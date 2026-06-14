@@ -5,12 +5,13 @@ export interface Linea {
   id?: number;
   nombre: string;
   numeroBalanza: number;
-  rutaPasadaActivaId?: number;
-  rutaPasadaActiva?: Ruta;
+  rutaPasadaActiva?: Ruta | null;
   activo?: boolean;
 }
 
-export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva'> {}
+export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva'> {
+  rutaPasadaActiva?: number | null;
+}
 
 interface ApiEnvelope<T> {
   success: boolean;

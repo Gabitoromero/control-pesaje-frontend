@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers, articulosMock, articulosMockInactivos } from '../../../test/handlers';
+import { handlers, articulosMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { ArticulosPage } from './ArticulosPage';
 
@@ -151,6 +151,71 @@ describe('ArticulosPage', () => {
     await waitFor(() => {
       expect((requestPayload as Record<string, unknown>).activo).toBe(true);
       expect(screen.queryByRole('heading', { name: 'Editar Artículo' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('editing and clearing descripcion sends PUT with descripcion: null (not empty string)', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/articulos/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 1, ...(requestPayload as object) } });
+      })
+    );
+
+    renderWithProviders(<ArticulosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    const harinaText = await screen.findByText('Harina 000');
+    const harinaRow = harinaText.closest('tr')!;
+    await userEvent.click(within(harinaRow).getByTitle('Editar'));
+
+    const textarea = screen.getByRole('textbox', { name: /descripción/i });
+    await userEvent.clear(textarea);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).descripcion).toBeNull();
+    });
+  });
+
+  it('editing and clearing descripcion on an inactive articulo sends PUT with descripcion: null', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/articulos/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
+      })
+    );
+
+    renderWithProviders(<ArticulosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Levadura seca')).toBeInTheDocument();
+    });
+
+    const levaduraText = await screen.findByText('Levadura seca');
+    const levaduraRow = levaduraText.closest('tr')!;
+    await userEvent.click(within(levaduraRow).getByTitle('Editar'));
+
+    const textarea = screen.getByRole('textbox', { name: /descripción/i });
+    await userEvent.clear(textarea);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).descripcion).toBeNull();
     });
   });
 

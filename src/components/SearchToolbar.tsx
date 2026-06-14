@@ -20,7 +20,7 @@ export function SearchToolbar({
   onQueryChange,
 }: SearchToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-4">
+    <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 mb-4">
       <select
         className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         value={status}
