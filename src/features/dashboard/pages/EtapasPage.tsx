@@ -73,6 +73,15 @@ export const EtapasPage = () => {
       queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo guardar la etapa:\n${msg}`);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -113,9 +122,12 @@ export const EtapasPage = () => {
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (editingEtapa?.id) {
-      updateMutation.mutate({ id: editingEtapa.id, data: formData });
+      updateMutation.mutate({
+        id: editingEtapa.id,
+        data: { nombre: formData.nombre, descripcion: formData.descripcion.trim() || null },
+      });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate({ nombre: formData.nombre, descripcion: formData.descripcion || undefined, activo: true });
     }
   };
 
@@ -131,7 +143,7 @@ export const EtapasPage = () => {
       id: editingEtapa.id,
       data: {
         nombre: formData.nombre,
-        descripcion: formData.descripcion || undefined,
+        descripcion: formData.descripcion.trim() || null,
         activo: true,
       },
     });
@@ -216,17 +228,20 @@ export const EtapasPage = () => {
                     id="etapa-nombre"
                     type="text"
                     required
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Ej: Amasado"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label htmlFor="etapa-descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
+                  <label htmlFor="etapa-descripcion" className="block text-sm font-medium text-gray-700">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
                   <textarea
                     id="etapa-descripcion"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
                     rows={3}
+                    minLength={4}
+                    placeholder="Ej: Proceso de preparación inicial de la masa"
                     value={formData.descripcion}
                     onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   />

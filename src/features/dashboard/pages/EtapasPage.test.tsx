@@ -116,6 +116,66 @@ describe('EtapasPage', () => {
     expect(screen.getByRole('button', { name: 'Activar Etapa' })).toBeInTheDocument();
   });
 
+  it('editing active etapa and clearing descripcion sends PUT with descripcion:null (not empty string)', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/etapas/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 1, ...(requestPayload as object) } });
+      })
+    );
+
+    renderWithProviders(<EtapasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Amasado')).toBeInTheDocument();
+    });
+
+    const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+    await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+    // Clear the description textarea
+    const textarea = screen.getByRole('textbox', { name: /descripción/i });
+    await userEvent.clear(textarea);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).descripcion).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Editar Etapa' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('editing inactive etapa and clearing descripcion sends PUT with descripcion:null', async () => {
+    let requestPayload: unknown = null;
+    server.use(
+      http.put('http://localhost:3000/api/etapas/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
+      })
+    );
+
+    renderWithProviders(<EtapasPage />);
+
+    await waitFor(() => expect(screen.getByText('Amasado')).toBeInTheDocument());
+
+    await userEvent.selectOptions(screen.getAllByRole('combobox')[0], 'inactivo');
+    await waitFor(() => expect(screen.getByText('Reposo')).toBeInTheDocument());
+
+    const reposoRow = (await screen.findByText('Reposo')).closest('tr')!;
+    await userEvent.click(within(reposoRow).getByTitle('Editar'));
+
+    const textarea = screen.getByRole('textbox', { name: /descripción/i });
+    await userEvent.clear(textarea);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).descripcion).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Editar Etapa' })).not.toBeInTheDocument();
+    });
+  });
+
   it('clicking "Activar Etapa" sends PUT with activo:true in body; on 200, query keys are invalidated and modal closes', async () => {
     let requestPayload: any = null;
     server.use(

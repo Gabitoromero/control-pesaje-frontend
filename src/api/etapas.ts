@@ -3,7 +3,7 @@ import api from './axios';
 export interface Etapa {
   id?: number;
   nombre: string;
-  descripcion?: string;
+  descripcion?: string | null;
   activo?: boolean;
 }
 

@@ -2,10 +2,9 @@ import api from './axios';
 
 export interface Articulo {
   id?: number;
-  codigo: string;
-  marca: string;
+  marca?: string;
   nombre: string;
-  descripcion?: string;
+  descripcion?: string | null;
   activo?: boolean;
 }
 

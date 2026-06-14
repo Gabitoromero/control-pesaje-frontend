@@ -7,12 +7,15 @@ export const loginMock = {
 };
 
 export const articulosMock = [
-  { id: 1, codigo: 'ART-001', nombre: 'Harina 000', descripcion: 'Harina de trigo tipo 000', activo: true },
-  { id: 2, codigo: 'ART-002', nombre: 'Azúcar',     descripcion: 'Azúcar refinada',           activo: true },
-  { id: 3, codigo: 'ART-003', nombre: 'Sal fina',   descripcion: undefined,                   activo: true },
+  { id: 1, marca: 'MarcaA', nombre: 'Harina 000', descripcion: 'Harina de trigo tipo 000', activo: true },
+  { id: 2, marca: 'MarcaB', nombre: 'Azúcar',     descripcion: 'Azúcar refinada',           activo: true },
+  { id: 3, marca: 'MarcaC', nombre: 'Sal fina',   descripcion: undefined,                   activo: true },
 ];
 
-export const articulosMockInactivos: typeof articulosMock = [];
+export const articulosMockInactivos = [
+  { id: 4, marca: 'MarcaD', nombre: 'Levadura seca', descripcion: 'Levadura inactiva', activo: false },
+  { id: 5, marca: 'MarcaE', nombre: 'Manteca',       descripcion: undefined,           activo: false },
+];
 
 export const usuariosMock = [
   { id: 1, nombreApellido: 'Admin Istrador', nombreUsuario: 'admin', rol: 'administrador', activo: true, puedeTomarMuestrasLibres: false },

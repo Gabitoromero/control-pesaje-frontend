@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getArticulos,
@@ -9,14 +9,26 @@ import {
   type Articulo,
 } from '../../../api/articulos';
 import { Plus, Edit, Trash, X } from 'lucide-react';
+import { isAxiosError } from 'axios';
+import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
-const EMPTY_FORM = { codigo: '', nombre: '', descripcion: '', marca: '' };
+const EMPTY_FORM = { nombre: '', descripcion: '', marca: '' };
+
+const ARTICULO_FIELDS: SearchField[] = [
+  { value: 'nombre', label: 'Nombre' },
+  { value: 'marca', label: 'Marca' },
+  { value: 'descripcion', label: 'Descripción' },
+];
 
 export const ArticulosPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+
+  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
+  const [field, setField] = useState('nombre');
+  const [query, setQuery] = useState('');
 
   const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
     queryKey: ['articulos'],
@@ -30,7 +42,20 @@ export const ArticulosPage = () => {
 
   const isLoading = loadingActivos || loadingInactivos;
   const error = errorActivos || errorInactivos;
-  const articulos = [...activos, ...inactivos];
+
+  const articulosFiltrados = useMemo(() => {
+    const base = status === 'activo' ? activos : inactivos;
+    const q = query.trim().toLowerCase();
+
+    let result = base;
+    if (q) {
+      result = base.filter((a) =>
+        String(a[field as keyof Articulo] ?? '').toLowerCase().includes(q)
+      );
+    }
+
+    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [activos, inactivos, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createArticulo,
@@ -48,6 +73,15 @@ export const ArticulosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo guardar el artículo:\n${msg}`);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -55,6 +89,16 @@ export const ArticulosPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
       queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
+      closeModal();
+    },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo eliminar el artículo:\n${msg}`);
     },
   });
 
@@ -62,7 +106,6 @@ export const ArticulosPage = () => {
     if (articulo) {
       setEditingArticulo(articulo);
       setFormData({
-        codigo: articulo.codigo,
         nombre: articulo.nombre,
         descripcion: articulo.descripcion || '',
         marca: articulo.marca || '',
@@ -83,16 +126,32 @@ export const ArticulosPage = () => {
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (editingArticulo?.id) {
-      updateMutation.mutate({ id: editingArticulo.id, data: formData });
+      updateMutation.mutate({
+        id: editingArticulo.id,
+        data: { nombre: formData.nombre, marca: formData.marca || undefined, descripcion: formData.descripcion.trim() || null },
+      });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate({ nombre: formData.nombre, marca: formData.marca || undefined, descripcion: formData.descripcion || undefined, activo: true });
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este artículo?')) {
-      deleteMutation.mutate(id);
+  const handleDelete = () => {
+    if (editingArticulo?.id && window.confirm('¿Está seguro de eliminar este artículo?')) {
+      deleteMutation.mutate(editingArticulo.id);
     }
+  };
+
+  const handleActivar = () => {
+    if (!editingArticulo?.id) return;
+    updateMutation.mutate({
+      id: editingArticulo.id,
+      data: {
+        nombre: formData.nombre,
+        marca: formData.marca || undefined,
+        descripcion: formData.descripcion.trim() || null,
+        activo: true,
+      },
+    });
   };
 
   const isBusy = createMutation.isPending || updateMutation.isPending;
@@ -112,11 +171,20 @@ export const ArticulosPage = () => {
         </button>
       </div>
 
+      <SearchToolbar
+        status={status}
+        onStatusChange={setStatus}
+        fields={ARTICULO_FIELDS}
+        field={field}
+        onFieldChange={setField}
+        query={query}
+        onQueryChange={setQuery}
+      />
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
@@ -125,10 +193,9 @@ export const ArticulosPage = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {articulos.map((articulo) => (
+            {articulosFiltrados.map((articulo) => (
               <tr key={articulo.id} className={`hover:bg-gray-50 ${articulo.activo === false ? 'opacity-60' : ''}`}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{articulo.codigo}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{articulo.nombre}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{articulo.nombre}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{articulo.marca || '-'}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{articulo.descripcion || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -137,18 +204,15 @@ export const ArticulosPage = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(articulo)} className="text-indigo-600 hover:text-indigo-900 mr-4" title="Editar">
+                  <button onClick={() => openModal(articulo)} className="text-indigo-600 hover:text-indigo-900" title="Editar">
                     <Edit size={18} />
-                  </button>
-                  <button onClick={() => articulo.id && handleDelete(articulo.id)} className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <Trash size={18} />
                   </button>
                 </td>
               </tr>
             ))}
-            {articulos.length === 0 && (
+            {articulosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No hay artículos registrados.</td>
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay artículos registrados.</td>
               </tr>
             )}
           </tbody>
@@ -166,23 +230,13 @@ export const ArticulosPage = () => {
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="articulo-codigo" className="block text-sm font-medium text-gray-700">Código</label>
-                  <input
-                    id="articulo-codigo"
-                    type="text"
-                    required
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                  />
-                </div>
-                <div>
                   <label htmlFor="articulo-nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
                   <input
                     id="articulo-nombre"
                     type="text"
                     required
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Ej: Palito bombón"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   />
@@ -192,23 +246,39 @@ export const ArticulosPage = () => {
                   <input
                     id="articulo-marca"
                     type="text"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    required
+                    placeholder="Ej: Arcor"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
                     value={formData.marca}
                     onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label htmlFor="articulo-descripcion" className="block text-sm font-medium text-gray-700">Descripción</label>
+                  <label htmlFor="articulo-descripcion" className="block text-sm font-medium text-gray-700">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
                   <textarea
                     id="articulo-descripcion"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
                     rows={3}
+                    minLength={4}
+                    placeholder="Ej: Caramelo sabor frutilla en palito"
                     value={formData.descripcion}
                     onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   />
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
+                {editingArticulo?.activo === false && (
+                  <button type="button" disabled={isBusy} onClick={handleActivar}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto">
+                    Activar Artículo
+                  </button>
+                )}
+                {editingArticulo?.id && editingArticulo?.activo !== false && (
+                  <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 mr-auto flex items-center gap-2">
+                    <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Artículo'}
+                  </button>
+                )}
                 <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>

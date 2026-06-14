@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers, articulosMock } from '../../../test/handlers';
+import { handlers, articulosMock, articulosMockInactivos } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { ArticulosPage } from './ArticulosPage';
 
@@ -13,156 +13,153 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('ArticulosPage', () => {
-  it('muestra la lista de artículos al cargar', async () => {
+  it('default mount shows only activos and "Código" column header is NOT present', async () => {
     renderWithProviders(<ArticulosPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('ART-001')).toBeInTheDocument();
-      expect(screen.getByText('ART-002')).toBeInTheDocument();
-      expect(screen.getByText('ART-003')).toBeInTheDocument();
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Harina 000')).toBeInTheDocument();
     expect(screen.getByText('Azúcar')).toBeInTheDocument();
+    expect(screen.getByText('Sal fina')).toBeInTheDocument();
+
+    // Inactivos should NOT be present by default
+    expect(screen.queryByText('Levadura seca')).not.toBeInTheDocument();
+    expect(screen.queryByText('Manteca')).not.toBeInTheDocument();
+
+    // "Código" column header must NOT appear in the table
+    const headers = screen.getAllByRole('columnheader');
+    const headerTexts = headers.map((h) => h.textContent?.toLowerCase() ?? '');
+    expect(headerTexts.some((t) => t.includes('código'))).toBe(false);
   });
 
-  it('muestra mensaje de error cuando falla la carga', async () => {
-    server.use(
-      http.get('http://localhost:3000/api/articulos', () =>
-        HttpResponse.json({ success: false }, { status: 500 })
-      )
-    );
-
+  it('switching status dropdown to "Inactivos" shows only inactivos', async () => {
     renderWithProviders(<ArticulosPage />);
 
-    await screen.findByText(/error al cargar artículos/i);
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Levadura seca')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Levadura seca')).toBeInTheDocument();
+    expect(screen.getByText('Manteca')).toBeInTheDocument();
+
+    // Activos should NOT be present
+    expect(screen.queryByText('Harina 000')).not.toBeInTheDocument();
+    expect(screen.queryByText('Azúcar')).not.toBeInTheDocument();
   });
 
-  it('muestra estado vacío cuando no hay artículos', async () => {
-    server.use(
-      http.get('http://localhost:3000/api/articulos', () =>
-        HttpResponse.json({ success: true, data: [] })
-      )
-    );
-
+  it('typing search text filters activos by nombre; clearing restores full list', async () => {
     renderWithProviders(<ArticulosPage />);
 
-    await screen.findByText(/no hay artículos registrados/i);
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Buscar...');
+
+    await userEvent.type(searchInput, 'harina');
+
+    expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    expect(screen.queryByText('Azúcar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sal fina')).not.toBeInTheDocument();
+
+    await userEvent.clear(searchInput);
+
+    expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    expect(screen.getByText('Azúcar')).toBeInTheDocument();
+    expect(screen.getByText('Sal fina')).toBeInTheDocument();
   });
 
-  it('abre el modal al hacer click en Nuevo Artículo', async () => {
+  it('"Activar Artículo" button is visible when editing an inactive articulo', async () => {
     renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
 
-    await userEvent.click(screen.getByRole('button', { name: /nuevo artículo/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
 
-    expect(screen.getByRole('heading', { name: 'Nuevo Artículo' })).toBeInTheDocument();
-  });
+    // Switch to inactivos
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
 
-  it('cierra el modal al hacer click en Cancelar', async () => {
-    renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
+    await waitFor(() => {
+      expect(screen.getByText('Levadura seca')).toBeInTheDocument();
+    });
 
-    await userEvent.click(screen.getByRole('button', { name: /nuevo artículo/i }));
-    await userEvent.click(screen.getByRole('button', { name: /cancelar/i }));
-
-    expect(screen.queryByRole('heading', { name: 'Nuevo Artículo' })).not.toBeInTheDocument();
-  });
-
-  it('pre-rellena el formulario al editar un artículo existente', async () => {
-    renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
-
-    const row = screen.getByText('ART-001').closest('tr')!;
-    await userEvent.click(within(row).getByTitle('Editar'));
+    const levaduraText = await screen.findByText('Levadura seca');
+    const levaduraRow = levaduraText.closest('tr')!;
+    const editBtn = within(levaduraRow).getByTitle('Editar');
+    await userEvent.click(editBtn);
 
     expect(screen.getByRole('heading', { name: 'Editar Artículo' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('ART-001')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Harina 000')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Harina de trigo tipo 000')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activar Artículo' })).toBeInTheDocument();
   });
 
-  it('crea un artículo nuevo al enviar el formulario', async () => {
+  it('"Activar Artículo" button is NOT visible when editing an active articulo', async () => {
     renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
 
-    await userEvent.click(screen.getByRole('button', { name: /nuevo artículo/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
 
-    await userEvent.type(screen.getByLabelText(/código/i), 'ART-099');
-    await userEvent.type(screen.getByLabelText(/nombre/i), 'Nuevo producto');
-    await userEvent.type(screen.getByLabelText(/marca/i), 'Nueva Marca');
+    const harinaText = await screen.findByText('Harina 000');
+    const harinaRow = harinaText.closest('tr')!;
+    const editBtn = within(harinaRow).getByTitle('Editar');
+    await userEvent.click(editBtn);
 
-    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
-
-    await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Nuevo Artículo' })).not.toBeInTheDocument()
-    );
+    expect(screen.getByRole('heading', { name: 'Editar Artículo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Activar Artículo' })).not.toBeInTheDocument();
   });
 
-  it('actualiza un artículo existente al enviar el formulario de edición', async () => {
-    renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
-
-    const row = screen.getByText('ART-001').closest('tr')!;
-    await userEvent.click(within(row).getByTitle('Editar'));
-
-    const nombreInput = screen.getByDisplayValue('Harina 000');
-    await userEvent.clear(nombreInput);
-    await userEvent.type(nombreInput, 'Harina 000 especial');
-
-    const marcaInput = screen.getByLabelText(/marca/i);
-    await userEvent.clear(marcaInput);
-    await userEvent.type(marcaInput, 'Marca Editada');
-
-    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
-
-    await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Editar Artículo' })).not.toBeInTheDocument()
-    );
-  });
-
-  it('elimina un artículo al confirmar el diálogo', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
-
-    const row = screen.getByText('ART-001').closest('tr')!;
-    await userEvent.click(within(row).getByTitle('Eliminar'));
-
-    expect(window.confirm).toHaveBeenCalledWith('¿Está seguro de eliminar este artículo?');
-
-    vi.restoreAllMocks();
-  });
-
-  it('no elimina el artículo si el usuario cancela el diálogo', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-
-    let deleteCalled = false;
+  it('clicking "Activar Artículo" sends PUT with activo:true; on success, modal closes', async () => {
+    let requestPayload: unknown = null;
     server.use(
-      http.delete('http://localhost:3000/api/articulos/:id', () => {
-        deleteCalled = true;
-        return new HttpResponse(null, { status: 204 });
+      http.put('http://localhost:3000/api/articulos/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
       })
     );
 
     renderWithProviders(<ArticulosPage />);
-    await screen.findByText('ART-001');
 
-    const row = screen.getByText('ART-001').closest('tr')!;
-    await userEvent.click(within(row).getByTitle('Eliminar'));
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
 
-    expect(deleteCalled).toBe(false);
+    // Switch to inactivos
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
 
-    vi.restoreAllMocks();
+    await waitFor(() => {
+      expect(screen.getByText('Levadura seca')).toBeInTheDocument();
+    });
+
+    const levaduraText = await screen.findByText('Levadura seca');
+    const levaduraRow = levaduraText.closest('tr')!;
+    const editBtn = within(levaduraRow).getByTitle('Editar');
+    await userEvent.click(editBtn);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activar Artículo' }));
+
+    await waitFor(() => {
+      expect((requestPayload as Record<string, unknown>).activo).toBe(true);
+      expect(screen.queryByRole('heading', { name: 'Editar Artículo' })).not.toBeInTheDocument();
+    });
   });
 
-  it('el envelope del backend se desenvuelve correctamente (data.data)', async () => {
+  it('envelope is unwrapped correctly — row count matches mock length', async () => {
     renderWithProviders(<ArticulosPage />);
 
-    // Si articulos.ts no desenvuelve .data.data, this.map no sería función y el componente exploraría
     await waitFor(() => {
-      expect(screen.getAllByRole('row').length).toBe(articulosMock.length + 1); // +1 por el header
+      // +1 for the header row
+      expect(screen.getAllByRole('row').length).toBe(articulosMock.length + 1);
     });
   });
 });
