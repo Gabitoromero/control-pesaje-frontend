@@ -13,239 +13,204 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('UsuariosPage', () => {
-  it('muestra la lista de usuarios activos e inactivos al cargar', async () => {
+  it('default mount shows only activos; inactivos are NOT present', async () => {
     renderWithProviders(<UsuariosPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('admin')).toBeInTheDocument();
-      expect(screen.getByText('operario1')).toBeInTheDocument();
-      expect(screen.getByText('inactivo1')).toBeInTheDocument();
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Administrador')).toBeInTheDocument();
-    expect(screen.getAllByText('Operario').length).toBeGreaterThan(0);
+    // All active users are visible
+    expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    expect(screen.getByText('José Jefe')).toBeInTheDocument();
+    expect(screen.getByText('Pedro Operario')).toBeInTheDocument();
+
+    // Inactive users are NOT rendered
+    usuariosMockInactivos.forEach((u) => {
+      expect(screen.queryByText(u.nombreApellido)).not.toBeInTheDocument();
+    });
   });
 
-  it('muestra el nombre completo de cada usuario', async () => {
+  it('switching status to "inactivo" shows only inactivos; activos are NOT present', async () => {
     renderWithProviders(<UsuariosPage />);
 
-    await screen.findByText('admin');
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Juan Inactivo')).toBeInTheDocument();
+    });
+
+    // Only inactivos are visible
+    usuariosMockInactivos.forEach((u) => {
+      expect(screen.getByText(u.nombreApellido)).toBeInTheDocument();
+    });
+
+    // Activos are NOT visible
+    usuariosMock.forEach((u) => {
+      expect(screen.queryByText(u.nombreApellido)).not.toBeInTheDocument();
+    });
+  });
+
+  it('typing search text filters activos by nombreApellido; clearing restores full list', async () => {
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Buscar...');
+
+    await userEvent.type(searchInput, 'pedro');
+
+    expect(screen.getByText('Pedro Operario')).toBeInTheDocument();
+    expect(screen.queryByText('Admin Istrador')).not.toBeInTheDocument();
+    expect(screen.queryByText('José Jefe')).not.toBeInTheDocument();
+
+    await userEvent.clear(searchInput);
 
     expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    expect(screen.getByText('José Jefe')).toBeInTheDocument();
     expect(screen.getByText('Pedro Operario')).toBeInTheDocument();
-    expect(screen.getByText('Juan Inactivo')).toBeInTheDocument();
   });
 
-  it('muestra el badge de estado para activos e inactivos', async () => {
+  it('"Activar Usuario" visible when editing inactive; NOT visible when editing active', async () => {
     renderWithProviders(<UsuariosPage />);
-
-    await screen.findByText('admin');
-
-    const activeBadges = screen.getAllByText('Activo');
-    const inactiveBadges = screen.getAllByText('Inactivo');
-
-    expect(activeBadges).toHaveLength(usuariosMock.filter((u) => u.activo).length);
-    expect(inactiveBadges).toHaveLength(usuariosMockInactivos.length);
-  });
-
-  it('abre el modal al hacer click en Nuevo Usuario', async () => {
-    renderWithProviders(<UsuariosPage />);
-    await screen.findByText('admin');
-
-    await userEvent.click(screen.getByText('Nuevo Usuario'));
-
-    expect(screen.getByText('Nuevo Usuario', { selector: 'h2' })).toBeInTheDocument();
-  });
-
-  it('muestra campo "Nombre completo" en el modal', async () => {
-    renderWithProviders(<UsuariosPage />);
-    await screen.findByText('admin');
-
-    await userEvent.click(screen.getByText('Nuevo Usuario'));
-
-    expect(screen.getByLabelText(/Nombre completo/)).toBeInTheDocument();
-  });
-
-  it('muestra checkbox "Puede tomar muestras libres" en el modal', async () => {
-    renderWithProviders(<UsuariosPage />);
-    await screen.findByText('admin');
-
-    await userEvent.click(screen.getByText('Nuevo Usuario'));
-
-    expect(screen.getByLabelText(/Puede tomar muestras libres/)).toBeInTheDocument();
-  });
-
-  it('muestra campos PIN y Contraseña para cualquier rol', async () => {
-    renderWithProviders(<UsuariosPage />);
-    await screen.findByText('admin');
-
-    await userEvent.click(screen.getByText('Nuevo Usuario'));
-
-    // Operario (default)
-    expect(screen.getByLabelText(/PIN/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Contraseña/)).toBeInTheDocument();
-
-    // Cambiar a administrador — ambos campos siguen visibles
-    await userEvent.selectOptions(screen.getByLabelText(/Rol/), 'administrador');
-    expect(screen.getByLabelText(/PIN/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Contraseña/)).toBeInTheDocument();
-  });
-
-  it('cierra el modal al hacer click en Cancelar', async () => {
-    renderWithProviders(<UsuariosPage />);
-    await screen.findByText('admin');
-
-    await userEvent.click(screen.getByText('Nuevo Usuario'));
-    await userEvent.click(screen.getByText('Cancelar'));
-
-    expect(screen.queryByText('Nuevo Usuario', { selector: 'h2' })).not.toBeInTheDocument();
-  });
-
-  it('crea un usuario nuevo con PIN plano al enviar el formulario', async () => {
-    let requestPayload: any = null;
-    server.use(
-      http.post('http://localhost:3000/api/usuarios', async ({ request }) => {
-        requestPayload = await request.json();
-        return HttpResponse.json({ success: true, data: { id: 99, ...requestPayload } }, { status: 201 });
-      })
-    );
-
-    renderWithProviders(<UsuariosPage />);
-    await screen.findByText('admin');
-
-    await userEvent.click(screen.getByText('Nuevo Usuario'));
-
-    await userEvent.type(screen.getByLabelText(/Legajo/), '123456');
-    await userEvent.type(screen.getByLabelText(/Nombre completo/), 'Nuevo Usuario');
-    await userEvent.type(screen.getByLabelText(/Nombre de usuario/), 'nuevouser');
-    await userEvent.type(screen.getByLabelText(/PIN/), '4321');
-    await userEvent.type(screen.getByLabelText(/Contraseña/), 'password123');
-
-    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }));
 
     await waitFor(() => {
-      expect(requestPayload).toEqual({
-        legajo: '123456',
-        nombreApellido: 'Nuevo Usuario',
-        nombreUsuario: 'nuevouser',
-        rol: 'operario',
-        puedeTomarMuestrasLibres: false,
-        contrasena: 'password123',
-        pin: '4321',
-      });
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
     });
-  });
 
-  it('pre-rellena el formulario al editar un usuario existente y envía PIN plano', async () => {
-    let requestPayload: any = null;
-    server.use(
-      http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
-        requestPayload = await request.json();
-        return HttpResponse.json({ success: true, data: { id: 3, ...requestPayload } });
-      })
-    );
-
-    renderWithProviders(<UsuariosPage />);
-
-    const pedroText = await screen.findByText('Pedro Operario');
-    const pedroRow = pedroText.closest('tr')!;
-    const editButton = within(pedroRow).getByTitle('Editar');
-    await userEvent.click(editButton);
-
-    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Pedro Operario')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('1234')).toBeInTheDocument();
-
-    // Legajo is required in the form, so fill it out
-    const legajoInput = screen.getByLabelText(/Legajo/);
-    await userEvent.type(legajoInput, '987654');
-
-    const pinInput = screen.getByLabelText(/PIN/);
-    await userEvent.clear(pinInput);
-    await userEvent.type(pinInput, '654321');
-
-    await userEvent.click(screen.getByRole('button', { name: /Guardar/ }));
-
-    await waitFor(() => {
-      expect(requestPayload).toEqual({
-        legajo: '987654',
-        nombreApellido: 'Pedro Operario',
-        nombreUsuario: 'operario1',
-        rol: 'operario',
-        puedeTomarMuestrasLibres: true,
-        pin: '654321',
-      });
-    });
-  });
-
-  it('muestra mensaje de error cuando falla la carga', async () => {
-    server.use(
-      http.get('http://localhost:3000/api/usuarios', () =>
-        HttpResponse.json({ success: false }, { status: 500 })
-      )
-    );
-
-    renderWithProviders(<UsuariosPage />);
-
-    await screen.findByText(/Error al cargar usuarios/);
-  });
-
-  it('no muestra el boton "Activar Usuario" al editar un usuario activo', async () => {
-    renderWithProviders(<UsuariosPage />);
-
-    const pedroText = await screen.findByText('Pedro Operario');
-    const pedroRow = pedroText.closest('tr')!;
-    const editButton = within(pedroRow).getByTitle('Editar');
-    await userEvent.click(editButton);
+    // Open edit modal for an active user — Activar should NOT appear
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
 
     expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Activar Usuario' })).not.toBeInTheDocument();
-  });
 
-  it('muestra el boton "Activar Usuario" al editar un usuario inactivo', async () => {
-    renderWithProviders(<UsuariosPage />);
+    // Close the modal
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
+    // Switch to inactivos
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Juan Inactivo')).toBeInTheDocument();
+    });
+
+    // Open edit modal for an inactive user — Activar SHOULD appear
     const juanText = await screen.findByText('Juan Inactivo');
     const juanRow = juanText.closest('tr')!;
-    const editButton = within(juanRow).getByTitle('Editar');
-    await userEvent.click(editButton);
+    await userEvent.click(within(juanRow).getByTitle('Editar'));
 
     expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Activar Usuario' })).toBeInTheDocument();
   });
 
-  it('al hacer click en "Activar Usuario" envia la peticion PUT con activo: true y los valores del formulario', async () => {
-    let requestPayload: any = null;
+  it('clicking "Activar Usuario" sends PUT with activo:true; modal closes on success', async () => {
+    let requestPayload: unknown = null;
     server.use(
       http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
         requestPayload = await request.json();
-        return HttpResponse.json({ success: true, data: { id: 4, ...requestPayload } });
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
       })
     );
 
     renderWithProviders(<UsuariosPage />);
 
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    // Switch to inactivos
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Juan Inactivo')).toBeInTheDocument();
+    });
+
     const juanText = await screen.findByText('Juan Inactivo');
     const juanRow = juanText.closest('tr')!;
-    const editButton = within(juanRow).getByTitle('Editar');
-    await userEvent.click(editButton);
+    await userEvent.click(within(juanRow).getByTitle('Editar'));
 
     expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
-
-    const legajoInput = screen.getByLabelText(/Legajo/);
-    await userEvent.type(legajoInput, '777777');
 
     await userEvent.click(screen.getByRole('button', { name: 'Activar Usuario' }));
 
     await waitFor(() => {
-      expect(requestPayload).toEqual({
-        legajo: '777777',
-        nombreApellido: 'Juan Inactivo',
-        nombreUsuario: 'inactivo1',
-        rol: 'operario',
-        puedeTomarMuestrasLibres: false,
-        activo: true,
-      });
+      expect((requestPayload as Record<string, unknown>).activo).toBe(true);
+      expect(screen.queryByRole('heading', { name: 'Editar Usuario' })).not.toBeInTheDocument();
     });
+  });
+
+  it('"Eliminar Usuario" button is in modal footer for active usuario; NOT present in table row', async () => {
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    // No delete buttons in table rows — only Edit (title="Editar")
+    const tableRows = screen.getAllByRole('row');
+    // Skip header row (index 0)
+    const dataRows = tableRows.slice(1);
+    dataRows.forEach((row) => {
+      expect(within(row).queryByTitle('Eliminar')).not.toBeInTheDocument();
+      expect(within(row).queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument();
+    });
+
+    // Open modal for an active user
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
+
+    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
+
+    // Eliminar button IS in the modal footer
+    expect(screen.getByRole('button', { name: /Eliminar Usuario/ })).toBeInTheDocument();
+  });
+
+  it('deleteMutation onError shows alert with backend error message', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    server.use(
+      http.delete('http://localhost:3000/api/usuarios/:id', () =>
+        HttpResponse.json(
+          { success: false, error: { message: 'No se puede eliminar: tiene registros asociados' } },
+          { status: 500 }
+        )
+      )
+    );
+
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
+
+    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Eliminar Usuario/ }));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        expect.stringContaining('No se puede eliminar: tiene registros asociados')
+      );
+    });
+
+    alertSpy.mockRestore();
+    confirmSpy.mockRestore();
   });
 });

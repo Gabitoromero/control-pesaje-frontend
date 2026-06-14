@@ -12,9 +12,7 @@ export interface Usuario {
   pin?: string;
 }
 
-export interface UsuarioCreate extends Omit<Usuario, 'id'> {
-  contrasena?: string;
-}
+export type UsuarioCreate = Omit<Usuario, 'id'>;
 
 export const getUsuarios = async (): Promise<Usuario[]> => {
   const response = await api.get<{ success: boolean; data: Usuario[] }>('/usuarios');

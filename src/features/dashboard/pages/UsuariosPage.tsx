@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getUsuarios,
@@ -10,7 +10,9 @@ import {
   type UsuarioCreate,
 } from '../../../api/usuarios';
 import { UsuarioRol } from '../../../shared/types';
-import { Plus, Edit, Trash, X, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash, X } from 'lucide-react';
+import { isAxiosError } from 'axios';
+import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
 const ROL_LABELS: Record<string, string> = {
   [UsuarioRol.ADMINISTRADOR]: 'Administrador',
@@ -24,17 +26,26 @@ const EMPTY_FORM = {
   nombreApellido: '',
   nombreUsuario: '',
   rol: UsuarioRol.OPERARIO as string,
-  contrasena: '',
   pin: '',
   puedeTomarMuestrasLibres: false,
 };
+
+const USUARIO_FIELDS: SearchField[] = [
+  { value: 'nombreApellido', label: 'Nombre completo' },
+  { value: 'nombreUsuario', label: 'Usuario' },
+  { value: 'legajo', label: 'Legajo' },
+  { value: 'rol', label: 'Rol' },
+];
 
 export const UsuariosPage = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
-  const [showPassword, setShowPassword] = useState(false);
+
+  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
+  const [field, setField] = useState('nombreApellido');
+  const [query, setQuery] = useState('');
 
   const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
     queryKey: ['usuarios'],
@@ -48,7 +59,18 @@ export const UsuariosPage = () => {
 
   const isLoading = loadingActivos || loadingInactivos;
   const error = errorActivos || errorInactivos;
-  const usuarios = [...activos, ...inactivos];
+
+  const usuariosFiltrados = useMemo(() => {
+    const base = status === 'activo' ? activos : inactivos;
+    const q = query.trim().toLowerCase();
+    let result = base;
+    if (q) {
+      result = base.filter((u) =>
+        String(u[field as keyof Usuario] ?? '').toLowerCase().includes(q)
+      );
+    }
+    return [...result].sort((a, b) => a.nombreApellido.localeCompare(b.nombreApellido));
+  }, [activos, inactivos, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createUsuario,
@@ -56,6 +78,15 @@ export const UsuariosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
       closeModal();
+    },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo crear el usuario:\n${msg}`);
     },
   });
 
@@ -66,6 +97,15 @@ export const UsuariosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
       closeModal();
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo guardar el usuario:\n${msg}`);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -73,6 +113,16 @@ export const UsuariosPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
+      closeModal();
+    },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo eliminar el usuario:\n${msg}`);
     },
   });
 
@@ -84,7 +134,6 @@ export const UsuariosPage = () => {
         nombreApellido: usuario.nombreApellido || '',
         nombreUsuario: usuario.nombreUsuario,
         rol: usuario.rol,
-        contrasena: '',
         pin: usuario.pin ?? '',
         puedeTomarMuestrasLibres: usuario.puedeTomarMuestrasLibres ?? false,
       });
@@ -99,7 +148,6 @@ export const UsuariosPage = () => {
     setIsModalOpen(false);
     setEditingUsuario(null);
     setFormData(EMPTY_FORM);
-    setShowPassword(false);
   };
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -111,7 +159,6 @@ export const UsuariosPage = () => {
       nombreUsuario: formData.nombreUsuario,
       rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
       puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
-      ...(formData.contrasena ? { contrasena: formData.contrasena } : {}),
       ...(formData.pin ? { pin: formData.pin } : {}),
     };
 
@@ -124,24 +171,23 @@ export const UsuariosPage = () => {
 
   const handleActivar = () => {
     if (!editingUsuario?.id) return;
-
-    const payload: UsuarioCreate = {
-      legajo: formData.legajo,
-      nombreApellido: formData.nombreApellido,
-      nombreUsuario: formData.nombreUsuario,
-      rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
-      puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
-      activo: true,
-      ...(formData.contrasena ? { contrasena: formData.contrasena } : {}),
-      ...(formData.pin ? { pin: formData.pin } : {}),
-    };
-
-    updateMutation.mutate({ id: editingUsuario.id, data: payload });
+    updateMutation.mutate({
+      id: editingUsuario.id,
+      data: {
+        legajo: formData.legajo,
+        nombreApellido: formData.nombreApellido,
+        nombreUsuario: formData.nombreUsuario,
+        rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
+        puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
+        activo: true,
+        ...(formData.pin ? { pin: formData.pin } : {}),
+      },
+    });
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este usuario?')) {
-      deleteMutation.mutate(id);
+  const handleDelete = () => {
+    if (editingUsuario?.id && window.confirm('¿Está seguro de eliminar este usuario?')) {
+      deleteMutation.mutate(editingUsuario.id);
     }
   };
 
@@ -162,24 +208,34 @@ export const UsuariosPage = () => {
         </button>
       </div>
 
+      <SearchToolbar
+        status={status}
+        onStatusChange={setStatus}
+        fields={USUARIO_FIELDS}
+        field={field}
+        onFieldChange={setField}
+        query={query}
+        onQueryChange={setQuery}
+      />
+
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Legajo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Legajo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {usuarios.map((u) => (
+            {usuariosFiltrados.map((u) => (
               <tr key={u.id} className={`hover:bg-gray-50 ${u.activo === false ? 'opacity-60' : ''}`}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.legajo || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.nombreApellido || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.nombreApellido || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.nombreUsuario}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.legajo || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ROL_LABELS[u.rol] ?? u.rol}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -187,16 +243,13 @@ export const UsuariosPage = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(u)} className="text-indigo-600 hover:text-indigo-900 mr-4" title="Editar">
+                  <button onClick={() => openModal(u)} className="text-indigo-600 hover:text-indigo-900" title="Editar">
                     <Edit size={18} />
-                  </button>
-                  <button onClick={() => u.id && handleDelete(u.id)} className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <Trash size={18} />
                   </button>
                 </td>
               </tr>
             ))}
-            {usuarios.length === 0 && (
+            {usuariosFiltrados.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No hay usuarios registrados.</td>
               </tr>
@@ -258,7 +311,7 @@ export const UsuariosPage = () => {
                     id="rol"
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={formData.rol}
-                    onChange={(e) => setFormData({ ...formData, rol: e.target.value, contrasena: '', pin: '' })}
+                    onChange={(e) => setFormData({ ...formData, rol: e.target.value, pin: '' })}
                   >
                     {Object.entries(ROL_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
@@ -274,36 +327,12 @@ export const UsuariosPage = () => {
                     inputMode="numeric"
                     pattern="\d{4,6}"
                     maxLength={6}
+                    required={!editingUsuario}
                     placeholder={editingUsuario ? 'Dejar vacío para no cambiar' : ''}
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={formData.pin}
                     onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
                   />
-                </div>
-
-                <div>
-                  <label htmlFor="contrasena" className="block text-sm font-medium text-gray-700">Contraseña</label>
-                  <div className="relative mt-1">
-                    <input
-                      id="contrasena"
-                      type={showPassword ? 'text' : 'password'}
-                      minLength={4}
-                      required={!editingUsuario}
-                      placeholder={editingUsuario ? 'Dejar vacío para no cambiar' : ''}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      value={formData.contrasena}
-                      onChange={(e) => setFormData({ ...formData, contrasena: e.target.value })}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                      tabIndex={-1}
-                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
                 </div>
 
                 <div className="sm:col-span-2 flex items-center gap-3 pt-1">
@@ -322,7 +351,7 @@ export const UsuariosPage = () => {
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
-                {editingUsuario && editingUsuario.activo === false && (
+                {editingUsuario?.activo === false && (
                   <button
                     type="button"
                     disabled={isBusy}
@@ -330,6 +359,16 @@ export const UsuariosPage = () => {
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto"
                   >
                     Activar Usuario
+                  </button>
+                )}
+                {editingUsuario?.id && editingUsuario?.activo !== false && (
+                  <button
+                    type="button"
+                    disabled={isBusy || deleteMutation.isPending}
+                    onClick={handleDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 mr-auto flex items-center gap-2"
+                  >
+                    <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Usuario'}
                   </button>
                 )}
                 <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">

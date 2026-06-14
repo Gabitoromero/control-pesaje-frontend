@@ -18,13 +18,13 @@ export const articulosMockInactivos = [
 ];
 
 export const usuariosMock = [
-  { id: 1, nombreApellido: 'Admin Istrador', nombreUsuario: 'admin', rol: 'administrador', activo: true, puedeTomarMuestrasLibres: false },
-  { id: 2, nombreApellido: 'José Jefe', nombreUsuario: 'jefe1', rol: 'jefe', activo: true, puedeTomarMuestrasLibres: false },
-  { id: 3, nombreApellido: 'Pedro Operario', nombreUsuario: 'operario1', rol: 'operario', activo: true, puedeTomarMuestrasLibres: true, pin: '1234' },
+  { id: 1, nombreApellido: 'Admin Istrador', nombreUsuario: 'admin',     rol: 'administrador', activo: true, puedeTomarMuestrasLibres: false, legajo: '111111' },
+  { id: 2, nombreApellido: 'José Jefe',      nombreUsuario: 'jefe1',     rol: 'jefe',          activo: true, puedeTomarMuestrasLibres: false, legajo: '222222' },
+  { id: 3, nombreApellido: 'Pedro Operario', nombreUsuario: 'operario1', rol: 'operario',      activo: true, puedeTomarMuestrasLibres: true,  legajo: '333333', pin: '1234' },
 ];
 
 export const usuariosMockInactivos = [
-  { id: 4, nombreApellido: 'Juan Inactivo', nombreUsuario: 'inactivo1', rol: 'operario', activo: false, puedeTomarMuestrasLibres: false },
+  { id: 4, nombreApellido: 'Juan Inactivo', nombreUsuario: 'inactivo1', rol: 'operario', activo: false, puedeTomarMuestrasLibres: false, legajo: '444444' },
 ];
 
 export const etapasMock = [
