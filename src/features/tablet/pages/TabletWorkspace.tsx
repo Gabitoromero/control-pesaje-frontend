@@ -26,7 +26,7 @@ export const TabletWorkspace: React.FC = () => {
   // Heartbeat para mantener sesión viva en backend
   useActividadHeartbeat(lineaId);
 
-  const { pesoNeto, isEstable, isConnected } = useBalanzaWebSocket(lineaId);
+  const { pesoNeto, isConnected } = useBalanzaWebSocket(lineaId);
 
   // En producción, la etapa activa se obtendría del backend para la línea actual.
   const [etapaActiva] = useState<RutaPasadaEtapa | null>(ETAPA_MOCK);
@@ -48,7 +48,7 @@ export const TabletWorkspace: React.FC = () => {
   }
 
   const handleRegistrarMuestra = () => {
-    if (isEstable && isConnected) {
+    if (isConnected) {
       addSample(pesoNeto);
     }
   };
@@ -101,19 +101,17 @@ export const TabletWorkspace: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 mb-10">
-            <div className={`w-4 h-4 rounded-full ${isEstable ? 'bg-green-500' : 'bg-amber-500'}`} />
+            <div className={`w-4 h-4 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'}`} />
             <span className="text-xl font-medium text-slate-600">
-              {isConnected 
-                ? (isEstable ? 'Peso Estable' : 'Balanza en movimiento...') 
-                : 'Balanza Desconectada'}
+              {isConnected ? 'Conectado' : 'Sin señal'}
             </span>
           </div>
 
           <button
             onClick={handleRegistrarMuestra}
-            disabled={!isEstable || !isConnected}
+            disabled={!isConnected}
             className={`w-full py-6 rounded-2xl text-2xl font-bold transition-all shadow-lg
-              ${isEstable && isConnected
+              ${isConnected
                 ? 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}

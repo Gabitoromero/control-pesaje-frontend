@@ -3,12 +3,10 @@ import { getSocket } from '../../../services/websocket';
 
 export interface BalanzaData {
   pesoNeto: number;
-  isEstable: boolean;
 }
 
 export function useBalanzaWebSocket(lineaId: number | null) {
   const [pesoNeto, setPesoNeto] = useState<number>(0);
-  const [isEstable, setIsEstable] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
@@ -27,12 +25,10 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     const onDisconnect = () => {
       setIsConnected(false);
       setPesoNeto(0);
-      setIsEstable(false);
     };
 
     const onBalanzaData = (data: BalanzaData) => {
       setPesoNeto(data.pesoNeto);
-      setIsEstable(data.isEstable);
     };
 
     if (socket.connected) {
@@ -53,5 +49,5 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     };
   }, [lineaId]);
 
-  return { pesoNeto, isEstable, isConnected };
+  return { pesoNeto, isConnected };
 }
