@@ -1,8 +1,8 @@
-import { screen, waitFor, within, fireEvent } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers, etapasMock, etapasMockInactivos } from '../../../test/handlers';
+import { handlers } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { EtapasPage } from './EtapasPage';
 
@@ -177,11 +177,11 @@ describe('EtapasPage', () => {
   });
 
   it('clicking "Activar Etapa" sends PUT with activo:true in body; on 200, query keys are invalidated and modal closes', async () => {
-    let requestPayload: any = null;
+    let requestPayload: unknown = null;
     server.use(
       http.put('http://localhost:3000/api/etapas/:id', async ({ request }) => {
         requestPayload = await request.json();
-        return HttpResponse.json({ success: true, data: { id: 4, ...requestPayload } });
+        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
       })
     );
 

@@ -95,7 +95,7 @@ export const TabletWorkspace: React.FC = () => {
           
           <div className="text-center mb-8">
             <span className="text-8xl font-black text-slate-800 tabular-nums">
-              {pesoNeto.toFixed(2)}
+              {pesoNeto.toFixed(3)}
             </span>
             <span className="text-3xl text-slate-500 ml-2">kg</span>
           </div>
@@ -144,7 +144,7 @@ export const TabletWorkspace: React.FC = () => {
                       </span>
                       <div>
                         <span className="text-xl font-bold tabular-nums text-slate-800">
-                          {muestra.peso_neto.toFixed(2)} kg
+                          {muestra.peso_neto.toFixed(3)} kg
                         </span>
                         <div className="text-sm mt-1">
                           {muestra.estado_validacion === 'ok' 
