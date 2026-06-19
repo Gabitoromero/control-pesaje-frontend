@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 import Cookies from 'js-cookie';
 import { cerrarSesionLinea } from '../../../api/auth';
 import { setLogoutHandler } from '../../../api/axios';
+import { resetSocket } from '../../../services/websocket';
 
 vi.mock('js-cookie');
 vi.mock('../../../api/auth', () => ({
@@ -12,6 +13,9 @@ vi.mock('../../../api/auth', () => ({
 vi.mock('../../../api/axios', () => ({
   setLogoutHandler: vi.fn(),
   default: {},
+}));
+vi.mock('../../../services/websocket', () => ({
+  resetSocket: vi.fn(),
 }));
 
 describe('AuthContext', () => {
@@ -88,7 +92,7 @@ describe('AuthContext', () => {
 
   it('logout global limpia todo', () => {
     const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
-    
+
     act(() => {
       result.current.login({
         token: 'jwt-123',
@@ -109,5 +113,57 @@ describe('AuthContext', () => {
     expect(result.current.activeLineaId).toBeNull();
     expect(result.current.user).toBeNull();
     expect(result.current.token).toBeNull();
+  });
+
+  it('login calls resetSocket to clear any previous socket singleton', () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    act(() => {
+      result.current.login({
+        token: 'jwt-user-a',
+        user: { id: 1, legajo: 'LA', nombreUsuario: 'UserA', rol: 'operario', puedeTomarMuestrasLibres: false },
+      });
+    });
+
+    expect(resetSocket).toHaveBeenCalled();
+  });
+
+  it('logout calls resetSocket before clearing state (no cross-user socket leak)', () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    act(() => {
+      result.current.login({
+        token: 'jwt-user-a',
+        user: { id: 1, legajo: 'LA', nombreUsuario: 'UserA', rol: 'operario', puedeTomarMuestrasLibres: false },
+      });
+    });
+
+    vi.mocked(resetSocket).mockClear();
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(resetSocket).toHaveBeenCalledOnce();
+    // activeLineaId must be null after logout — no state leak to next user
+    expect(result.current.activeLineaId).toBeNull();
+  });
+
+  it('login sets activeLineaId to null — no cross-user leak from previous session', () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    act(() => {
+      result.current.openLineSession(7);
+    });
+    expect(result.current.activeLineaId).toBe(7);
+
+    act(() => {
+      result.current.login({
+        token: 'jwt-user-b',
+        user: { id: 2, legajo: 'LB', nombreUsuario: 'UserB', rol: 'operario', puedeTomarMuestrasLibres: false },
+      });
+    });
+
+    expect(result.current.activeLineaId).toBeNull();
   });
 });

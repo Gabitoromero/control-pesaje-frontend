@@ -4,6 +4,7 @@ import Cookies from 'js-cookie';
 import type { User, AuthResponse } from '../../../shared/types/auth';
 import { setLogoutHandler } from '../../../api/axios';
 import { cerrarSesionLinea } from '../../../api/auth';
+import { resetSocket } from '../../../services/websocket';
 import { useCallback, useEffect } from 'react';
 
 export interface AuthContextType {
@@ -51,6 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const logout = useCallback(() => {
+    resetSocket();
     setToken(null);
     setUser(null);
     setActiveLineaId(null);
@@ -66,6 +68,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [logout]);
 
   const login = useCallback((data: AuthResponse) => {
+    resetSocket();
     setToken(data.token);
     setUser(data.user);
     setActiveLineaId(null);
