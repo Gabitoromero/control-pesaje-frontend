@@ -89,7 +89,7 @@ export const RutaFormPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => updateRuta(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<RutaFormValues> }) => updateRuta(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
       navigate('/dashboard/rutas');
@@ -106,7 +106,7 @@ export const RutaFormPage = () => {
     if (isEditing) {
       updateMutation.mutate({ id: Number(id), data: payload });
     } else {
-      createMutation.mutate(payload as any);
+      createMutation.mutate(payload as unknown as Parameters<typeof createRuta>[0]);
     }
   };
 
