@@ -1,13 +1,27 @@
 import api from './axios';
 
+export interface RutaPasadaEtapa {
+  id?: number;
+  articulo: number;
+  etapa: number;
+  orden: number;
+  pesoIdeal: number;
+  pesoMinimo: number;
+  pesoMaximo: number;
+  cantidadMuestrasRequeridas: number;
+}
+
 export interface Ruta {
   id?: number;
   nombre: string;
   descripcion?: string | null;
   activo?: boolean;
+  etapas?: RutaPasadaEtapa[];
 }
 
-export interface RutaCreate extends Omit<Ruta, 'id'> {}
+export interface RutaCreate extends Omit<Ruta, 'id'> {
+  etapas: RutaPasadaEtapa[];
+}
 
 interface ApiEnvelope<T> {
   success: boolean;

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   getRutas,
   getRutasInactivas,
@@ -13,7 +14,6 @@ import { Plus, Edit, Trash, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
-const EMPTY_FORM = { nombre: '', descripcion: '' };
 
 const RUTA_FIELDS: SearchField[] = [
   { value: 'nombre', label: 'Nombre' },
@@ -22,9 +22,7 @@ const RUTA_FIELDS: SearchField[] = [
 
 export const RutasPage = () => {
   const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRuta, setEditingRuta] = useState<Ruta | null>(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
+  const navigate = useNavigate();
 
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
@@ -62,7 +60,6 @@ export const RutasPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
       queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
-      closeModal();
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
@@ -81,7 +78,6 @@ export const RutasPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
       queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
-      closeModal();
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
@@ -99,7 +95,6 @@ export const RutasPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
       queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
-      closeModal();
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
@@ -112,54 +107,21 @@ export const RutasPage = () => {
     },
   });
 
-  const openModal = (ruta?: Ruta) => {
-    if (ruta) {
-      setEditingRuta(ruta);
-      setFormData({ nombre: ruta.nombre, descripcion: ruta.descripcion || '' });
-    } else {
-      setEditingRuta(null);
-      setFormData(EMPTY_FORM);
-    }
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingRuta(null);
-    setFormData(EMPTY_FORM);
-  };
-
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (editingRuta?.id) {
-      updateMutation.mutate({
-        id: editingRuta.id,
-        data: { nombre: formData.nombre, descripcion: formData.descripcion.trim() || null },
-      });
-    } else {
-      createMutation.mutate({ nombre: formData.nombre, descripcion: formData.descripcion || undefined, activo: true });
+  const handleDelete = (id: number) => {
+    if (window.confirm('¿Está seguro de eliminar esta ruta?')) {
+      deleteMutation.mutate(id);
     }
   };
 
-  const handleDelete = () => {
-    if (editingRuta?.id && window.confirm('¿Está seguro de eliminar esta ruta?')) {
-      deleteMutation.mutate(editingRuta.id);
-    }
-  };
-
-  const handleActivar = () => {
-    if (!editingRuta?.id) return;
+  const handleActivar = (id: number) => {
     updateMutation.mutate({
-      id: editingRuta.id,
+      id,
       data: {
-        nombre: formData.nombre,
-        descripcion: formData.descripcion.trim() || null,
         activo: true,
       },
     });
   };
 
-  const isBusy = createMutation.isPending || updateMutation.isPending;
 
   if (isLoading) return <div className="p-6">Cargando rutas...</div>;
   if (error) return <div className="p-6 text-red-500">Error al cargar rutas</div>;
@@ -169,7 +131,7 @@ export const RutasPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Gestión de Rutas</h1>
         <button
-          onClick={() => openModal()}
+          onClick={() => navigate('/dashboard/rutas/new')}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
         >
           <Plus size={18} /> Nueva Ruta
@@ -207,9 +169,19 @@ export const RutasPage = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(ruta)} className="text-indigo-600 hover:text-indigo-900" title="Editar">
+                  {ruta.activo === false && (
+                    <button onClick={() => handleActivar(ruta.id!)} className="text-green-600 hover:text-green-900 mr-3" title="Activar">
+                      Activar
+                    </button>
+                  )}
+                  <button onClick={() => navigate(`/dashboard/rutas/${ruta.id}`)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar">
                     <Edit size={18} />
                   </button>
+                  {ruta.activo !== false && (
+                    <button onClick={() => handleDelete(ruta.id!)} className="text-red-600 hover:text-red-900" title="Eliminar">
+                      <Trash size={18} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -221,66 +193,6 @@ export const RutasPage = () => {
           </tbody>
         </table>
       </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold">{editingRuta ? 'Editar Ruta' : 'Nueva Ruta'}</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="ruta-nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input
-                    id="ruta-nombre"
-                    type="text"
-                    required
-                    placeholder="Ej: Ruta de producción A"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="ruta-descripcion" className="block text-sm font-medium text-gray-700">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
-                  <textarea
-                    id="ruta-descripcion"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
-                    rows={3}
-                    minLength={4}
-                    placeholder="Ej: Ruta para productos de alta rotación"
-                    value={formData.descripcion}
-                    onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end gap-3">
-                {editingRuta?.activo === false && (
-                  <button type="button" disabled={isBusy} onClick={handleActivar}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto">
-                    Activar Ruta
-                  </button>
-                )}
-                {editingRuta?.id && editingRuta?.activo !== false && (
-                  <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 mr-auto flex items-center gap-2">
-                    <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Ruta'}
-                  </button>
-                )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isBusy} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
-                  {isBusy ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
