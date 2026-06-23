@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePasadaState } from './usePasadaState';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
-import type { RutaPasadaEtapa } from '../../../shared/types/domain';
+import type { RutaPasadaEtapa } from '../../../api/rutas';
 
 vi.mock('../../../api/muestras', () => ({
   registrarMuestra: vi.fn(),
@@ -11,16 +11,16 @@ vi.mock('../../../api/muestras', () => ({
 
 const mockEtapas: RutaPasadaEtapa[] = [
   {
-    etapaId: 10,
-    nombre: 'Stage 1',
+    etapa: { id: 10, nombre: 'Stage 1' },
+    orden: 1,
     pesoMinimo: 10,
     pesoIdeal: 15,
     pesoMaximo: 20,
     cantidadMuestrasRequeridas: 2,
   },
   {
-    etapaId: 20,
-    nombre: 'Stage 2',
+    etapa: { id: 20, nombre: 'Stage 2' },
+    orden: 2,
     pesoMinimo: 30,
     pesoIdeal: 35,
     pesoMaximo: 40,
@@ -45,7 +45,7 @@ describe('usePasadaState', () => {
     );
 
     // Initial state: Stage 1 is active (no samples)
-    expect(result.current.etapaActiva?.etapaId).toBe(10);
+    expect(result.current.etapaActiva?.etapa.id).toBe(10);
     expect(result.current.muestras.length).toBe(0);
   });
 
@@ -77,7 +77,7 @@ describe('usePasadaState', () => {
     );
 
     // Still in Stage 1 since it requires 2 samples, only has 1
-    expect(result.current.etapaActiva?.etapaId).toBe(10);
+    expect(result.current.etapaActiva?.etapa.id).toBe(10);
 
     // Add another sample for Stage 1
     const samples2 = [
@@ -96,7 +96,7 @@ describe('usePasadaState', () => {
     rerender({ samples: samples2 });
 
     // Now Stage 1 has 2 samples, it should advance to Stage 2
-    expect(result.current.etapaActiva?.etapaId).toBe(20);
+    expect(result.current.etapaActiva?.etapa.id).toBe(20);
   });
 
   it('returns null when all stages are completed', () => {

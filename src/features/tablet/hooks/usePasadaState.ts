@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { Muestra, RutaPasadaEtapa, EstadoValidacion } from '../../../shared/types/domain';
+import type { Muestra, EstadoValidacion } from '../../../shared/types/domain';
+import type { RutaPasadaEtapa } from '../../../api/rutas';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
 
 interface UsePasadaStateProps {
@@ -9,7 +10,7 @@ interface UsePasadaStateProps {
   articuloId?: number;
   etapas: RutaPasadaEtapa[];
   initialMuestras?: Muestra[];
-  onApiError?: (error: any) => void;
+  onApiError?: (error: unknown) => void;
 }
 
 const normalizeMuestra = (m: any): Muestra => {
@@ -63,11 +64,8 @@ export function usePasadaState({
     }
   }, [initialMuestrasKey, pasadaId]);
 
-  const calcularEstadoValidacion = (peso: number, etapa: RutaPasadaEtapa | null): EstadoValidacion => {
-    if (!etapa) return 'fuera_de_rango';
-    const pesoMin = etapa.pesoMinimo ?? etapa.peso_minimo ?? 0;
-    const pesoMax = etapa.pesoMaximo ?? etapa.peso_maximo ?? 0;
-    if (peso >= pesoMin && peso <= pesoMax) {
+  const calcularEstadoValidacion = (peso: number, etapa: RutaPasadaEtapa): EstadoValidacion => {
+    if (peso >= etapa.pesoMinimo && peso <= etapa.pesoMaximo) {
       return 'ok';
     }
     return 'fuera_de_rango';
@@ -79,10 +77,10 @@ export function usePasadaState({
     const sortedEtapas = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     
     for (const stage of sortedEtapas) {
-      const stageId = stage.etapa?.id ?? stage.etapaId ?? stage.etapa_id;
+      const stageId = stage.etapa.id;
       if (stageId === undefined) continue;
       
-      const reqCount = stage.cantidadMuestrasRequeridas ?? stage.cantidad_muestras_requeridas ?? 0;
+      const reqCount = stage.cantidadMuestrasRequeridas;
       
       const muestrasEtapa = muestras.filter((m) => {
         const mEtapaId = m.etapaId ?? m.etapa_id;
@@ -109,7 +107,7 @@ export function usePasadaState({
       return;
     }
 
-    const stageId = etapaActiva.etapa?.id ?? etapaActiva.etapaId ?? etapaActiva.etapa_id;
+    const stageId = etapaActiva.etapa.id;
     if (stageId === undefined) {
       console.warn('Cannot add sample: stageId is undefined');
       return;

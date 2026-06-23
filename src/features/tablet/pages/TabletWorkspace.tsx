@@ -7,7 +7,8 @@ import { usePasadaState } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
-import type { RutaPasadaEtapa, Pasada } from '../../../shared/types/domain';
+import type { Pasada } from '../../../shared/types/domain';
+import type { RutaPasadaEtapa } from '../../../api/rutas';
 import { Scale, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 
 export const TabletWorkspace: React.FC = () => {
@@ -49,7 +50,7 @@ export const TabletWorkspace: React.FC = () => {
     enabled: !!targetLineaId,
   });
 
-  const etapas = (linea?.rutaPasadaActiva?.etapas as RutaPasadaEtapa[]) || [];
+  const etapas: RutaPasadaEtapa[] = linea?.rutaPasadaActiva?.etapas ?? [];
 
   // Hook up hook with API integration and client-side derived active stage calculation
   const {
@@ -92,7 +93,7 @@ export const TabletWorkspace: React.FC = () => {
     if (isConnected) {
       try {
         await addSample(pesoNeto);
-      } catch (err) {
+      } catch {
         // usePasadaState already triggers onApiError
       }
     }
@@ -102,7 +103,7 @@ export const TabletWorkspace: React.FC = () => {
   const handleRemoveSample = async (index: number) => {
     try {
       await removeSample(index);
-    } catch (err) {
+    } catch {
       // usePasadaState already triggers onApiError
     }
   };
@@ -112,19 +113,20 @@ export const TabletWorkspace: React.FC = () => {
     try {
       await completarPasada(pasadaId);
       navigate('/tablet/pasadas');
-    } catch (err: any) {
-      const msg = err.response?.data?.error?.message || err.message || 'Error al completar pasada';
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      const msg = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error al completar pasada';
       setApiError(msg);
     }
   };
 
   // Helper variables for UI
-  const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapaId ?? etapaActiva?.etapa_id;
+  const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapaId;
   const samplesForActiveStage = muestras.filter(
     (m) => (m.etapaId ?? m.etapa_id) === currentStageId && (m.estadoValidacion ?? m.estado_validacion) !== 'descartado'
   );
   
-  const activeStageName = etapaActiva?.nombre ?? etapaActiva?.etapa?.nombre ?? 'Completado';
+  const activeStageName = etapaActiva?.etapa?.nombre ?? etapaActiva?.nombre ?? 'Completado';
   const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidad_muestras_requeridas ?? 0;
   
   // Task 3.7: Render Lockout Overlay when isConnected is false or API requests fail
@@ -287,11 +289,10 @@ export const TabletWorkspace: React.FC = () => {
             </p>
             {(apiError || errorPasada || errorLinea) && (
               <div className="bg-red-950/50 border border-red-900/50 rounded-xl p-3 text-xs text-red-400 mb-6 font-mono break-all max-h-32 overflow-y-auto">
-                {apiError || 
-                  (errorPasada as any)?.response?.data?.error?.message || 
-                  (errorPasada as any)?.message || 
-                  (errorLinea as any)?.response?.data?.error?.message || 
-                  (errorLinea as any)?.message}
+                {apiError || (errorPasada as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message || 
+                   (errorPasada as { message?: string })?.message || 
+                   (errorLinea as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message || 
+                   (errorLinea as { message?: string })?.message}
               </div>
             )}
             <button

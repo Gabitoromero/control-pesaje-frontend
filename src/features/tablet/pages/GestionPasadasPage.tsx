@@ -5,7 +5,7 @@ import { ArrowLeft, Play, Plus, Loader2, X } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getArticulos } from '../../../api/articulos';
-import type { Pasada } from '../../../shared/types';
+import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
 
 export const GestionPasadasPage: React.FC = () => {
@@ -44,7 +44,7 @@ export const GestionPasadasPage: React.FC = () => {
   }
 
   // Task 2.2: Client-side filtering by user.id
-  const filteredPasadas = pasadas.filter((pasada: any) => {
+  const filteredPasadas = pasadas.filter((pasada: Pasada) => {
     const pasadaUsuarioId = pasada.usuarioId || pasada.usuario_id || (pasada.usuario && typeof pasada.usuario === 'object' ? pasada.usuario.id : pasada.usuario);
     return pasadaUsuarioId === user?.id;
   });
@@ -72,16 +72,17 @@ export const GestionPasadasPage: React.FC = () => {
       setIsModalOpen(false);
       setSelectedArticuloId(null);
       navigate(`/tablet?pasadaId=${newPasada.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error starting pasada:', err);
-      setErrorIniciar(err.response?.data?.error?.message || 'Error al iniciar la pasada');
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      setErrorIniciar(axiosErr.response?.data?.error?.message || axiosErr.message || 'Error al iniciar la pasada');
     } finally {
       setIniciando(false);
     }
   };
 
   // Helper to resolve article display name
-  const getArticuloNombre = (pasada: any) => {
+  const getArticuloNombre = (pasada: Pasada) => {
     if (pasada.articulo && typeof pasada.articulo === 'object') {
       const brand = pasada.articulo.marca ? `${pasada.articulo.marca} - ` : '';
       return `${brand}${pasada.articulo.nombre}`;
