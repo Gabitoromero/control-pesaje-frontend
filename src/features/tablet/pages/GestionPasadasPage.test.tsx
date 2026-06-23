@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
 import { GestionPasadasPage } from './GestionPasadasPage';
 import { vi } from 'vitest';
+import { getPasadas, iniciarPasada } from '../../../api/pasadas';
+import { getArticulos } from '../../../api/articulos';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -14,6 +16,15 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+vi.mock('../../../api/pasadas', () => ({
+  getPasadas: vi.fn(),
+  iniciarPasada: vi.fn(),
+}));
+
+vi.mock('../../../api/articulos', () => ({
+  getArticulos: vi.fn(),
+}));
+
 const operarioUser: User = {
   id: 3,
   legajo: 'O1',
@@ -22,9 +33,26 @@ const operarioUser: User = {
   puedeTomarMuestrasLibres: false,
 };
 
+const mockPasadas = [
+  { id: 101, estado: 'en_curso', usuarioId: 3, articuloId: 1, createdAt: '', updatedAt: '' },
+  { id: 102, estado: 'en_curso', usuarioId: 3, articuloId: 2, createdAt: '', updatedAt: '' },
+];
+
+const mockArticulos = [
+  { id: 1, nombre: 'Articulo A', marca: 'Marca X', activo: true },
+  { id: 2, nombre: 'Articulo B', marca: 'Marca Y', activo: true },
+];
+
 describe('GestionPasadasPage', () => {
   beforeEach(() => {
     navigateMock.mockClear();
+    vi.mocked(getPasadas).mockReset();
+    vi.mocked(iniciarPasada).mockReset();
+    vi.mocked(getArticulos).mockReset();
+
+    // Default mock implementation
+    vi.mocked(getPasadas).mockResolvedValue(mockPasadas);
+    vi.mocked(getArticulos).mockResolvedValue(mockArticulos);
   });
 
   it('llama a closeLineSession al hacer click en Volver', async () => {
@@ -41,16 +69,39 @@ describe('GestionPasadasPage', () => {
   });
 
   it('navega al workspace al hacer click en Continuar en una pasada', async () => {
-    // Assuming the continue button has 'Continuar' text
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
     const btnContinuar = await screen.findAllByRole('button', { name: /continuar/i });
     expect(btnContinuar.length).toBeGreaterThan(0);
     await userEvent.click(btnContinuar[0]);
-    expect(navigateMock).toHaveBeenCalledWith('/tablet');
+    expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=101');
   });
 
   it('redirige si activeLineaId es null', () => {
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: null });
     expect(screen.queryByText('Gestión de Pasadas')).not.toBeInTheDocument();
+  });
+
+  it('muestra el modal y permite iniciar una pasada', async () => {
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 200 } as any);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+    
+    // Click Nueva Pasada to open modal
+    const btnNuevaPasada = screen.getByRole('button', { name: /nueva pasada/i });
+    await userEvent.click(btnNuevaPasada);
+
+    // Modal should show articles
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    expect(screen.getByText('Articulo A')).toBeInTheDocument();
+
+    // Select article
+    await userEvent.click(screen.getByText('Articulo A'));
+
+    // Click Iniciar Pasada
+    const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
+    await userEvent.click(btnIniciar);
+
+    // Verify API call and navigation
+    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, articuloId: 1 });
+    expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=200');
   });
 });
