@@ -88,58 +88,7 @@ describe('RutasPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/dashboard/rutas/1');
   });
 
-  it('clicking Activar sends PUT with activo:true', async () => {
-    let requestPayload: unknown = null;
-    server.use(
-      http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
-        requestPayload = await request.json();
-        return HttpResponse.json({ success: true, data: { id: 4, ...(requestPayload as object) } });
-      })
-    );
-    renderWithProviders(<RutasPage />);
-    await waitFor(() => {
-      expect(screen.getByText('Ruta Alpha')).toBeInTheDocument();
-    });
-    const statusSelect = screen.getAllByRole('combobox')[0];
-    await userEvent.selectOptions(statusSelect, 'inactivo');
-    await waitFor(() => {
-      expect(screen.getByText('Ruta Delta')).toBeInTheDocument();
-    });
-    const deltaText = await screen.findByText('Ruta Delta');
-    const deltaRow = deltaText.closest('tr')!;
-    await userEvent.click(within(deltaRow).getByTitle('Activar'));
-    await waitFor(() => {
-      expect((requestPayload as Record<string, unknown>).activo).toBe(true);
-    });
-  });
 
-  it('delete fires on confirm / does not fire on cancel', async () => {
-    let deleteFired = false;
-    server.use(
-      http.delete('http://localhost:3000/api/rutas-pasadas/:id', () => {
-        deleteFired = true;
-        return new HttpResponse(null, { status: 204 });
-      })
-    );
-    renderWithProviders(<RutasPage />);
-    await waitFor(() => {
-      expect(screen.getByText('Ruta Alpha')).toBeInTheDocument();
-    });
 
-    const alphaText = await screen.findByText('Ruta Alpha');
-    const alphaRow = alphaText.closest('tr')!;
 
-    // Cancel delete
-    const spy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    await userEvent.click(within(alphaRow).getByTitle('Eliminar'));
-    expect(spy).toHaveBeenCalled();
-    expect(deleteFired).toBe(false);
-
-    // Confirm delete
-    spy.mockReturnValue(true);
-    await userEvent.click(within(alphaRow).getByTitle('Eliminar'));
-    await waitFor(() => {
-      expect(deleteFired).toBe(true);
-    });
-  });
 });

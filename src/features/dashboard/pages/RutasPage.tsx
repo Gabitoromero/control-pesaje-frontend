@@ -5,11 +5,10 @@ import {
   getRutas,
   getRutasInactivas,
   updateRuta,
-  deleteRuta,
   type Ruta,
   type RutaUpdate,
 } from '../../../api/rutas';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
@@ -72,37 +71,6 @@ export const RutasPage = () => {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteRuta,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rutas'] });
-      queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
-    },
-    onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar la ruta:\n${msg}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Líneas en el sistema.`);
-    },
-  });
-
-  const handleDelete = (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar esta ruta?')) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const handleActivar = (id: number) => {
-    updateMutation.mutate({
-      id,
-      data: {
-        activo: true,
-      },
-    });
-  };
 
 
   if (isLoading) return <div className="p-6">Cargando rutas...</div>;
@@ -151,19 +119,11 @@ export const RutasPage = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {ruta.activo === false && (
-                    <button onClick={() => handleActivar(ruta.id!)} className="text-green-600 hover:text-green-900 mr-3" title="Activar">
-                      Activar
-                    </button>
-                  )}
+
                   <button onClick={() => navigate(`/dashboard/rutas/${ruta.id}`)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar">
                     <Edit size={18} />
                   </button>
-                  {ruta.activo !== false && (
-                    <button onClick={() => handleDelete(ruta.id!)} className="text-red-600 hover:text-red-900" title="Eliminar">
-                      <Trash size={18} />
-                    </button>
-                  )}
+
                 </td>
               </tr>
             ))}

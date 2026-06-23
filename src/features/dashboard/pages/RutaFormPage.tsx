@@ -5,9 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getRuta, createRuta, updateRuta } from '../../../api/rutas';
+import { getRuta, createRuta, updateRuta, deleteRuta } from '../../../api/rutas';
 import { getEtapas } from '../../../api/etapas';
-import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save } from 'lucide-react';
+import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { isAxiosError } from 'axios';
 
 export const etapaSchema = z.object({
@@ -119,6 +119,36 @@ export const RutaFormPage = () => {
       alert(`No se pudo guardar:\n${msg}`);
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteRuta,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rutas'] });
+      queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
+      navigate('/dashboard/rutas');
+    },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo eliminar la ruta:\n${msg}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Líneas en el sistema.`);
+    },
+  });
+
+  const handleDelete = () => {
+    if (window.confirm('¿Está seguro de eliminar esta ruta?')) {
+      deleteMutation.mutate(Number(id));
+    }
+  };
+
+  const handleReactivar = () => {
+    if (window.confirm('¿Está seguro de reactivar esta ruta?')) {
+      updateMutation.mutate({ id: Number(id), data: { activo: true } });
+    }
+  };
 
   const onSubmit = (data: RutaFormValues) => {
     const etapas = data.etapas.map((e, index) => ({
@@ -307,21 +337,45 @@ export const RutaFormPage = () => {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/rutas')}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isBusy}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            <Save size={18} /> {isBusy ? 'Guardando...' : 'Guardar Ruta'}
-          </button>
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            {isEditing && ruta?.activo !== false && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 text-red-600 border border-red-200 rounded-md hover:bg-red-50 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Trash size={18} /> Eliminar Ruta
+              </button>
+            )}
+            {isEditing && ruta?.activo === false && (
+              <button
+                type="button"
+                onClick={handleReactivar}
+                disabled={updateMutation.isPending}
+                className="px-4 py-2 text-green-600 border border-green-200 rounded-md hover:bg-green-50 disabled:opacity-50 flex items-center gap-2 mr-auto"
+              >
+                <RefreshCw size={18} /> Reactivar Ruta
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/rutas')}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isBusy}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              <Save size={18} /> {isBusy ? 'Guardando...' : 'Guardar Ruta'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

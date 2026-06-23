@@ -342,4 +342,59 @@ describe('RutaFormPage Component', () => {
     expect(requestPayload.etapas[2].orden).toBe(3);
     expect(requestPayload.etapas[2].pesoIdeal).toBe(7);
   });
+
+  it('12. delete fires on confirm in edit mode', async () => {
+    paramsMock = { id: '1' };
+    let deleteFired = false;
+    server.use(
+      http.delete('http://localhost:3000/api/rutas-pasadas/:id', () => {
+        deleteFired = true;
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    renderWithProviders(<RutaFormPage />);
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+    });
+
+    const deleteBtn = screen.getByText(/eliminar ruta/i).closest('button') as HTMLButtonElement;
+    
+    const spy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await userEvent.click(deleteBtn);
+    expect(spy).toHaveBeenCalled();
+    expect(deleteFired).toBe(false);
+
+    spy.mockReturnValue(true);
+    await userEvent.click(deleteBtn);
+    await waitFor(() => {
+      expect(deleteFired).toBe(true);
+    });
+  });
+  it('13. clicking Reactivar sends PUT with activo:true', async () => {
+    paramsMock = { id: '4' }; // Ruta Delta is inactive
+    let requestPayload: any = null;
+    server.use(
+      http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
+        requestPayload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...requestPayload } });
+      })
+    );
+    renderWithProviders(<RutaFormPage />);
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Delta')).toBeInTheDocument();
+    });
+
+    const reactivarBtn = screen.getByText(/reactivar ruta/i).closest('button') as HTMLButtonElement;
+    
+    const spy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await userEvent.click(reactivarBtn);
+    expect(spy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(requestPayload).toBeDefined();
+    });
+    expect(requestPayload.activo).toBe(true);
+  });
 });

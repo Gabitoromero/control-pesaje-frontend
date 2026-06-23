@@ -1,0 +1,34 @@
+change: frontend-rutas-abm
+project: controlador-pesaje
+artifact_store: openspec
+scope: frontend
+strict_tdd: true
+test_command: "pnpm test run"
+phases:
+  explore:
+    status: done
+    artifact: "engram:sdd/frontend-rutas-abm/explore"
+  propose:
+    status: done
+    artifact: "frontend/openspec/changes/frontend-rutas-abm/proposal.md"
+  spec:
+    status: done
+    artifact: "frontend/openspec/changes/frontend-rutas-abm/spec.md"
+  design:
+    status: done
+    artifact: "frontend/openspec/changes/frontend-rutas-abm/design.md"
+  tasks:
+    status: done
+    artifact: "frontend/openspec/changes/frontend-rutas-abm/tasks.md"
+  apply:
+    status: pending
+    artifact: null
+  verify:
+    status: pending
+    artifact: null
+  archive:
+    status: pending
+    artifact: null
+next_recommended:
+  - apply
+updated: 2026-06-22
