@@ -1,25 +1,21 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { usePasadaState } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
-import type { RutaPasadaEtapa } from '../../../shared/types/domain';
-import { Scale, Trash2, CheckCircle2 } from 'lucide-react';
-
-// Mock de etapa para desarrollo
-const ETAPA_MOCK: RutaPasadaEtapa = {
-  etapa_id: 1,
-  nombre: 'Llenado Inicial',
-  peso_minimo: 98,
-  peso_maximo: 102,
-  peso_ideal: 100,
-  cantidad_muestras_requeridas: 10,
-};
+import { getPasada, completarPasada } from '../../../api/pasadas';
+import { getLinea } from '../../../api/lineas';
+import type { RutaPasadaEtapa, Pasada } from '../../../shared/types/domain';
+import { Scale, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const pasadaIdString = searchParams.get('pasadaId');
+  const pasadaId = pasadaIdString ? parseInt(pasadaIdString, 10) : undefined;
   
   const lineaId = activeLineaId ?? 0;
 
@@ -27,40 +23,115 @@ export const TabletWorkspace: React.FC = () => {
   useActividadHeartbeat(lineaId);
 
   const { pesoNeto, isConnected } = useBalanzaWebSocket(lineaId);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // En producción, la etapa activa se obtendría del backend para la línea actual.
-  const [etapaActiva] = useState<RutaPasadaEtapa | null>(ETAPA_MOCK);
+  // Task 3.3: Load the active run using GET /api/pasadas/:id
+  const {
+    data: pasada,
+    isLoading: loadingPasada,
+    error: errorPasada,
+    refetch: refetchPasada,
+  } = useQuery<Pasada>({
+    queryKey: ['pasada', pasadaId],
+    queryFn: () => getPasada(pasadaId!),
+    enabled: !!pasadaId,
+  });
 
+  // Load production line details to get the route and stages
+  const targetLineaId = pasada?.lineaProduccionId ?? activeLineaId ?? 0;
+  const {
+    data: linea,
+    isLoading: loadingLinea,
+    error: errorLinea,
+  } = useQuery({
+    queryKey: ['linea', targetLineaId],
+    queryFn: () => getLinea(targetLineaId),
+    enabled: !!targetLineaId,
+  });
+
+  const etapas = (linea?.rutaPasadaActiva?.etapas as RutaPasadaEtapa[]) || [];
+
+  // Hook up hook with API integration and client-side derived active stage calculation
   const {
     muestras,
+    etapaActiva,
     addSample,
     removeSample,
-    clearPasada
   } = usePasadaState({
+    pasadaId,
     usuarioId: user?.id ?? 0,
-    lineaProduccionId: lineaId,
-    etapaActiva,
-    articuloId: 1, // Mock
+    lineaProduccionId: targetLineaId,
+    articuloId: pasada?.articuloId,
+    etapas,
+    initialMuestras: pasada?.muestras,
+    onApiError: (err) => {
+      const msg = err.response?.data?.error?.message || err.message || 'Error de comunicación';
+      setApiError(msg);
+    },
   });
 
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
   }
 
-  const handleRegistrarMuestra = () => {
+  if (!pasadaId) {
+    return <Navigate to="/tablet/pasadas" replace />;
+  }
+
+  if (loadingPasada || loadingLinea) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="animate-spin text-blue-500" size={36} />
+        <p className="text-sm font-medium">Cargando espacio de trabajo...</p>
+      </div>
+    );
+  }
+
+  // Task 3.4: Bind weight capture (addSample) from WebSocket to registrarMuestra API
+  const handleRegistrarMuestra = async () => {
     if (isConnected) {
-      addSample(pesoNeto);
+      try {
+        await addSample(pesoNeto);
+      } catch (err) {
+        // usePasadaState already triggers onApiError
+      }
     }
   };
 
-  const handleCerrarPasada = () => {
-    // Aquí iría el POST al backend
-    alert('Pasada cerrada. Muestras guardadas: ' + muestras.length);
-    clearPasada();
+  // Task 3.5: Bind delete sample (removeSample) action to call deleteMuestra API
+  const handleRemoveSample = async (index: number) => {
+    try {
+      await removeSample(index);
+    } catch (err) {
+      // usePasadaState already triggers onApiError
+    }
   };
 
+  // Task 3.6: Finalizar Pasada action
+  const handleFinalizarPasada = async () => {
+    try {
+      await completarPasada(pasadaId);
+      navigate('/tablet/pasadas');
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message || err.message || 'Error al completar pasada';
+      setApiError(msg);
+    }
+  };
+
+  // Helper variables for UI
+  const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapaId ?? etapaActiva?.etapa_id;
+  const samplesForActiveStage = muestras.filter(
+    (m) => (m.etapaId ?? m.etapa_id) === currentStageId && (m.estadoValidacion ?? m.estado_validacion) !== 'descartado'
+  );
+  
+  const activeStageName = etapaActiva?.nombre ?? etapaActiva?.etapa?.nombre ?? 'Completado';
+  const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidad_muestras_requeridas ?? 0;
+  
+  // Task 3.7: Render Lockout Overlay when isConnected is false or API requests fail
+  const showLockout = !isConnected || !!apiError || !!errorPasada || !!errorLinea;
+
   return (
-    <div className="h-full flex flex-col p-6 bg-slate-50 gap-6">
+    <div className="h-full flex flex-col p-6 bg-slate-50 gap-6 relative">
       
       {/* Header Info */}
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -71,11 +142,18 @@ export const TabletWorkspace: React.FC = () => {
         <div className="flex items-center gap-6 text-right">
           <div>
             <h3 className="text-lg font-semibold text-slate-700">
-              {etapaActiva?.nombre ?? 'Sin Etapa'}
+              {activeStageName}
             </h3>
-            <p className="text-slate-500">
-              Muestras: {muestras.length} / {etapaActiva?.cantidad_muestras_requeridas ?? 0}
-            </p>
+            {etapaActiva ? (
+              <p className="text-slate-500">
+                Muestras: {samplesForActiveStage.length} / {activeStageRequired}
+              </p>
+            ) : (
+              <p className="text-green-600 font-semibold flex items-center gap-1 justify-end">
+                <CheckCircle2 className="w-4 h-4" />
+                Listo para finalizar
+              </p>
+            )}
           </div>
           <button
             onClick={() => navigate('/tablet/pasadas')}
@@ -109,9 +187,9 @@ export const TabletWorkspace: React.FC = () => {
 
           <button
             onClick={handleRegistrarMuestra}
-            disabled={!isConnected}
+            disabled={!isConnected || etapaActiva === null}
             className={`w-full py-6 rounded-2xl text-2xl font-bold transition-all shadow-lg
-              ${isConnected
+              ${isConnected && etapaActiva !== null
                 ? 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
@@ -135,27 +213,33 @@ export const TabletWorkspace: React.FC = () => {
               <ul className="space-y-3">
                 {muestras.map((muestra, index) => (
                   <li 
-                    key={index}
+                    key={muestra.id ?? index}
                     className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
                   >
                     <div className="flex items-center gap-4">
-                      <span className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full font-bold text-slate-600">
+                      <span className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full font-bold text-slate-600 text-sm">
                         {index + 1}
                       </span>
                       <div>
                         <span className="text-xl font-bold tabular-nums text-slate-800">
-                          {muestra.peso_neto.toFixed(3)} kg
+                          {(muestra.pesoNeto ?? muestra.peso_neto ?? 0).toFixed(3)} kg
                         </span>
-                        <div className="text-sm mt-1">
-                          {muestra.estado_validacion === 'ok' 
+                        <div className="text-sm mt-1 flex items-center gap-2">
+                          {(muestra.estadoValidacion ?? muestra.estado_validacion) === 'ok' 
                             ? <span className="text-green-600 font-medium">En Rango</span>
                             : <span className="text-red-500 font-medium">Fuera de Rango</span>
                           }
+                          <span className="text-slate-400">•</span>
+                          <span className="text-slate-500">
+                            {etapas.find(e => (e.etapa?.id ?? e.etapaId ?? e.etapa_id) === (muestra.etapaId ?? muestra.etapa_id))?.nombre ?? 
+                             etapas.find(e => (e.etapa?.id ?? e.etapaId ?? e.etapa_id) === (muestra.etapaId ?? muestra.etapa_id))?.etapa?.nombre ?? 
+                             'Etapa'}
+                          </span>
                         </div>
                       </div>
                     </div>
                     <button
-                      onClick={() => removeSample(index)}
+                      onClick={() => handleRemoveSample(index)}
                       className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                       aria-label="Descartar muestra"
                     >
@@ -167,22 +251,61 @@ export const TabletWorkspace: React.FC = () => {
             )}
           </div>
 
+          {/* Task 3.6: Finalizar Pasada button rendered when all stages are complete */}
           <div className="p-4 border-t border-slate-100">
-            <button
-              onClick={handleCerrarPasada}
-              disabled={muestras.length === 0}
-              className={`w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all
-                ${muestras.length > 0
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-            >
-              <CheckCircle2 className="w-6 h-6" />
-              Cerrar Pasada
-            </button>
+            {etapaActiva === null && etapas.length > 0 ? (
+              <button
+                onClick={handleFinalizarPasada}
+                className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20"
+              >
+                <CheckCircle2 className="w-6 h-6" />
+                Finalizar Pasada
+              </button>
+            ) : (
+              <div className="w-full py-4 px-4 bg-slate-100 text-slate-500 rounded-xl text-sm font-medium text-center border border-slate-200">
+                Complete todas las etapas para finalizar la pasada.
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Lockout Overlay */}
+      {showLockout && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 select-none animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-500 animate-pulse">
+              <Scale size={32} />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              {!isConnected ? 'Señal de Balanza Perdida' : 'Error de Conexión'}
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">
+              {!isConnected 
+                ? 'La comunicación con la balanza se ha interrumpido. Verifique la conexión para continuar.'
+                : 'Hubo un problema al comunicarse con el servidor o procesar la solicitud.'}
+            </p>
+            {(apiError || errorPasada || errorLinea) && (
+              <div className="bg-red-950/50 border border-red-900/50 rounded-xl p-3 text-xs text-red-400 mb-6 font-mono break-all max-h-32 overflow-y-auto">
+                {apiError || 
+                  (errorPasada as any)?.response?.data?.error?.message || 
+                  (errorPasada as any)?.message || 
+                  (errorLinea as any)?.response?.data?.error?.message || 
+                  (errorLinea as any)?.message}
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setApiError(null);
+                refetchPasada();
+              }}
+              className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-sm font-semibold transition-all"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1,58 +1,172 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Muestra, RutaPasadaEtapa, EstadoValidacion } from '../../../shared/types/domain';
+import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
 
 interface UsePasadaStateProps {
+  pasadaId: number | undefined;
   usuarioId: number;
   lineaProduccionId: number;
-  etapaActiva: RutaPasadaEtapa | null;
   articuloId?: number;
+  etapas: RutaPasadaEtapa[];
+  initialMuestras?: Muestra[];
+  onApiError?: (error: any) => void;
 }
 
+const normalizeMuestra = (m: any): Muestra => {
+  const pesoNeto = m.pesoNeto ?? m.peso_neto ?? 0;
+  const estadoValidacion = m.estadoValidacion ?? m.estado_validacion ?? 'fuera_de_rango';
+  const usuarioId = m.usuarioId ?? m.usuario_id ?? 0;
+  const etapaId = m.etapaId ?? m.etapa_id ?? 0;
+  const lineaProduccionId = m.lineaProduccionId ?? m.linea_produccion_id ?? 0;
+  const articuloId = m.articuloId ?? m.articulo_id;
+  const timestamp = m.timestamp ?? new Date();
+
+  return {
+    ...m,
+    id: m.id,
+    pesoNeto,
+    estadoValidacion,
+    usuarioId,
+    etapaId,
+    lineaProduccionId,
+    articuloId,
+    peso_neto: pesoNeto,
+    estado_validacion: estadoValidacion,
+    usuario_id: usuarioId,
+    etapa_id: etapaId,
+    linea_produccion_id: lineaProduccionId,
+    articulo_id: articuloId,
+    timestamp,
+  };
+};
+
 export function usePasadaState({
+  pasadaId,
   usuarioId,
   lineaProduccionId,
-  etapaActiva,
   articuloId,
+  etapas,
+  initialMuestras,
+  onApiError,
 }: UsePasadaStateProps) {
   const [muestras, setMuestras] = useState<Muestra[]>([]);
 
-  const calcularEstadoValidacion = (peso: number): EstadoValidacion => {
-    if (!etapaActiva) return 'fuera_de_rango';
-    if (peso >= etapaActiva.peso_minimo && peso <= etapaActiva.peso_maximo) {
+  const initialMuestrasKey = initialMuestras
+    ? initialMuestras.map((m, idx) => m.id ?? idx).join(',')
+    : '';
+
+  useEffect(() => {
+    if (initialMuestras) {
+      setMuestras(initialMuestras.map(normalizeMuestra));
+    } else {
+      setMuestras([]);
+    }
+  }, [initialMuestrasKey, pasadaId]);
+
+  const calcularEstadoValidacion = (peso: number, etapa: RutaPasadaEtapa | null): EstadoValidacion => {
+    if (!etapa) return 'fuera_de_rango';
+    const pesoMin = etapa.pesoMinimo ?? etapa.peso_minimo ?? 0;
+    const pesoMax = etapa.pesoMaximo ?? etapa.peso_maximo ?? 0;
+    if (peso >= pesoMin && peso <= pesoMax) {
       return 'ok';
     }
     return 'fuera_de_rango';
   };
 
-  const addSample = useCallback((pesoNeto: number) => {
-    if (!etapaActiva) return;
+  // Task 3.2: Derived client-side stage calculation
+  const obtenerEtapaActiva = useCallback((): RutaPasadaEtapa | null => {
+    if (!etapas || etapas.length === 0) return null;
+    const sortedEtapas = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     
-    setMuestras((prev) => {
-      if (prev.length >= 50) return prev; // Límite de 50 muestras por pasada (local buffer)
-
-      const nuevaMuestra: Muestra = {
-        peso_neto: pesoNeto,
-        estado_validacion: calcularEstadoValidacion(pesoNeto),
-        usuario_id: usuarioId,
-        etapa_id: etapaActiva.etapa_id,
-        linea_produccion_id: lineaProduccionId,
-        articulo_id: articuloId,
-        timestamp: new Date(),
-      };
+    for (const stage of sortedEtapas) {
+      const stageId = stage.etapa?.id ?? stage.etapaId ?? stage.etapa_id;
+      if (stageId === undefined) continue;
       
-      return [...prev, nuevaMuestra];
-    });
-  }, [etapaActiva, usuarioId, lineaProduccionId, articuloId]);
+      const reqCount = stage.cantidadMuestrasRequeridas ?? stage.cantidad_muestras_requeridas ?? 0;
+      
+      const muestrasEtapa = muestras.filter((m) => {
+        const mEtapaId = m.etapaId ?? m.etapa_id;
+        const mEstado = m.estadoValidacion ?? m.estado_validacion;
+        return mEtapaId === stageId && mEstado !== 'descartado';
+      });
 
-  const removeSample = useCallback((index: number) => {
-    setMuestras((prev) => {
-      const newMuestras = [...prev];
-      // Descartado local (removemos en vez de marcar como descartado para evitar enviar basura, o lo marcamos como descartado)
-      // La regla pide "local discard", que removería la muestra del buffer.
-      newMuestras.splice(index, 1);
-      return newMuestras;
-    });
-  }, []);
+      if (muestrasEtapa.length < reqCount) {
+        return stage;
+      }
+    }
+    return null;
+  }, [etapas, muestras]);
+
+  const etapaActiva = obtenerEtapaActiva();
+
+  const addSample = useCallback(async (pesoNeto: number) => {
+    if (!pasadaId) {
+      console.warn('Cannot add sample: pasadaId is undefined');
+      return;
+    }
+    if (!etapaActiva) {
+      console.warn('Cannot add sample: no active stage');
+      return;
+    }
+
+    const stageId = etapaActiva.etapa?.id ?? etapaActiva.etapaId ?? etapaActiva.etapa_id;
+    if (stageId === undefined) {
+      console.warn('Cannot add sample: stageId is undefined');
+      return;
+    }
+
+    try {
+      const validacion = calcularEstadoValidacion(pesoNeto, etapaActiva);
+      const data = {
+        pasadaId,
+        etapaId: stageId,
+        pesoNeto,
+        usuarioId,
+        lineaProduccionId,
+        articuloId,
+      };
+
+      const nuevaMuestra = await registrarMuestra(data);
+      const normalized = normalizeMuestra(nuevaMuestra);
+
+      setMuestras((prev) => {
+        if (prev.length >= 50) return prev;
+        return [...prev, normalized];
+      });
+      return normalized;
+    } catch (error) {
+      console.error('Error registering sample:', error);
+      if (onApiError) {
+        onApiError(error);
+      }
+      throw error;
+    }
+  }, [pasadaId, etapaActiva, usuarioId, lineaProduccionId, articuloId, onApiError]);
+
+  const removeSample = useCallback(async (index: number) => {
+    const sampleToRemove = muestras[index];
+    if (!sampleToRemove) {
+      console.warn('No sample found at index:', index);
+      return;
+    }
+
+    const sampleId = sampleToRemove.id;
+    if (sampleId === undefined) {
+      setMuestras((prev) => prev.filter((_, i) => i !== index));
+      return;
+    }
+
+    try {
+      await deleteMuestra(sampleId);
+      setMuestras((prev) => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      console.error('Error deleting sample:', error);
+      if (onApiError) {
+        onApiError(error);
+      }
+      throw error;
+    }
+  }, [muestras, onApiError]);
 
   const clearPasada = useCallback(() => {
     setMuestras([]);
@@ -60,8 +174,10 @@ export function usePasadaState({
 
   return {
     muestras,
+    etapaActiva,
     addSample,
     removeSample,
     clearPasada,
   };
 }
+
