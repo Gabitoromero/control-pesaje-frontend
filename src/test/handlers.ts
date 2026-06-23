@@ -57,14 +57,25 @@ export const lineasMockInactivos = [
 ];
 
 export const rutasMock = [
-  { id: 1, nombre: 'Ruta Alpha',   descripcion: 'Descripción Alpha', activo: true },
-  { id: 2, nombre: 'Ruta Beta',    descripcion: null,                activo: true },
-  { id: 3, nombre: 'Ruta Gamma',   descripcion: 'Descripción Gamma', activo: true },
+  {
+    id: 1, nombre: 'Ruta Alpha', descripcion: 'Descripción Alpha', activo: true,
+    etapas: [
+      { id: 10, etapa: { id: 1, nombre: 'Amasado' }, orden: 1, pesoMinimo: 10, pesoIdeal: 15, pesoMaximo: 20, cantidadMuestrasRequeridas: 2 },
+      { id: 11, etapa: { id: 2, nombre: 'Horneado' }, orden: 2, pesoMinimo: 30, pesoIdeal: 35, pesoMaximo: 40, cantidadMuestrasRequeridas: 1 },
+    ],
+  },
+  { id: 2, nombre: 'Ruta Beta', descripcion: null, activo: true, etapas: [] },
+  { id: 3, nombre: 'Ruta Gamma', descripcion: 'Descripción Gamma', activo: true, etapas: [] },
 ];
 
 export const rutasMockInactivos = [
-  { id: 4, nombre: 'Ruta Delta',   descripcion: 'Ruta inactiva D', activo: false },
-  { id: 5, nombre: 'Ruta Epsilon', descripcion: null,              activo: false },
+  {
+    id: 4, nombre: 'Ruta Delta', descripcion: 'Ruta inactiva D', activo: false,
+    etapas: [
+      { id: 40, etapa: { id: 3, nombre: 'Envasado' }, orden: 1, pesoMinimo: 5, pesoIdeal: 7, pesoMaximo: 9, cantidadMuestrasRequeridas: 3 },
+    ],
+  },
+  { id: 5, nombre: 'Ruta Epsilon', descripcion: null, activo: false, etapas: [] },
 ];
 
 export const handlers = [
@@ -174,6 +185,13 @@ export const handlers = [
   http.get(`${BASE}/rutas-pasadas/inactive`, () =>
     HttpResponse.json({ success: true, data: rutasMockInactivos })
   ),
+
+  http.get(`${BASE}/rutas-pasadas/:id`, ({ params }) => {
+    const id = Number(params.id);
+    const found = [...rutasMock, ...rutasMockInactivos].find(r => r.id === id);
+    if (!found) return HttpResponse.json({ success: false, message: 'No encontrada' }, { status: 404 });
+    return HttpResponse.json({ success: true, data: found });
+  }),
 
   http.post(`${BASE}/rutas-pasadas`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;

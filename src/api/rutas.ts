@@ -1,12 +1,26 @@
 import api from './axios';
 
+export interface EtapaDetalle {
+  id: number;
+  nombre: string;
+}
+
 export interface RutaPasadaEtapa {
   id?: number;
-  articulo: number;
+  etapa: EtapaDetalle;
+  orden: number;
+  pesoMinimo: number;
+  pesoIdeal: number;
+  pesoMaximo: number;
+  cantidadMuestrasRequeridas: number;
+}
+
+export interface RutaPasadaEtapaCreate {
+  id?: number;
   etapa: number;
   orden: number;
-  pesoIdeal: number;
   pesoMinimo: number;
+  pesoIdeal: number;
   pesoMaximo: number;
   cantidadMuestrasRequeridas: number;
 }
@@ -19,9 +33,14 @@ export interface Ruta {
   etapas?: RutaPasadaEtapa[];
 }
 
-export interface RutaCreate extends Omit<Ruta, 'id'> {
-  etapas: RutaPasadaEtapa[];
+export interface RutaCreate extends Omit<Ruta, 'id' | 'etapas'> {
+  etapas: RutaPasadaEtapaCreate[];
 }
+
+export type RutaUpdate = Partial<Omit<RutaCreate, 'etapas'>> & {
+  etapas?: RutaPasadaEtapaCreate[];
+  activo?: boolean;
+};
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -48,7 +67,7 @@ export const createRuta = async (ruta: RutaCreate): Promise<Ruta> => {
   return response.data.data;
 };
 
-export const updateRuta = async (id: number, ruta: Partial<Ruta>): Promise<Ruta> => {
+export const updateRuta = async (id: number, ruta: RutaUpdate): Promise<Ruta> => {
   const response = await api.put<ApiEnvelope<Ruta>>(`/rutas-pasadas/${id}`, ruta);
   return response.data.data;
 };

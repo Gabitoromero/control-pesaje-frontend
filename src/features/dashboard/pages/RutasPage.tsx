@@ -4,13 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   getRutas,
   getRutasInactivas,
-  createRuta,
   updateRuta,
   deleteRuta,
   type Ruta,
-  type RutaCreate,
+  type RutaUpdate,
 } from '../../../api/rutas';
-import { Plus, Edit, Trash, X } from 'lucide-react';
+import { Plus, Edit, Trash } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
@@ -55,25 +54,8 @@ export const RutasPage = () => {
     return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [activas, inactivas, status, field, query]);
 
-  const createMutation = useMutation({
-    mutationFn: createRuta,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rutas'] });
-      queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
-    },
-    onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo crear la ruta:\n${msg}`);
-    },
-  });
-
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<RutaCreate> & { activo?: boolean } }) =>
+    mutationFn: ({ id, data }: { id: number; data: RutaUpdate }) =>
       updateRuta(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });

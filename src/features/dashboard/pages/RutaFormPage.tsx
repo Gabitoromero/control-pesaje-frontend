@@ -1,17 +1,17 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import type { Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRuta, createRuta, updateRuta } from '../../../api/rutas';
-import { getArticulos } from '../../../api/articulos';
 import { getEtapas } from '../../../api/etapas';
 import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save } from 'lucide-react';
+import { isAxiosError } from 'axios';
 
 export const etapaSchema = z.object({
   id: z.number().optional(),
-  articulo: z.coerce.number().min(1, 'Requerido'),
   etapa: z.coerce.number().min(1, 'Requerido'),
   pesoMinimo: z.coerce.number().min(0, 'Mínimo 0'),
   pesoMaximo: z.coerce.number().min(0, 'Mínimo 0'),
@@ -33,7 +33,6 @@ export const RutaFormPage = () => {
   const queryClient = useQueryClient();
   const isEditing = Boolean(id);
 
-  const { data: articulos = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });
   const { data: etapasOptions = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
 
   const { data: ruta, isLoading: loadingRuta } = useQuery({
@@ -49,11 +48,19 @@ export const RutaFormPage = () => {
     reset,
     formState: { errors },
   } = useForm<RutaFormValues>({
-    resolver: zodResolver(rutaSchema),
+    resolver: zodResolver(rutaSchema) as unknown as Resolver<RutaFormValues>,
     defaultValues: {
       nombre: '',
       descripcion: '',
-      etapas: [],
+      etapas: [
+        {
+          etapa: 0,
+          pesoMinimo: 0,
+          pesoMaximo: 0,
+          pesoIdeal: 0,
+          cantidadMuestrasRequeridas: 1,
+        }
+      ],
     },
   });
 
@@ -67,15 +74,14 @@ export const RutaFormPage = () => {
       reset({
         nombre: ruta.nombre,
         descripcion: ruta.descripcion || '',
-        etapas: ruta.etapas?.map(e => ({
+        etapas: [...(ruta.etapas ?? [])].sort((a, b) => a.orden - b.orden).map(e => ({
           id: e.id,
-          articulo: e.articulo,
-          etapa: e.etapa,
+          etapa: e.etapa.id,
           pesoMinimo: e.pesoMinimo,
           pesoMaximo: e.pesoMaximo,
           pesoIdeal: e.pesoIdeal,
           cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
-        })) || [],
+        })),
       });
     }
   }, [ruta, reset]);
@@ -86,27 +92,55 @@ export const RutaFormPage = () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
       navigate('/dashboard/rutas');
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo guardar:\n${msg}`);
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<RutaFormValues> }) => updateRuta(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateRuta>[1] }) => updateRuta(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
       navigate('/dashboard/rutas');
     },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo guardar:\n${msg}`);
+    },
   });
 
   const onSubmit = (data: RutaFormValues) => {
-    // Add 'orden' to etapas based on array index
+    const etapas = data.etapas.map((e, index) => ({
+      ...(e.id != null ? { id: e.id } : {}),
+      etapa: e.etapa,
+      orden: index + 1,
+      pesoMinimo: e.pesoMinimo,
+      pesoIdeal: e.pesoIdeal,
+      pesoMaximo: e.pesoMaximo,
+      cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
+    }));
+
     const payload = {
-      ...data,
-      etapas: data.etapas.map((etapa, index) => ({ ...etapa, orden: index + 1 }))
+      nombre: data.nombre,
+      descripcion: data.descripcion?.trim() || null,
+      etapas,
     };
 
     if (isEditing) {
       updateMutation.mutate({ id: Number(id), data: payload });
     } else {
-      createMutation.mutate(payload as unknown as Parameters<typeof createRuta>[0]);
+      createMutation.mutate(payload);
     }
   };
 
@@ -157,7 +191,6 @@ export const RutaFormPage = () => {
             <button
               type="button"
               onClick={() => append({
-                articulo: 0,
                 etapa: 0,
                 pesoMinimo: 0,
                 pesoMaximo: 0,
@@ -180,6 +213,8 @@ export const RutaFormPage = () => {
                 <div className="flex flex-col gap-1 mt-1">
                   <button
                     type="button"
+                    title="Subir etapa"
+                    aria-label="Subir etapa"
                     onClick={() => index > 0 && swap(index, index - 1)}
                     disabled={index === 0}
                     className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-30"
@@ -188,6 +223,8 @@ export const RutaFormPage = () => {
                   </button>
                   <button
                     type="button"
+                    title="Bajar etapa"
+                    aria-label="Bajar etapa"
                     onClick={() => index < fields.length - 1 && swap(index, index + 1)}
                     disabled={index === fields.length - 1}
                     className="p-1 text-gray-400 hover:text-blue-600 disabled:opacity-30"
@@ -197,21 +234,7 @@ export const RutaFormPage = () => {
                 </div>
 
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Artículo</label>
-                    <select
-                      {...register(`etapas.${index}.articulo`)}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-1.5 shadow-sm text-sm"
-                    >
-                      <option value={0}>Seleccione...</option>
-                      {articulos.map(a => (
-                        <option key={a.id} value={a.id}>{a.nombre}</option>
-                      ))}
-                    </select>
-                    {errors.etapas?.[index]?.articulo && (
-                      <span className="text-red-500 text-xs">{errors.etapas[index]?.articulo?.message}</span>
-                    )}
-                  </div>
+
 
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Etapa</label>
@@ -271,8 +294,11 @@ export const RutaFormPage = () => {
 
                 <button
                   type="button"
+                  title="Eliminar etapa"
+                  aria-label="Eliminar etapa"
                   onClick={() => remove(index)}
-                  className="p-2 text-gray-400 hover:text-red-600 mt-5"
+                  disabled={fields.length === 1}
+                  className="p-2 text-gray-400 hover:text-red-600 mt-5 disabled:opacity-30"
                 >
                   <Trash size={18} />
                 </button>
