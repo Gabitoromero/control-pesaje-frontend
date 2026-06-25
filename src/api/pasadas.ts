@@ -1,5 +1,5 @@
 import api from './axios';
-import type { Pasada } from '../shared/types';
+import type { Pasada } from '../shared/types/index';
 
 interface ApiEnvelope<T> {
   success: boolean;

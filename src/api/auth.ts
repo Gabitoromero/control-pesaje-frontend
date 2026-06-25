@@ -1,5 +1,5 @@
 import api from './axios';
-import type { SesionActiva } from '../shared/types/auth';
+import type { SesionActiva, SesionActivaAdmin } from '../shared/types/auth';
 
 export const loginApi = async (credentials: { legajo: string; pin: string }): Promise<{ token: string }> => {
   const response = await api.post('/auth/login', credentials);
@@ -21,4 +21,9 @@ export const getSesionActiva = async (lineaId: number): Promise<SesionActiva> =>
 
 export const cerrarSesionLinea = async (lineaId?: number) => {
   await api.post('/auth/cerrar-sesion', { lineaProduccionId: lineaId });
+};
+
+export const getSesionesActivas = async (): Promise<SesionActivaAdmin[]> => {
+  const response = await api.get('/auth/sesiones-activas');
+  return response.data.data;
 };

@@ -5,6 +5,7 @@ import {
   actualizarActividad,
   getSesionActiva,
   cerrarSesionLinea,
+  getSesionesActivas,
 } from './auth';
 import api from './axios';
 
@@ -66,5 +67,15 @@ describe('auth API', () => {
     await cerrarSesionLinea(3);
 
     expect(api.post).toHaveBeenCalledWith('/auth/cerrar-sesion', { lineaProduccionId: 3 });
+  });
+
+  it('getSesionesActivas llama a GET /auth/sesiones-activas y retorna lista', async () => {
+    const mockList = [{ lineaId: 1, usuarioId: 2 }];
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: mockList } });
+
+    const result = await getSesionesActivas();
+
+    expect(api.get).toHaveBeenCalledWith('/auth/sesiones-activas');
+    expect(result).toEqual(mockList);
   });
 });

@@ -145,7 +145,7 @@ describe('usePasadaState', () => {
   });
 
   it('registers a sample calling api and updates local list', async () => {
-    const mockMuestraResult = {
+    const mockMuestraResult: any = {
       id: 50,
       pesoNeto: 15,
       estadoValidacion: 'ok',
@@ -245,5 +245,227 @@ describe('usePasadaState', () => {
     ).rejects.toThrow('Network error');
 
     expect(onErrorMock).toHaveBeenCalledWith(apiError);
+  });
+
+  describe('etapasConEstado', () => {
+    it('Hook returns etapasConEstado field', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: mockEtapas,
+          initialMuestras: [],
+        })
+      );
+      expect(result.current.etapasConEstado).toBeDefined();
+    });
+
+    it('3 stages, zero samples -> stage 1 actual, stages 2+3 pendiente', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: [
+            ...mockEtapas,
+            {
+              etapa: { id: 30, nombre: 'Stage 3' },
+              orden: 3,
+              pesoMinimo: 50,
+              pesoIdeal: 55,
+              pesoMaximo: 60,
+              cantidadMuestrasRequeridas: 1,
+            }
+          ],
+          initialMuestras: [],
+        })
+      );
+
+      const estados = result.current.etapasConEstado;
+      expect(estados.length).toBe(3);
+      expect(estados[0].estado).toBe('actual');
+      expect(estados[1].estado).toBe('pendiente');
+      expect(estados[2].estado).toBe('pendiente');
+    });
+
+    it('Stage 1 has enough ok samples -> stage 1 completada, stage 2 actual', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: mockEtapas,
+          initialMuestras: [
+            {
+              id: 1,
+              pesoNeto: 15,
+              estadoValidacion: 'ok',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            },
+            {
+              id: 2,
+              pesoNeto: 15,
+              estadoValidacion: 'ok',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            }
+          ],
+        })
+      );
+
+      const estados = result.current.etapasConEstado;
+      expect(estados[0].estado).toBe('completada');
+      expect(estados[1].estado).toBe('actual');
+    });
+
+    it('All stages complete -> array has all completada, none actual', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: mockEtapas,
+          initialMuestras: [
+            {
+              id: 1,
+              pesoNeto: 15,
+              estadoValidacion: 'ok',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            },
+            {
+              id: 2,
+              pesoNeto: 15,
+              estadoValidacion: 'ok',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            },
+            {
+              id: 3,
+              pesoNeto: 35,
+              estadoValidacion: 'ok',
+              usuarioId: 3,
+              etapaId: 20,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            }
+          ],
+        })
+      );
+
+      const estados = result.current.etapasConEstado;
+      expect(estados.every(e => e.estado === 'completada')).toBe(true);
+      expect(estados.some(e => e.estado === 'actual')).toBe(false);
+    });
+
+    it('Stage 1 needs 3, has 3 fuera_de_rango -> stage 1 still actual', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: [
+            {
+              etapa: { id: 10, nombre: 'Stage 1' },
+              orden: 1,
+              pesoMinimo: 10,
+              pesoIdeal: 15,
+              pesoMaximo: 20,
+              cantidadMuestrasRequeridas: 3,
+            }
+          ],
+          initialMuestras: [
+            {
+              id: 1,
+              pesoNeto: 5,
+              estadoValidacion: 'fuera_de_rango',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            },
+            {
+              id: 2,
+              pesoNeto: 5,
+              estadoValidacion: 'fuera_de_rango',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            },
+            {
+              id: 3,
+              pesoNeto: 5,
+              estadoValidacion: 'fuera_de_rango',
+              usuarioId: 3,
+              etapaId: 10,
+              lineaProduccionId: 1,
+              timestamp: new Date(),
+            }
+          ],
+        })
+      );
+
+      const estados = result.current.etapasConEstado;
+      expect(estados[0].estado).toBe('actual');
+    });
+
+    it('Empty etapas prop -> etapasConEstado is empty array, no throw', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: [],
+          initialMuestras: [],
+        })
+      );
+
+      expect(result.current.etapasConEstado).toEqual([]);
+    });
+  });
+
+  it('etapaActiva must not advance on fuera_de_rango', () => {
+    const { result } = renderHook(() =>
+      usePasadaState({
+        pasadaId: 101,
+        usuarioId: 3,
+        lineaProduccionId: 1,
+        etapas: mockEtapas, // Stage 1 requires 2 samples
+        initialMuestras: [
+          {
+            id: 1,
+            pesoNeto: 5,
+            estadoValidacion: 'fuera_de_rango',
+            usuarioId: 3,
+            etapaId: 10,
+            lineaProduccionId: 1,
+            timestamp: new Date(),
+          },
+          {
+            id: 2,
+            pesoNeto: 5,
+            estadoValidacion: 'fuera_de_rango',
+            usuarioId: 3,
+            etapaId: 10,
+            lineaProduccionId: 1,
+            timestamp: new Date(),
+          }
+        ],
+      })
+    );
+
+    // Should still be in Stage 1 since it requires 2 'ok' samples
+    expect(result.current.etapaActiva?.etapa.id).toBe(10);
   });
 });

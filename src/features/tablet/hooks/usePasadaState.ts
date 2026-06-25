@@ -1,6 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { Muestra, EstadoValidacion, RutaPasadaEtapa } from '../../../shared/types/domain';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
+
+export type EstadoEtapa = 'completada' | 'actual' | 'pendiente';
+
+export interface EtapaConEstado {
+  etapa: RutaPasadaEtapa;
+  estado: EstadoEtapa;
+  muestrasOk: number;
+  muestrasRequeridas: number;
+}
 
 interface UsePasadaStateProps {
   pasadaId: number | undefined;
@@ -12,6 +21,7 @@ interface UsePasadaStateProps {
   onApiError?: (error: unknown) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const normalizeMuestra = (m: any): Muestra => {
   const pesoNeto = m.pesoNeto ?? m.peso_neto ?? 0;
   const estadoValidacion = m.estadoValidacion ?? m.estado_validacion ?? 'fuera_de_rango';
@@ -57,44 +67,58 @@ export function usePasadaState({
 
   useEffect(() => {
     if (initialMuestras) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMuestras(initialMuestras.map(normalizeMuestra));
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMuestras([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMuestrasKey, pasadaId]);
 
-  const calcularEstadoValidacion = (peso: number, etapa: RutaPasadaEtapa): EstadoValidacion => {
-    if (peso >= etapa.pesoMinimo && peso <= etapa.pesoMaximo) {
-      return 'ok';
-    }
-    return 'fuera_de_rango';
-  };
 
-  // Task 3.2: Derived client-side stage calculation
-  const obtenerEtapaActiva = useCallback((): RutaPasadaEtapa | null => {
-    if (!etapas || etapas.length === 0) return null;
+
+  const etapasConEstado = useMemo(() => {
+    if (!etapas || etapas.length === 0) return [];
+    
     const sortedEtapas = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
     
-    for (const stage of sortedEtapas) {
-      const stageId = stage.etapa.id;
-      if (stageId === undefined) continue;
+    let isActualFound = false;
+    
+    return sortedEtapas.map((etapaWrapper): EtapaConEstado => {
+      const stageId = etapaWrapper.etapa.id;
+      const muestrasRequeridas = etapaWrapper.cantidadMuestrasRequeridas;
       
-      const reqCount = stage.cantidadMuestrasRequeridas;
+      const muestrasOk = muestras.filter((m) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mEtapaId = m.etapaId ?? (m as any).etapa_id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mEstado = m.estadoValidacion ?? (m as any).estado_validacion;
+        return mEtapaId === stageId && mEstado === 'ok';
+      }).length;
       
-      const muestrasEtapa = muestras.filter((m) => {
-        const mEtapaId = m.etapaId ?? m.etapa_id;
-        const mEstado = m.estadoValidacion ?? m.estado_validacion;
-        return mEtapaId === stageId && mEstado !== 'descartado';
-      });
-
-      if (muestrasEtapa.length < reqCount) {
-        return stage;
+      const completa = muestrasOk >= muestrasRequeridas;
+      let estado: EstadoEtapa;
+      
+      if (completa) {
+        estado = 'completada';
+      } else if (!isActualFound) {
+        estado = 'actual';
+        isActualFound = true;
+      } else {
+        estado = 'pendiente';
       }
-    }
-    return null;
+      
+      return {
+        etapa: etapaWrapper,
+        estado,
+        muestrasOk,
+        muestrasRequeridas,
+      };
+    });
   }, [etapas, muestras]);
 
-  const etapaActiva = obtenerEtapaActiva();
+  const etapaActiva = etapasConEstado.find(e => e.estado === 'actual')?.etapa ?? null;
 
   const addSample = useCallback(async (pesoNeto: number) => {
     if (!pasadaId) {
@@ -113,7 +137,7 @@ export function usePasadaState({
     }
 
     try {
-      const validacion = calcularEstadoValidacion(pesoNeto, etapaActiva);
+
       const data = {
         pasadaId,
         etapaId: stageId,
@@ -172,6 +196,7 @@ export function usePasadaState({
   return {
     muestras,
     etapaActiva,
+    etapasConEstado,
     addSample,
     removeSample,
     clearPasada,

@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { 
   LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory, 
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings 
+  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity 
 } from 'lucide-react';
 import { UsuarioRol } from '../../shared/types';
 
@@ -95,10 +95,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                   Rutas
                 </NavLink>
                 {isAdmin && (
-                  <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
-                    <Users className="w-5 h-5 mr-3" />
-                    Usuarios
-                  </NavLink>
+                  <>
+                    <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
+                      <Users className="w-5 h-5 mr-3" />
+                      Usuarios
+                    </NavLink>
+                    <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
+                      <Activity className="w-5 h-5 mr-3" />
+                      Sesiones Activas
+                    </NavLink>
+                  </>
                 )}
               </div>
             )}

@@ -3,8 +3,9 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
-import { usePasadaState } from '../hooks/usePasadaState';
+import { usePasadaState, type EtapaConEstado } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
+import { StageProgressPanel } from '../components/StageProgressPanel';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
@@ -55,6 +56,7 @@ export const TabletWorkspace: React.FC = () => {
   const {
     muestras,
     etapaActiva,
+    etapasConEstado,
     addSample,
     removeSample,
   } = usePasadaState({
@@ -123,7 +125,7 @@ export const TabletWorkspace: React.FC = () => {
   // Helper variables for UI
   const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapa.id;
   const samplesForActiveStage = muestras.filter(
-    (m) => m.etapaId === currentStageId && m.estadoValidacion !== 'descartado'
+    (m) => m.etapaId === currentStageId && m.estadoValidacion === 'ok'
   );
   
   const activeStageName = etapaActiva?.etapa?.nombre ?? etapaActiva?.etapa.nombre ?? 'Completado';
@@ -165,6 +167,8 @@ export const TabletWorkspace: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <StageProgressPanel etapasConEstado={etapasConEstado} />
 
       {/* Main Content Area */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">

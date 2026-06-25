@@ -1,5 +1,5 @@
 import api from './axios';
-import type { Muestra } from '../shared/types';
+import type { Muestra } from '../shared/types/index';
 
 interface ApiEnvelope<T> {
   success: boolean;

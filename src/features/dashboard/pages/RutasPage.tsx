@@ -1,14 +1,12 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   getRutas,
   getRutasInactivas,
-  updateRuta,
 } from '../../../api/rutas';
-import type { Ruta, RutaUpdate } from '../../../shared/types/domain';
+import type { Ruta } from '../../../shared/types/domain';
 import { Plus, Edit } from 'lucide-react';
-import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
 
@@ -18,7 +16,6 @@ const RUTA_FIELDS: SearchField[] = [
 ];
 
 export const RutasPage = () => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
@@ -51,26 +48,6 @@ export const RutasPage = () => {
 
     return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [activas, inactivas, status, field, query]);
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: RutaUpdate }) =>
-      updateRuta(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rutas'] });
-      queryClient.invalidateQueries({ queryKey: ['rutas-inactivos'] });
-    },
-    onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar la ruta:\n${msg}`);
-    },
-  });
-
-
 
   if (isLoading) return <div className="p-6">Cargando rutas...</div>;
   if (error) return <div className="p-6 text-red-500">Error al cargar rutas</div>;

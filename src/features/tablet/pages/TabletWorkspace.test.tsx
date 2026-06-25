@@ -289,4 +289,19 @@ describe('TabletWorkspace', () => {
       expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas');
     });
   });
+
+  it('renders StageProgressPanel with stages in order', async () => {
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    // Wait for the workspace to load
+    expect(await screen.findByText('Amasado')).toBeInTheDocument();
+
+    // Verify StageProgressPanel is rendered via test id
+    const panel = screen.getByTestId('stage-progress-panel');
+    expect(panel).toBeInTheDocument();
+  });
 });

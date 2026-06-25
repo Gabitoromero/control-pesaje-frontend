@@ -5,7 +5,7 @@ import { ArrowLeft, Play, Plus, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
-import { getArticulos } from '../../../api/articulos';
+import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
 
@@ -39,14 +39,15 @@ export const GestionPasadasPage: React.FC = () => {
   const sinRutaAsignada = linea !== undefined && !linea.rutaPasadaActiva;
 
   // Query articles for the "Nueva Pasada" modal
+  const rutaPasadaId = linea?.rutaPasadaActiva?.id;
   const { 
     data: articulos = [], 
     isLoading: loadingArticulos,
     error: errorArticulos
   } = useQuery<Articulo[]>({
-    queryKey: ['articulos-activos'],
-    queryFn: getArticulos,
-    enabled: isModalOpen,
+    queryKey: ['articulos-ruta', rutaPasadaId],
+    queryFn: () => getArticulosPorRuta(rutaPasadaId!),
+    enabled: isModalOpen && !!rutaPasadaId,
   });
 
   if (!activeLineaId) {
@@ -239,7 +240,7 @@ export const GestionPasadasPage: React.FC = () => {
               ) : errorArticulos ? (
                 <p className="text-sm text-red-400 text-center py-4">Error al cargar los artículos.</p>
               ) : articulos.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">No hay artículos activos disponibles.</p>
+                <p className="text-sm text-slate-400 text-center py-4">No hay artículos asignados a esta ruta</p>
               ) : (
                 <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
                   {articulos.map((articulo) => {

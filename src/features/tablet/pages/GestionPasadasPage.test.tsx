@@ -5,7 +5,7 @@ import type { User } from '../../../shared/types/auth';
 import { GestionPasadasPage } from './GestionPasadasPage';
 import { vi } from 'vitest';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
-import { getArticulos } from '../../../api/articulos';
+import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { getLinea } from '../../../api/lineas';
 
 const navigateMock = vi.fn();
@@ -22,8 +22,8 @@ vi.mock('../../../api/pasadas', () => ({
   iniciarPasada: vi.fn(),
 }));
 
-vi.mock('../../../api/articulos', () => ({
-  getArticulos: vi.fn(),
+vi.mock('../../../api/rutas-pasadas-articulos', () => ({
+  getArticulosPorRuta: vi.fn(),
 }));
 
 vi.mock('../../../api/lineas', () => ({
@@ -38,7 +38,7 @@ const operarioUser: User = {
   puedeTomarMuestrasLibres: false,
 };
 
-const mockPasadas = [
+const mockPasadas: any[] = [
   { id: 101, estado: 'en_curso', usuarioId: 3, articuloId: 1, createdAt: '', updatedAt: '' },
   { id: 102, estado: 'en_curso', usuarioId: 3, articuloId: 2, createdAt: '', updatedAt: '' },
 ];
@@ -69,12 +69,12 @@ describe('GestionPasadasPage', () => {
     navigateMock.mockClear();
     vi.mocked(getPasadas).mockReset();
     vi.mocked(iniciarPasada).mockReset();
-    vi.mocked(getArticulos).mockReset();
+    vi.mocked(getArticulosPorRuta).mockReset();
     vi.mocked(getLinea).mockReset();
 
     // Default mocks: line with route assigned
     vi.mocked(getPasadas).mockResolvedValue(mockPasadas);
-    vi.mocked(getArticulos).mockResolvedValue(mockArticulos);
+    vi.mocked(getArticulosPorRuta).mockResolvedValue(mockArticulos);
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
   });
 
@@ -127,6 +127,18 @@ describe('GestionPasadasPage', () => {
     // Verify API call and navigation
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, articuloId: 1 });
     expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=200');
+  });
+
+  it('muestra el empty state cuando getArticulosPorRuta retorna vacío', async () => {
+    vi.mocked(getArticulosPorRuta).mockResolvedValue([]);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    expect(btnNuevaPasada).not.toBeDisabled();
+    await userEvent.click(btnNuevaPasada);
+
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    expect(screen.getByText('No hay artículos asignados a esta ruta')).toBeInTheDocument();
   });
 
   describe('cuando la línea no tiene ruta asignada', () => {
