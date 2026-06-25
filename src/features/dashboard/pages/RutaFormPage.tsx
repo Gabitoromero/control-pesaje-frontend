@@ -9,21 +9,7 @@ import { getRuta, createRuta, updateRuta, deleteRuta } from '../../../api/rutas'
 import { getEtapas } from '../../../api/etapas';
 import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { isAxiosError } from 'axios';
-
-export const etapaSchema = z.object({
-  id: z.number().optional(),
-  etapa: z.coerce.number().min(1, 'Requerido'),
-  pesoMinimo: z.coerce.number().min(0, 'Mínimo 0'),
-  pesoMaximo: z.coerce.number().min(0, 'Mínimo 0'),
-  pesoIdeal: z.coerce.number().min(0, 'Mínimo 0'),
-  cantidadMuestrasRequeridas: z.coerce.number().min(1, 'Mínimo 1'),
-});
-
-export const rutaSchema = z.object({
-  nombre: z.string().min(1, 'Nombre es requerido'),
-  descripcion: z.string().optional(),
-  etapas: z.array(etapaSchema).min(1, 'Debe agregar al menos una etapa'),
-});
+import { rutaSchema } from './RutaFormPage.schemas.js';
 
 type RutaFormValues = z.infer<typeof rutaSchema>;
 
@@ -326,9 +312,16 @@ export const RutaFormPage = () => {
                   type="button"
                   title="Eliminar etapa"
                   aria-label="Eliminar etapa"
-                  onClick={() => remove(index)}
-                  disabled={fields.length === 1}
-                  className="p-2 text-gray-400 hover:text-red-600 mt-5 disabled:opacity-30"
+                  onClick={() => {
+                    if (fields.length === 1) {
+                      if (window.confirm("¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion")) {
+                        remove(index);
+                      }
+                    } else {
+                      remove(index);
+                    }
+                  }}
+                  className="p-2 text-gray-400 hover:text-red-600 mt-5"
                 >
                   <Trash size={18} />
                 </button>

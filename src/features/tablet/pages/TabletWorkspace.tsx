@@ -7,8 +7,7 @@ import { usePasadaState } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
-import type { Pasada } from '../../../shared/types/domain';
-import type { RutaPasadaEtapa } from '../../../api/rutas';
+import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 
 export const TabletWorkspace: React.FC = () => {
@@ -65,8 +64,9 @@ export const TabletWorkspace: React.FC = () => {
     articuloId: pasada?.articuloId,
     etapas,
     initialMuestras: pasada?.muestras,
-    onApiError: (err) => {
-      const msg = err.response?.data?.error?.message || err.message || 'Error de comunicación';
+    onApiError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      const msg = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error de comunicación';
       setApiError(msg);
     },
   });
@@ -121,13 +121,13 @@ export const TabletWorkspace: React.FC = () => {
   };
 
   // Helper variables for UI
-  const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapaId;
+  const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapa.id;
   const samplesForActiveStage = muestras.filter(
-    (m) => (m.etapaId ?? m.etapa_id) === currentStageId && (m.estadoValidacion ?? m.estado_validacion) !== 'descartado'
+    (m) => m.etapaId === currentStageId && m.estadoValidacion !== 'descartado'
   );
   
-  const activeStageName = etapaActiva?.etapa?.nombre ?? etapaActiva?.nombre ?? 'Completado';
-  const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidad_muestras_requeridas ?? 0;
+  const activeStageName = etapaActiva?.etapa?.nombre ?? etapaActiva?.etapa.nombre ?? 'Completado';
+  const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidadMuestrasRequeridas ?? 0;
   
   // Task 3.7: Render Lockout Overlay when isConnected is false or API requests fail
   const showLockout = !isConnected || !!apiError || !!errorPasada || !!errorLinea;
@@ -224,18 +224,16 @@ export const TabletWorkspace: React.FC = () => {
                       </span>
                       <div>
                         <span className="text-xl font-bold tabular-nums text-slate-800">
-                          {(muestra.pesoNeto ?? muestra.peso_neto ?? 0).toFixed(3)} kg
+                          {muestra.pesoNeto.toFixed(3)} kg
                         </span>
                         <div className="text-sm mt-1 flex items-center gap-2">
-                          {(muestra.estadoValidacion ?? muestra.estado_validacion) === 'ok' 
+                          {muestra.estadoValidacion === 'ok' 
                             ? <span className="text-green-600 font-medium">En Rango</span>
                             : <span className="text-red-500 font-medium">Fuera de Rango</span>
                           }
                           <span className="text-slate-400">•</span>
                           <span className="text-slate-500">
-                            {etapas.find(e => (e.etapa?.id ?? e.etapaId ?? e.etapa_id) === (muestra.etapaId ?? muestra.etapa_id))?.nombre ?? 
-                             etapas.find(e => (e.etapa?.id ?? e.etapaId ?? e.etapa_id) === (muestra.etapaId ?? muestra.etapa_id))?.etapa?.nombre ?? 
-                             'Etapa'}
+                            {etapas.find(e => e.etapa.id === muestra.etapaId)?.etapa.nombre ?? 'Etapa'}
                           </span>
                         </div>
                       </div>

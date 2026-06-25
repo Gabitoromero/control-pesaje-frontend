@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePasadaState } from './usePasadaState';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
-import type { RutaPasadaEtapa } from '../../../api/rutas';
+import type { RutaPasadaEtapa } from '../../../shared/types/domain';
 
 vi.mock('../../../api/muestras', () => ({
   registrarMuestra: vi.fn(),

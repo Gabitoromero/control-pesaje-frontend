@@ -1,11 +1,12 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { handlers } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
-import { RutaFormPage, rutaSchema, etapaSchema } from './RutaFormPage';
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { RutaFormPage } from './RutaFormPage';
+import { etapaSchema, rutaSchema } from './RutaFormPage.schemas';
+import { describe, it, expect, vi, afterEach, beforeAll, afterAll } from 'vitest';
 
 describe('RutaFormPage Validation Schemas', () => {
   describe('rutaSchema', () => {
@@ -39,16 +40,13 @@ describe('RutaFormPage Validation Schemas', () => {
       }
     });
 
-    it('should require at least one etapa', () => {
-      const invalidPayload = {
+    it('should permit empty etapas', () => {
+      const validPayload = {
         nombre: 'Ruta 1',
         etapas: []
       };
-      const result = rutaSchema.safeParse(invalidPayload);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Debe agregar al menos una etapa');
-      }
+      const result = rutaSchema.safeParse(validPayload);
+      expect(result.success).toBe(true);
     });
   });
 
@@ -104,6 +102,7 @@ afterAll(() => server.close());
 
 describe('RutaFormPage Component', () => {
   it('1. create valid payload no articulo', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
     server.use(
       http.post('http://localhost:3000/api/rutas-pasadas', async ({ request }) => {
@@ -123,7 +122,6 @@ describe('RutaFormPage Component', () => {
     await userEvent.selectOptions(selects[0], '1'); // Amasado
 
     // Set weights and muestras
-    const muestras = document.querySelectorAll('input[name$=".cantidadMuestrasRequeridas"]')[0] as HTMLInputElement;
     const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
     const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
     const pesosIdeal = document.querySelectorAll('input[name$=".pesoIdeal"]')[0] as HTMLInputElement;
@@ -199,15 +197,37 @@ describe('RutaFormPage Component', () => {
     expect(screen.getAllByRole('combobox').length).toBe(1);
   });
 
-  it('7. remove disabled (single row)', async () => {
+  it('7. remove single row asks for confirmation and clears list if confirmed', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
     renderWithProviders(<RutaFormPage />);
     
     const removeBtn = await screen.findByTitle(/eliminar etapa/i);
-    expect(removeBtn).toBeDisabled();
+    expect(removeBtn).not.toBeDisabled();
+    
+    await userEvent.click(removeBtn);
+    expect(confirmSpy).toHaveBeenCalledWith("Esta seguro que desea eliminar la ultima etapa? NO se podra asignar una ruta sin etapas a una linea de produccion");
+    
+    expect(screen.queryAllByRole('combobox').length).toBe(0);
+    confirmSpy.mockRestore();
+  });
+
+  it('7b. remove single row asks for confirmation and keeps row if cancelled', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
+    renderWithProviders(<RutaFormPage />);
+    
+    const removeBtn = await screen.findByTitle(/eliminar etapa/i);
+    expect(removeBtn).not.toBeDisabled();
+    
+    await userEvent.click(removeBtn);
+    expect(confirmSpy).toHaveBeenCalledWith("Esta seguro que desea eliminar la ultima etapa? NO se podra asignar una ruta sin etapas a una linea de produccion");
+    
+    expect(screen.queryAllByRole('combobox').length).toBe(1);
+    confirmSpy.mockRestore();
   });
 
   it('8. reorder rows and assert orden in PUT body', async () => {
     paramsMock = { id: '1' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
@@ -240,6 +260,7 @@ describe('RutaFormPage Component', () => {
 
   it('9. edit params of existing etapa — PUT sends updated pesoIdeal', async () => {
     paramsMock = { id: '1' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
@@ -273,6 +294,7 @@ describe('RutaFormPage Component', () => {
 
   it('10. change etapa select on existing row — PUT sends new etapa id', async () => {
     paramsMock = { id: '1' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
@@ -302,6 +324,7 @@ describe('RutaFormPage Component', () => {
 
   it('11. add new etapa to existing ruta — PUT sends 3 etapas with correct orden', async () => {
     paramsMock = { id: '1' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
@@ -373,6 +396,7 @@ describe('RutaFormPage Component', () => {
   });
   it('13. clicking Reactivar sends PUT with activo:true', async () => {
     paramsMock = { id: '4' }; // Ruta Delta is inactive
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {

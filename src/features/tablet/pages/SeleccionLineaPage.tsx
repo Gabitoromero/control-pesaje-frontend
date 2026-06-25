@@ -7,12 +7,7 @@ import api from '../../../api/axios';
 import { isAxiosError } from 'axios';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { abrirSesionLinea } from '../../../api/auth';
-
-interface Linea {
-  id: number;
-  nombre: string;
-  estado: 'disponible' | 'ocupada';
-}
+import type { Linea } from '../../../api/lineas';
 
 export const SeleccionLineaPage: React.FC = () => {
   const { isAuthenticated, user, logout, openLineSession } = useAuth();
@@ -37,6 +32,7 @@ export const SeleccionLineaPage: React.FC = () => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const handleSeleccionarLinea = async (linea: Linea) => {
+    if (linea.id === undefined) return;
     if (linea.estado === 'ocupada') return;
     try {
       setActivatingId(linea.id);

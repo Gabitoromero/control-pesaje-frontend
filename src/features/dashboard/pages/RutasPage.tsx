@@ -5,9 +5,8 @@ import {
   getRutas,
   getRutasInactivas,
   updateRuta,
-  type Ruta,
-  type RutaUpdate,
 } from '../../../api/rutas';
+import type { Ruta, RutaUpdate } from '../../../shared/types/domain';
 import { Plus, Edit } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';

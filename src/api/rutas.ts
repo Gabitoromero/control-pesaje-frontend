@@ -1,46 +1,5 @@
 import api from './axios';
-
-export interface EtapaDetalle {
-  id: number;
-  nombre: string;
-}
-
-export interface RutaPasadaEtapa {
-  id?: number;
-  etapa: EtapaDetalle;
-  orden: number;
-  pesoMinimo: number;
-  pesoIdeal: number;
-  pesoMaximo: number;
-  cantidadMuestrasRequeridas: number;
-}
-
-export interface RutaPasadaEtapaCreate {
-  id?: number;
-  etapa: number;
-  orden: number;
-  pesoMinimo: number;
-  pesoIdeal: number;
-  pesoMaximo: number;
-  cantidadMuestrasRequeridas: number;
-}
-
-export interface Ruta {
-  id?: number;
-  nombre: string;
-  descripcion?: string | null;
-  activo?: boolean;
-  etapas?: RutaPasadaEtapa[];
-}
-
-export interface RutaCreate extends Omit<Ruta, 'id' | 'etapas'> {
-  etapas: RutaPasadaEtapaCreate[];
-}
-
-export type RutaUpdate = Partial<Omit<RutaCreate, 'etapas'>> & {
-  etapas?: RutaPasadaEtapaCreate[];
-  activo?: boolean;
-};
+import type { Ruta, RutaCreate, RutaUpdate } from '../shared/types/domain';
 
 interface ApiEnvelope<T> {
   success: boolean;

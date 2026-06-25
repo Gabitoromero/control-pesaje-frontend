@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { Muestra, EstadoValidacion } from '../../../shared/types/domain';
-import type { RutaPasadaEtapa } from '../../../api/rutas';
+import type { Muestra, EstadoValidacion, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
 
 interface UsePasadaStateProps {

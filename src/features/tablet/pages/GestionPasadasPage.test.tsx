@@ -6,6 +6,7 @@ import { GestionPasadasPage } from './GestionPasadasPage';
 import { vi } from 'vitest';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getArticulos } from '../../../api/articulos';
+import { getLinea } from '../../../api/lineas';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -23,6 +24,10 @@ vi.mock('../../../api/pasadas', () => ({
 
 vi.mock('../../../api/articulos', () => ({
   getArticulos: vi.fn(),
+}));
+
+vi.mock('../../../api/lineas', () => ({
+  getLinea: vi.fn(),
 }));
 
 const operarioUser: User = {
@@ -43,16 +48,34 @@ const mockArticulos = [
   { id: 2, nombre: 'Articulo B', marca: 'Marca Y', activo: true },
 ];
 
+const lineaConRuta = {
+  id: 1,
+  nombre: 'Línea 1',
+  numeroBalanza: 1,
+  rutaPasadaActiva: { id: 10, nombre: 'Ruta A', etapas: [] },
+  activo: true,
+};
+
+const lineaSinRuta = {
+  id: 1,
+  nombre: 'Línea 1',
+  numeroBalanza: 1,
+  rutaPasadaActiva: null,
+  activo: true,
+};
+
 describe('GestionPasadasPage', () => {
   beforeEach(() => {
     navigateMock.mockClear();
     vi.mocked(getPasadas).mockReset();
     vi.mocked(iniciarPasada).mockReset();
     vi.mocked(getArticulos).mockReset();
+    vi.mocked(getLinea).mockReset();
 
-    // Default mock implementation
+    // Default mocks: line with route assigned
     vi.mocked(getPasadas).mockResolvedValue(mockPasadas);
     vi.mocked(getArticulos).mockResolvedValue(mockArticulos);
+    vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
   });
 
   it('llama a closeLineSession al hacer click en Volver', async () => {
@@ -84,9 +107,10 @@ describe('GestionPasadasPage', () => {
   it('muestra el modal y permite iniciar una pasada', async () => {
     vi.mocked(iniciarPasada).mockResolvedValue({ id: 200 } as any);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
-    
-    // Click Nueva Pasada to open modal
-    const btnNuevaPasada = screen.getByRole('button', { name: /nueva pasada/i });
+
+    // Wait for linea to load so the button is enabled
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    expect(btnNuevaPasada).not.toBeDisabled();
     await userEvent.click(btnNuevaPasada);
 
     // Modal should show articles
@@ -103,5 +127,41 @@ describe('GestionPasadasPage', () => {
     // Verify API call and navigation
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, articuloId: 1 });
     expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=200');
+  });
+
+  describe('cuando la línea no tiene ruta asignada', () => {
+    beforeEach(() => {
+      vi.mocked(getLinea).mockResolvedValue(lineaSinRuta);
+    });
+
+    it('muestra el warning de ruta no asignada', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      expect(await screen.findByText('Sin ruta de pesaje asignada')).toBeInTheDocument();
+      expect(
+        screen.getByText(/solicitar asignacion|asigne una ruta/i)
+      ).toBeInTheDocument();
+    });
+
+    it('deshabilita el botón Nueva Pasada cuando no hay ruta', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      // Wait for linea query to resolve
+      await screen.findByText('Sin ruta de pesaje asignada');
+
+      const btnNuevaPasada = screen.getByRole('button', { name: /nueva pasada/i });
+      expect(btnNuevaPasada).toBeDisabled();
+    });
+
+    it('no abre el modal al intentar hacer click en Nueva Pasada sin ruta', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await screen.findByText('Sin ruta de pesaje asignada');
+
+      const btnNuevaPasada = screen.getByRole('button', { name: /nueva pasada/i });
+      // Attempt click on disabled button — modal should never open
+      await userEvent.click(btnNuevaPasada);
+
+      expect(screen.queryByText('Iniciar Nueva Pasada')).not.toBeInTheDocument();
+    });
   });
 });

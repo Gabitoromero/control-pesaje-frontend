@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Play, Plus, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Play, Plus, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
+import { getLinea } from '../../../api/lineas';
 import { getArticulos } from '../../../api/articulos';
 import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
@@ -28,6 +29,15 @@ export const GestionPasadasPage: React.FC = () => {
     enabled: !!activeLineaId,
   });
 
+  // Query the active line to verify it has a route assigned
+  const { data: linea } = useQuery({
+    queryKey: ['linea', activeLineaId],
+    queryFn: () => getLinea(activeLineaId!),
+    enabled: !!activeLineaId,
+  });
+
+  const sinRutaAsignada = linea !== undefined && !linea.rutaPasadaActiva;
+
   // Query articles for the "Nueva Pasada" modal
   const { 
     data: articulos = [], 
@@ -43,10 +53,12 @@ export const GestionPasadasPage: React.FC = () => {
     return <Navigate to="/tablet/seleccion-linea" replace />;
   }
 
-  // Task 2.2: Client-side filtering by user.id
+  // Task 2.2: Client-side filtering by user.id.
+  // The backend may return usuarioId as a flat field or nest it inside usuario.id.
   const filteredPasadas = pasadas.filter((pasada: Pasada) => {
-    const pasadaUsuarioId = pasada.usuarioId || pasada.usuario_id || (pasada.usuario && typeof pasada.usuario === 'object' ? pasada.usuario.id : pasada.usuario);
-    return pasadaUsuarioId === user?.id;
+    const byFlat = pasada.usuarioId === user?.id;
+    const byNested = pasada.usuario?.id === user?.id;
+    return byFlat || byNested;
   });
 
   const handleVolver = async () => {
@@ -81,21 +93,22 @@ export const GestionPasadasPage: React.FC = () => {
     }
   };
 
-  // Helper to resolve article display name
-  const getArticuloNombre = (pasada: Pasada) => {
-    if (pasada.articulo && typeof pasada.articulo === 'object') {
+  // Helper to resolve article display name from nested articulo object or articuloId
+  const getArticuloNombre = (pasada: Pasada): string => {
+    if (pasada.articulo) {
       const brand = pasada.articulo.marca ? `${pasada.articulo.marca} - ` : '';
       return `${brand}${pasada.articulo.nombre}`;
     }
-    const artId = pasada.articuloId || pasada.articulo_id || (typeof pasada.articulo === 'number' ? pasada.articulo : undefined);
+    const artId = pasada.articuloId;
     if (artId !== undefined) {
       const found = articulos.find(a => a.id === artId);
       if (found) {
         const brand = found.marca ? `${found.marca} - ` : '';
         return `${brand}${found.nombre}`;
       }
+      return `Artículo #${artId}`;
     }
-    return `Artículo #${artId || '?'}`;
+    return 'Artículo desconocido';
   };
 
   return (
@@ -121,12 +134,31 @@ export const GestionPasadasPage: React.FC = () => {
           <h2 className="text-xl font-semibold">Pasadas Activas</h2>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-900/25"
+            disabled={sinRutaAsignada}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-lg ${
+              sinRutaAsignada
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
+                : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-[1.02] active:scale-[0.98] shadow-blue-900/25'
+            }`}
           >
             <Plus size={20} />
             Nueva Pasada
           </button>
         </div>
+
+        {/* Warning: line has no route assigned */}
+        {sinRutaAsignada && (
+          <div className="flex items-start gap-3 bg-amber-900/30 border border-amber-700/50 rounded-2xl p-5 mb-6">
+            <AlertTriangle size={20} className="text-amber-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-300 text-sm">Sin ruta de pesaje asignada</p>
+              <p className="text-amber-400/80 text-sm mt-1">
+                Esta línea de producción no tiene una ruta activa configurada.
+                No es posible iniciar nuevas pasadas hasta que un administrador asigne una ruta.
+              </p>
+            </div>
+          </div>
+        )}
 
         {loadingPasadas ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">

@@ -1,5 +1,5 @@
 import api from './axios';
-import type { Ruta } from './rutas';
+import type { Ruta } from '../shared/types/domain';
 
 export interface Linea {
   id?: number;
@@ -7,6 +7,8 @@ export interface Linea {
   numeroBalanza: number;
   rutaPasadaActiva?: Ruta | null;
   activo?: boolean;
+  /** Computed by the backend: 'ocupada' if there is an active session on this line */
+  estado?: 'disponible' | 'ocupada';
 }
 
 export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva'> {
