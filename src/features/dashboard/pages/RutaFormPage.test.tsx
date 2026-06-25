@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
@@ -169,32 +169,37 @@ describe('RutaFormPage Component', () => {
       expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
     });
 
-    const selects = screen.getAllByRole('combobox');
-    expect(selects.length).toBe(2);
-    expect(selects[0]).toHaveValue('1');
-    expect(selects[1]).toHaveValue('2');
+    // Scope to etapas-container to avoid picking up the articulos selector
+    const etapasContainer = screen.getByTestId('etapas-container');
+    const etapaSelects = within(etapasContainer).getAllByRole('combobox');
+    expect(etapaSelects.length).toBe(2);
+    expect(etapaSelects[0]).toHaveValue('1');
+    expect(etapaSelects[1]).toHaveValue('2');
   });
 
   it('5. add row', async () => {
     renderWithProviders(<RutaFormPage />);
     
-    expect(screen.getAllByRole('combobox').length).toBe(1);
+    const etapasContainer = screen.getByTestId('etapas-container');
+    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(1);
     await userEvent.click(screen.getByRole('button', { name: /agregar etapa/i }));
-    expect(screen.getAllByRole('combobox').length).toBe(2);
+    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
   });
 
   it('6. remove row (multi)', async () => {
     paramsMock = { id: '1' }; // Has 2 rows
     renderWithProviders(<RutaFormPage />);
     
+    // findByTestId is async — waits for the loading state to resolve
+    const etapasContainer = await screen.findByTestId('etapas-container');
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
 
     const removeBtns = screen.getAllByTitle(/eliminar etapa/i);
     await userEvent.click(removeBtns[1]);
     
-    expect(screen.getAllByRole('combobox').length).toBe(1);
+    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(1);
   });
 
   it('7. remove single row asks for confirmation and clears list if confirmed', async () => {
@@ -205,9 +210,11 @@ describe('RutaFormPage Component', () => {
     expect(removeBtn).not.toBeDisabled();
     
     await userEvent.click(removeBtn);
-    expect(confirmSpy).toHaveBeenCalledWith("Esta seguro que desea eliminar la ultima etapa? NO se podra asignar una ruta sin etapas a una linea de produccion");
+    expect(confirmSpy).toHaveBeenCalledWith("¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion");
     
-    expect(screen.queryAllByRole('combobox').length).toBe(0);
+    // Only etapa comboboxes should be gone (articulos selector remains)
+    const etapasContainer = screen.getByTestId('etapas-container');
+    expect(within(etapasContainer).queryAllByRole('combobox').length).toBe(0);
     confirmSpy.mockRestore();
   });
 
@@ -219,9 +226,10 @@ describe('RutaFormPage Component', () => {
     expect(removeBtn).not.toBeDisabled();
     
     await userEvent.click(removeBtn);
-    expect(confirmSpy).toHaveBeenCalledWith("Esta seguro que desea eliminar la ultima etapa? NO se podra asignar una ruta sin etapas a una linea de produccion");
+    expect(confirmSpy).toHaveBeenCalledWith("¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion");
     
-    expect(screen.queryAllByRole('combobox').length).toBe(1);
+    const etapasContainer = screen.getByTestId('etapas-container');
+    expect(within(etapasContainer).queryAllByRole('combobox').length).toBe(1);
     confirmSpy.mockRestore();
   });
 
@@ -238,8 +246,10 @@ describe('RutaFormPage Component', () => {
 
     renderWithProviders(<RutaFormPage />);
     
+    // findByTestId is async — waits for the component to finish loading
+    const etapasContainer = await screen.findByTestId('etapas-container');
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
 
     const upBtns = screen.getAllByTitle(/subir etapa/i);
@@ -271,8 +281,9 @@ describe('RutaFormPage Component', () => {
 
     renderWithProviders(<RutaFormPage />);
 
+    const etapasContainer = await screen.findByTestId('etapas-container');
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
 
     // Update pesoIdeal of the first etapa (currently 15)
@@ -305,12 +316,14 @@ describe('RutaFormPage Component', () => {
 
     renderWithProviders(<RutaFormPage />);
 
+    // findByTestId waits for the component to finish the loading state
+    const etapasContainer = await screen.findByTestId('etapas-container');
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
 
     // Change first etapa from Amasado (1) to Envasado (3)
-    const selects = screen.getAllByRole('combobox');
+    const selects = within(etapasContainer).getAllByRole('combobox');
     await userEvent.selectOptions(selects[0], '3');
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
@@ -335,14 +348,16 @@ describe('RutaFormPage Component', () => {
 
     renderWithProviders(<RutaFormPage />);
 
+    // findByTestId waits for the component to finish the loading state
+    const etapasContainer = await screen.findByTestId('etapas-container');
     await waitFor(() => {
-      expect(screen.getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
 
     await userEvent.click(screen.getByRole('button', { name: /agregar etapa/i }));
-    expect(screen.getAllByRole('combobox').length).toBe(3);
+    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(3);
 
-    const selects = screen.getAllByRole('combobox');
+    const selects = within(etapasContainer).getAllByRole('combobox');
     await userEvent.selectOptions(selects[2], '3'); // Envasado
 
     const pesoMinInputs = document.querySelectorAll('input[name$=".pesoMinimo"]');
@@ -422,3 +437,130 @@ describe('RutaFormPage Component', () => {
     expect(requestPayload.activo).toBe(true);
   });
 });
+
+describe('RutaFormPage — Artículos Asignados', () => {
+  it('14. edit mode: shows articulos asignados from the pivot endpoint', async () => {
+    paramsMock = { id: '1' }; // Ruta Alpha has Harina 000 and Azucar assigned (per handlers)
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      expect(screen.getByText('Azúcar')).toBeInTheDocument();
+    });
+  });
+
+  it('15. edit mode: assigned articulos are excluded from the selector', async () => {
+    paramsMock = { id: '1' }; // Harina 000 (id=1) and Azucar (id=2) are assigned
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    // articulosOptions has Harina 000 (1), Azucar (2), Sal fina (3)
+    // After assigning 1 and 2, only Sal fina should be in the selector
+    const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
+    const options = Array.from(selector.querySelectorAll('option'));
+    const optionValues = options.map(o => Number(o.value)).filter(v => v !== 0);
+    expect(optionValues).not.toContain(1);
+    expect(optionValues).not.toContain(2);
+    expect(optionValues).toContain(3); // Sal fina should be available
+  });
+
+  it('16. edit mode: adding an articulo calls the pivot POST endpoint', async () => {
+    paramsMock = { id: '1' };
+    let pivotPostPayload: Record<string, unknown> | null = null;
+    server.use(
+      http.post('http://localhost:3000/api/rutas-pasadas-articulos', async ({ request }) => {
+        pivotPostPayload = await request.json() as Record<string, unknown>;
+        return HttpResponse.json({ success: true, data: { id: 999, articulo: { id: 3, nombre: 'Sal fina', marca: 'MarcaC' } } }, { status: 201 });
+      })
+    );
+
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+    });
+
+    // Select Sal fina (id=3, not yet assigned)
+    const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
+    await userEvent.selectOptions(selector, '3');
+
+    const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
+    await userEvent.click(addBtn);
+
+    await waitFor(() => {
+      expect(pivotPostPayload).toBeDefined();
+    });
+
+    expect(pivotPostPayload).toMatchObject({ rutaPasada: 1, articulo: 3 });
+  });
+
+  it('17. edit mode: removing an articulo calls the pivot DELETE endpoint', async () => {
+    paramsMock = { id: '1' };
+    let deletedPivotId: string | null = null;
+    server.use(
+      http.delete('http://localhost:3000/api/rutas-pasadas-articulos/:id', ({ params }) => {
+        deletedPivotId = params.id as string;
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    // Click the remove button for the first assigned articulo (pivot id=101)
+    const removeButtons = screen.getAllByRole('button', { name: /quitar artículo/i });
+    await userEvent.click(removeButtons[0]);
+
+    await waitFor(() => {
+      expect(deletedPivotId).toBe('101');
+    });
+  });
+
+  it('18. create mode: articulos are managed locally before the ruta is saved', async () => {
+    // No paramsMock — create mode
+    renderWithProviders(<RutaFormPage />);
+
+    // The articulos section should show "Sin artículos asignados." initially
+    await waitFor(() => {
+      expect(screen.getByText(/sin artículos asignados/i)).toBeInTheDocument();
+    });
+
+    // Wait for articulos options to load from the mock server
+    const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
+    await waitFor(() => {
+      // Harina 000 (id=1) should be available in the selector
+      const option = selector.querySelector('option[value="1"]');
+      expect(option).not.toBeNull();
+    });
+
+    await userEvent.selectOptions(selector, '1');
+
+    const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
+    await userEvent.click(addBtn);
+
+    // Should appear in the list without any API call
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    // Remove it locally
+    const removeBtn = screen.getByRole('button', { name: /quitar artículo/i });
+    await userEvent.click(removeBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Harina 000')).not.toBeInTheDocument();
+      expect(screen.getByText(/sin artículos asignados/i)).toBeInTheDocument();
+    });
+  });
+});
+

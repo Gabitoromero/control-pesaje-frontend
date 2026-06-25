@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import type { Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,6 +7,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRuta, createRuta, updateRuta, deleteRuta } from '../../../api/rutas';
 import { getEtapas } from '../../../api/etapas';
+import { getArticulos } from '../../../api/articulos';
+import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
+import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
 import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { rutaSchema } from './RutaFormPage.schemas.js';
@@ -20,6 +23,18 @@ export const RutaFormPage = () => {
   const isEditing = Boolean(id);
 
   const { data: etapasOptions = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
+  const { data: articulosOptions = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });
+
+  // Articulos asignados a la ruta (pivot table, managed via direct API calls)
+  const { data: articulosAsignados = [], refetch: refetchArticulosAsignados } = useQuery({
+    queryKey: ['ruta-articulos', id],
+    queryFn: () => getArticulosDeRuta(Number(id)),
+    enabled: isEditing,
+  });
+
+  // Local state for articulos in create mode (not yet persisted until the ruta itself is saved)
+  const [articulosLocal, setArticulosLocal] = useState<ArticuloRutaPasadaItem[]>([]);
+  const [selectedArticuloId, setSelectedArticuloId] = useState<number>(0);
 
   const { data: ruta, isLoading: loadingRuta } = useQuery({
     queryKey: ['ruta', id],
@@ -105,6 +120,81 @@ export const RutaFormPage = () => {
       alert(`No se pudo guardar:\n${msg}`);
     },
   });
+
+  const addArticuloMutation = useMutation({
+    mutationFn: ({ rutaId, articuloId }: { rutaId: number; articuloId: number }) =>
+      addArticuloARuta(rutaId, articuloId),
+    onSuccess: () => {
+      refetchArticulosAsignados();
+      setSelectedArticuloId(0);
+    },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo agregar el artículo:\n${msg}`);
+    },
+  });
+
+  const removeArticuloMutation = useMutation({
+    mutationFn: (pivotId: number) => removeArticuloDeRuta(pivotId),
+    onSuccess: () => {
+      refetchArticulosAsignados();
+    },
+    onError: (err: unknown) => {
+      let msg = 'Ocurrió un error inesperado';
+      if (isAxiosError(err)) {
+        msg = err.response?.data?.error?.message || err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      alert(`No se pudo eliminar el artículo:\n${msg}`);
+    },
+  });
+
+  const handleAddArticulo = () => {
+    if (!selectedArticuloId || selectedArticuloId === 0) return;
+
+    if (isEditing) {
+      // In edit mode: call the API directly
+      addArticuloMutation.mutate({ rutaId: Number(id), articuloId: selectedArticuloId });
+    } else {
+      // In create mode: manage locally until the ruta is persisted
+      const alreadyAssigned = articulosLocal.some(a => a.articulo.id === selectedArticuloId);
+      if (alreadyAssigned) return;
+
+      const articuloOption = articulosOptions.find(a => a.id === selectedArticuloId);
+      if (!articuloOption) return;
+
+      const localItem: ArticuloRutaPasadaItem = {
+        id: -(Date.now()), // temporary negative ID for local items
+        articulo: {
+          id: articuloOption.id!,
+          nombre: articuloOption.nombre,
+          marca: articuloOption.marca,
+        },
+      };
+      setArticulosLocal(prev => [...prev, localItem]);
+      setSelectedArticuloId(0);
+    }
+  };
+
+  const handleRemoveArticulo = (pivotId: number) => {
+    if (isEditing) {
+      removeArticuloMutation.mutate(pivotId);
+    } else {
+      setArticulosLocal(prev => prev.filter(a => a.id !== pivotId));
+    }
+  };
+
+  // Compute displayed list: server data in edit mode, local state in create mode
+  const articulosMostrados = isEditing ? articulosAsignados : articulosLocal;
+
+  // IDs of articulos already assigned — used to exclude them from the selector
+  const articulosAsignadosIds = new Set(articulosMostrados.map(a => a.articulo.id));
 
   const deleteMutation = useMutation({
     mutationFn: deleteRuta,
@@ -223,7 +313,7 @@ export const RutaFormPage = () => {
             <div className="text-red-500 text-sm mb-4">{errors.etapas.message}</div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-4" data-testid="etapas-container">
             {fields.map((field: { id: string }, index: number) => (
               <div key={field.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex items-start gap-4">
                 <div className="flex flex-col gap-1 mt-1">
@@ -328,6 +418,73 @@ export const RutaFormPage = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Articulos asignados */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Artículos Asignados</h2>
+          </div>
+
+          {/* Selector to add a new articulo */}
+          <div className="flex gap-2 mb-4">
+            <select
+              value={selectedArticuloId}
+              onChange={(e) => setSelectedArticuloId(Number(e.target.value))}
+              aria-label="Seleccionar artículo"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm text-sm"
+            >
+              <option value={0}>Seleccione un artículo...</option>
+              {articulosOptions
+                .filter(a => !articulosAsignadosIds.has(a.id!))
+                .map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.marca ? `[${a.marca}] ` : ''}{a.nombre}
+                  </option>
+                ))
+              }
+            </select>
+            <button
+              type="button"
+              onClick={handleAddArticulo}
+              disabled={!selectedArticuloId || addArticuloMutation.isPending}
+              aria-label="Agregar artículo"
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md flex items-center gap-2 text-sm disabled:opacity-50"
+            >
+              <Plus size={16} /> Agregar
+            </button>
+          </div>
+
+          {/* List of assigned articulos */}
+          {articulosMostrados.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Sin artículos asignados.</p>
+          ) : (
+            <ul className="space-y-2">
+              {articulosMostrados.map(item => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-2 bg-gray-50"
+                >
+                  <span className="text-sm">
+                    {item.articulo.marca ? (
+                      <span className="text-gray-500 mr-1">[{item.articulo.marca}]</span>
+                    ) : null}
+                    {item.articulo.nombre}
+                  </span>
+                  <button
+                    type="button"
+                    title="Quitar artículo"
+                    aria-label="Quitar artículo"
+                    onClick={() => handleRemoveArticulo(item.id)}
+                    disabled={removeArticuloMutation.isPending}
+                    className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <Trash size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="flex justify-between items-center">

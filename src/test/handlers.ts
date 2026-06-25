@@ -207,6 +207,35 @@ export const handlers = [
     new HttpResponse(null, { status: 204 })
   ),
 
+  // rutas-pasadas-articulos pivot handlers
+  http.get(`${BASE}/rutas-pasadas-articulos`, ({ request }) => {
+    const url = new URL(request.url);
+    const rutaPasadaId = Number(url.searchParams.get('rutaPasadaId'));
+    // Ruta 1 (Alpha) has Harina 000 and Azucar assigned
+    const pivotsByRuta: Record<number, { id: number; articulo: { id: number; nombre: string; marca?: string } }[]> = {
+      1: [
+        { id: 101, articulo: { id: 1, nombre: 'Harina 000', marca: 'MarcaA' } },
+        { id: 102, articulo: { id: 2, nombre: 'Azúcar', marca: 'MarcaB' } },
+      ],
+    };
+    const data = rutaPasadaId ? (pivotsByRuta[rutaPasadaId] ?? []) : [];
+    return HttpResponse.json({ success: true, data });
+  }),
+
+  http.post(`${BASE}/rutas-pasadas-articulos`, async ({ request }) => {
+    const body = await request.json() as { rutaPasada: number; articulo: number };
+    const articuloOption = articulosMock.find(a => a.id === body.articulo);
+    const newPivot = {
+      id: 999,
+      articulo: { id: body.articulo, nombre: articuloOption?.nombre ?? 'Artículo', marca: articuloOption?.marca },
+    };
+    return HttpResponse.json({ success: true, data: newPivot }, { status: 201 });
+  }),
+
+  http.delete(`${BASE}/rutas-pasadas-articulos/:id`, () =>
+    new HttpResponse(null, { status: 204 })
+  ),
+
   // lineas-produccion ABM handlers (GET active already exists above)
   http.get(`${BASE}/lineas-produccion/inactive`, () =>
     HttpResponse.json({ success: true, data: lineasMockInactivos })
