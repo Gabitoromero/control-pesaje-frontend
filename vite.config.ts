@@ -10,6 +10,10 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: env.VITE_API_PROXY_TARGET_1 || env.VITE_API_PROXY_TARGET_2 || 'http://localhost:3000',
           changeOrigin: true,
+        },
+        '/socket.io': {
+          target: env.VITE_API_PROXY_TARGET_1 || env.VITE_API_PROXY_TARGET_2 || 'http://localhost:3000',
+          ws: true,
         }
       }
     },

@@ -18,17 +18,35 @@ export function useBalanzaWebSocket(lineaId: number | null) {
 
     // Join room when connected
     const onConnect = () => {
-      setIsConnected(true);
+      console.log(`[Balanza WebSocket] Connected to backend. Emitting 'join-linea' with id:`, lineaId);
       socket.emit('join-linea', lineaId);
     };
 
     const onDisconnect = () => {
+      console.log('[Balanza WebSocket] Disconnected from backend');
       setIsConnected(false);
       setPesoNeto(0);
     };
 
+    const onBalanzaStatus = (data: { isConnected: boolean }) => {
+      console.log(`[Balanza WebSocket] Received 'balanza-status':`, data);
+      setIsConnected(data.isConnected);
+      if (!data.isConnected) {
+        setPesoNeto(0);
+      }
+    };
+
     const onBalanzaData = (data: BalanzaData) => {
       setPesoNeto(data.pesoNeto);
+    };
+
+    const onConnectError = (err: Error) => {
+      console.error('[Balanza WebSocket] Connect Error:', err.message, err);
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onError = (err: any) => {
+      console.error('[Balanza WebSocket] Socket Error:', err);
     };
 
     if (socket.connected) {
@@ -37,15 +55,19 @@ export function useBalanzaWebSocket(lineaId: number | null) {
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnectError);
+    socket.on('error', onError);
     socket.on('balanza-data', onBalanzaData);
+    socket.on('balanza-status', onBalanzaStatus);
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnectError);
+      socket.off('error', onError);
       socket.off('balanza-data', onBalanzaData);
+      socket.off('balanza-status', onBalanzaStatus);
       socket.emit('leave-linea', lineaId);
-      // Depending on architecture, you might not want to completely disconnect the socket if shared
-      // but for now we keep it connected for background stability or other modules.
     };
   }, [lineaId]);
 
