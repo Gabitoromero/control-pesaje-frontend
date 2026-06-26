@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { 
   LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory, 
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity 
+  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu 
 } from 'lucide-react';
 import { UsuarioRol } from '../../shared/types';
 
@@ -17,7 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const location = useLocation();
 
   const [isGestionOpen, setIsGestionOpen] = useState(() => {
-    return ['/articulos', '/etapas', '/lineas', '/rutas', '/usuarios']
+    return ['/articulos', '/etapas', '/lineas', '/rutas', '/usuarios', '/sesiones-activas', '/dispositivos-conectados']
       .some(path => location.pathname.includes(path));
   });
 
@@ -103,6 +103,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                     <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
                       <Activity className="w-5 h-5 mr-3" />
                       Sesiones Activas
+                    </NavLink>
+                    <NavLink to="/dashboard/dispositivos-conectados" className={navClass} onClick={handleLinkClick}>
+                      <Cpu className="w-5 h-5 mr-3" />
+                      Dispositivos
                     </NavLink>
                   </>
                 )}

@@ -24,7 +24,7 @@ export const SesionesActivasPage: React.FC = () => {
         const data = await getSesionesActivas();
         
         const enrichedSessions: EnrichedSession[] = await Promise.all(
-          data.map(async (session: any) => {
+          data.map(async (session: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
             let usuarioNombre = 'Desconocido';
             let legajo = '-';
             try {

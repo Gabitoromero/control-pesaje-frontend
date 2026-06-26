@@ -16,6 +16,7 @@ import { LineasPage } from './features/dashboard/pages/LineasPage';
 import { RutasPage } from './features/dashboard/pages/RutasPage';
 import { RutaFormPage } from './features/dashboard/pages/RutaFormPage';
 import { SesionesActivasPage } from './features/dashboard/pages/SesionesActivasPage';
+import { DispositivosConectadosPage } from './features/dashboard/pages/DispositivosConectadosPage';
 
 function App() {
   const { isAuthenticated, user } = useAuth();
@@ -55,6 +56,7 @@ function App() {
           <Route path="rutas/:id" element={isJefe ? <RutaFormPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="usuarios" element={isAdmin ? <UsuariosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="sesiones-activas" element={isAdmin ? <SesionesActivasPage /> : <Navigate to="/dashboard" replace />} />
+          <Route path="dispositivos-conectados" element={isAdmin ? <DispositivosConectadosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="reportes" element={<div className="bg-white p-6 rounded-lg shadow-sm text-gray-500">Reportes — en construcción</div>} />
         </Route>
 
