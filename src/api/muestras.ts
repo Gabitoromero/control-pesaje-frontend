@@ -21,3 +21,8 @@ export const registrarMuestra = async (data: {
 export const deleteMuestra = async (id: number): Promise<void> => {
   await api.delete(`/muestras/${id}`);
 };
+
+export const getMuestras = async (pasadaId: number): Promise<Muestra[]> => {
+  const response = await api.get<ApiEnvelope<Muestra[]>>('/muestras', { params: { pasadaId } });
+  return response.data.data;
+};

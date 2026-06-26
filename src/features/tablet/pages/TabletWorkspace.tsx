@@ -9,6 +9,7 @@ import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { StageProgressPanel } from '../components/StageProgressPanel';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
+import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -53,6 +54,13 @@ export const TabletWorkspace: React.FC = () => {
 
   const etapas: RutaPasadaEtapa[] = linea?.rutaPasadaActiva?.etapas ?? [];
 
+  // Load muestras explicitly from API since Pasada payload might not include them
+  const { data: muestrasList = [], isLoading: loadingMuestras } = useQuery({
+    queryKey: ['muestras', pasadaId],
+    queryFn: () => getMuestras(pasadaId!),
+    enabled: !!pasadaId,
+  });
+
   // Hook up hook with API integration and client-side derived active stage calculation
   const {
     muestras,
@@ -67,7 +75,7 @@ export const TabletWorkspace: React.FC = () => {
     lineaProduccionId: targetLineaId,
     articuloId: pasada?.articuloId,
     etapas,
-    initialMuestras: pasada?.muestras,
+    initialMuestras: muestrasList,
     onApiError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
       const msg = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error de comunicación';
@@ -83,7 +91,7 @@ export const TabletWorkspace: React.FC = () => {
     return <Navigate to="/tablet/pasadas" replace />;
   }
 
-  if (loadingPasada || loadingLinea) {
+  if (loadingPasada || loadingLinea || loadingMuestras) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="animate-spin text-blue-500" size={36} />
