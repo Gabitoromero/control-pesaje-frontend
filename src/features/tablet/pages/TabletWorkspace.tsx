@@ -3,7 +3,8 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
-import { usePasadaState, type EtapaConEstado } from '../hooks/usePasadaState';
+import { usePasadaState} from '../hooks/usePasadaState';
+//import  type { EtapaConEstado } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { StageProgressPanel } from '../components/StageProgressPanel';
 import { getPasada, completarPasada } from '../../../api/pasadas';
@@ -59,6 +60,7 @@ export const TabletWorkspace: React.FC = () => {
     etapasConEstado,
     addSample,
     removeSample,
+    finalizarEtapaActual,
   } = usePasadaState({
     pasadaId,
     usuarioId: user?.id ?? 0,
@@ -124,10 +126,17 @@ export const TabletWorkspace: React.FC = () => {
 
   // Helper variables for UI
   const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapa.id;
+
+  // Only count 'ok' samples for progress, but show all samples of the active stage in the list
   const samplesForActiveStage = muestras.filter(
     (m) => m.etapaId === currentStageId && m.estadoValidacion === 'ok'
   );
-  
+
+  // Muestras list scoped to the active stage, keeping original indices for removal
+  const muestrasDeEtapaActiva = muestras
+    .map((muestra, originalIndex) => ({ muestra, originalIndex }))
+    .filter(({ muestra }) => muestra.etapaId === currentStageId);
+
   const activeStageName = etapaActiva?.etapa?.nombre ?? etapaActiva?.etapa.nombre ?? 'Completado';
   const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidadMuestrasRequeridas ?? 0;
   
@@ -211,39 +220,35 @@ export const TabletWorkspace: React.FC = () => {
           </div>
           
           <div className="flex-1 overflow-y-auto p-4">
-            {muestras.length === 0 ? (
+            {muestrasDeEtapaActiva.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                <p>No hay muestras en la pasada actual.</p>
+                <p>No hay muestras en esta etapa.</p>
               </div>
             ) : (
               <ul className="space-y-3">
-                {muestras.map((muestra, index) => (
-                  <li 
-                    key={muestra.id ?? index}
+                {muestrasDeEtapaActiva.map(({ muestra, originalIndex }, displayIndex) => (
+                  <li
+                    key={muestra.id ?? originalIndex}
                     className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
                   >
                     <div className="flex items-center gap-4">
                       <span className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full font-bold text-slate-600 text-sm">
-                        {index + 1}
+                        {displayIndex + 1}
                       </span>
                       <div>
                         <span className="text-xl font-bold tabular-nums text-slate-800">
                           {muestra.pesoNeto.toFixed(3)} kg
                         </span>
                         <div className="text-sm mt-1 flex items-center gap-2">
-                          {muestra.estadoValidacion === 'ok' 
+                          {muestra.estadoValidacion === 'ok'
                             ? <span className="text-green-600 font-medium">En Rango</span>
                             : <span className="text-red-500 font-medium">Fuera de Rango</span>
                           }
-                          <span className="text-slate-400">•</span>
-                          <span className="text-slate-500">
-                            {etapas.find(e => e.etapa.id === muestra.etapaId)?.etapa.nombre ?? 'Etapa'}
-                          </span>
                         </div>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleRemoveSample(index)}
+                      onClick={() => handleRemoveSample(originalIndex)}
                       className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                       aria-label="Descartar muestra"
                     >
@@ -255,21 +260,36 @@ export const TabletWorkspace: React.FC = () => {
             )}
           </div>
 
-          {/* Task 3.6: Finalizar Pasada button rendered when all stages are complete */}
+          {/* Task 3.6: Manual Stage / Pasada progression button */}
           <div className="p-4 border-t border-slate-100">
-            {etapaActiva === null && etapas.length > 0 ? (
+            {etapaActiva !== null ? (() => {
+              const isActiveStageComplete = samplesForActiveStage.length >= activeStageRequired;
+              const isLastStage = etapasConEstado.length > 0 && 
+                                  etapasConEstado[etapasConEstado.length - 1].etapa.etapa.id === etapaActiva.etapa.id;
+
+              return (
+                <button
+                  onClick={isLastStage ? () => navigate('/tablet/pasadas') : finalizarEtapaActual}
+                  disabled={!isActiveStageComplete}
+                  className={`w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all
+                    ${isActiveStageComplete
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 active:scale-95'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                >
+                  <CheckCircle2 className="w-6 h-6" />
+                  {isLastStage ? 'Finalizar Pasada' : 'Siguiente Etapa'}
+                </button>
+              );
+            })() : etapas.length > 0 ? (
               <button
-                onClick={handleFinalizarPasada}
-                className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20"
+                onClick={() => navigate('/tablet/pasadas')}
+                className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 active:scale-95"
               >
                 <CheckCircle2 className="w-6 h-6" />
                 Finalizar Pasada
               </button>
-            ) : (
-              <div className="w-full py-4 px-4 bg-slate-100 text-slate-500 rounded-xl text-sm font-medium text-center border border-slate-200">
-                Complete todas las etapas para finalizar la pasada.
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

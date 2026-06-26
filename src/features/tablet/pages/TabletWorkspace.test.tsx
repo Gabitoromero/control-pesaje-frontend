@@ -131,6 +131,17 @@ describe('TabletWorkspace', () => {
       pesoNeto: 15.0,
       isConnected: true,
     });
+    
+    // Mock localStorage
+    const store: Record<string, string> = {};
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn((key) => store[key] || null),
+        setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
+        clear: vi.fn(() => { for (const key in store) delete store[key]; }),
+      },
+      writable: true
+    });
   });
 
   it('navega a /tablet/pasadas sin cerrar sesión al hacer click en Volver', async () => {
@@ -163,7 +174,7 @@ describe('TabletWorkspace', () => {
 
     // Verify it renders Line name and stage name from MSW handlers
     expect(await screen.findByText('Línea 1')).toBeInTheDocument();
-    expect(screen.getByText('Amasado')).toBeInTheDocument();
+    expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
     expect(screen.getByText('Muestras: 0 / 2')).toBeInTheDocument();
   });
 
@@ -175,7 +186,7 @@ describe('TabletWorkspace', () => {
     });
 
     // Wait for the workspace to load
-    expect(await screen.findByText('Amasado')).toBeInTheDocument();
+    expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
 
     const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
     await userEvent.click(btnRegistrar);
@@ -279,11 +290,13 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    // No stage is active (ready to finalize)
-    expect(await screen.findByText('Listo para finalizar')).toBeInTheDocument();
+    // Advance first stage (Amasado)
+    expect(await screen.findByRole('button', { name: /siguiente etapa/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /siguiente etapa/i }));
 
-    const btnFinalizar = screen.getByRole('button', { name: /finalizar pasada/i });
-    await userEvent.click(btnFinalizar);
+    // Advance second stage (Horneado) which makes it ready to finalize
+    expect(await screen.findByRole('button', { name: /finalizar pasada/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /finalizar pasada/i }));
 
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas');
@@ -298,7 +311,7 @@ describe('TabletWorkspace', () => {
     });
 
     // Wait for the workspace to load
-    expect(await screen.findByText('Amasado')).toBeInTheDocument();
+    expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
 
     // Verify StageProgressPanel is rendered via test id
     const panel = screen.getByTestId('stage-progress-panel');

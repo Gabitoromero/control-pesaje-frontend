@@ -45,7 +45,7 @@ export const StageProgressPanel: React.FC<StageProgressPanelProps> = ({ etapasCo
               <div className={`flex flex-col flex-shrink-0 min-w-[160px] p-3 rounded-lg border ${bgClass} ${textClass} ${borderClass}`}>
                 <div className="flex items-center gap-2 mb-1">
                   {icon}
-                  <span className="text-sm">{etapa.nombre}</span>
+                  <span className="text-sm">{etapa.etapa.nombre}</span>
                 </div>
                 {counterText && (
                   <span className="text-xs font-medium text-blue-600 pl-7">

@@ -29,8 +29,22 @@ const mockEtapas: RutaPasadaEtapa[] = [
 ];
 
 describe('usePasadaState', () => {
+  const store: Record<string, string> = {};
+  
+  beforeAll(() => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn((key) => store[key] || null),
+        setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
+        clear: vi.fn(() => { for (const key in store) delete store[key]; }),
+      },
+      writable: true
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
   });
 
   it('determines the active stage based on samples count', () => {
@@ -49,7 +63,7 @@ describe('usePasadaState', () => {
     expect(result.current.muestras.length).toBe(0);
   });
 
-  it('advances to the next stage when required samples are satisfied', () => {
+  it('advances to the next stage when finalizarEtapaActual is called', () => {
     const initialMuestras = [
       {
         id: 1,
@@ -76,71 +90,38 @@ describe('usePasadaState', () => {
       }
     );
 
-    // Still in Stage 1 since it requires 2 samples, only has 1
+    // Initial state: Stage 1 is active
     expect(result.current.etapaActiva?.etapa.id).toBe(10);
 
-    // Add another sample for Stage 1
-    const samples2 = [
-      ...initialMuestras,
-      {
-        id: 2,
-        pesoNeto: 16,
-        estadoValidacion: 'ok' as const,
-        usuarioId: 3,
-        etapaId: 10,
-        lineaProduccionId: 1,
-        timestamp: new Date(),
-      },
-    ];
+    // Call manual advance
+    act(() => {
+      result.current.finalizarEtapaActual();
+    });
 
-    rerender({ samples: samples2 });
-
-    // Now Stage 1 has 2 samples, it should advance to Stage 2
+    // Now Stage 1 is complete, it should advance to Stage 2
     expect(result.current.etapaActiva?.etapa.id).toBe(20);
   });
 
   it('returns null when all stages are completed', () => {
-    const initialMuestras = [
-      {
-        id: 1,
-        pesoNeto: 15,
-        estadoValidacion: 'ok' as const,
-        usuarioId: 3,
-        etapaId: 10,
-        lineaProduccionId: 1,
-        timestamp: new Date(),
-      },
-      {
-        id: 2,
-        pesoNeto: 16,
-        estadoValidacion: 'ok' as const,
-        usuarioId: 3,
-        etapaId: 10,
-        lineaProduccionId: 1,
-        timestamp: new Date(),
-      },
-      {
-        id: 3,
-        pesoNeto: 35,
-        estadoValidacion: 'ok' as const,
-        usuarioId: 3,
-        etapaId: 20,
-        lineaProduccionId: 1,
-        timestamp: new Date(),
-      },
-    ];
-
     const { result } = renderHook(() =>
       usePasadaState({
         pasadaId: 101,
         usuarioId: 3,
         lineaProduccionId: 1,
         etapas: mockEtapas,
-        initialMuestras,
+        initialMuestras: [],
       })
     );
 
-    // All requirements met, active stage is null
+    act(() => {
+      result.current.finalizarEtapaActual(); // complete stage 1
+    });
+    
+    act(() => {
+      result.current.finalizarEtapaActual(); // complete stage 2
+    });
+
+    // All stages manually completed, active stage is null
     expect(result.current.etapaActiva).toBeNull();
   });
 
@@ -247,6 +228,44 @@ describe('usePasadaState', () => {
     expect(onErrorMock).toHaveBeenCalledWith(apiError);
   });
 
+  it('normalizeMuestra correctly handles flat IDs and populated objects for usuario and etapa', () => {
+    const { result } = renderHook(() =>
+      usePasadaState({
+        pasadaId: 101,
+        usuarioId: 3,
+        lineaProduccionId: 1,
+        etapas: mockEtapas,
+        initialMuestras: [
+          // Case 1: Populated objects
+          {
+            id: 1,
+            pesoNeto: 15,
+            estadoValidacion: 'ok',
+            usuario: { id: 7, nombre: 'Juan' },
+            etapa: { id: 20, nombre: 'Etapa 2' },
+            lineaProduccionId: 1,
+            timestamp: new Date(),
+          } as any,
+          // Case 2: Flat IDs
+          {
+            id: 2,
+            pesoNeto: 15,
+            estadoValidacion: 'ok',
+            usuario: 8,
+            etapa: 10,
+            lineaProduccionId: 1,
+            timestamp: new Date(),
+          } as any,
+        ],
+      })
+    );
+
+    expect(result.current.muestras[0].usuarioId).toBe(7);
+    expect(result.current.muestras[0].etapaId).toBe(20);
+    expect(result.current.muestras[1].usuarioId).toBe(8);
+    expect(result.current.muestras[1].etapaId).toBe(10);
+  });
+
   describe('etapasConEstado', () => {
     it('Hook returns etapasConEstado field', () => {
       const { result } = renderHook(() =>
@@ -289,79 +308,43 @@ describe('usePasadaState', () => {
       expect(estados[2].estado).toBe('pendiente');
     });
 
-    it('Stage 1 has enough ok samples -> stage 1 completada, stage 2 actual', () => {
+    it('Stage 1 manually completed -> stage 1 completada, stage 2 actual', () => {
       const { result } = renderHook(() =>
         usePasadaState({
           pasadaId: 101,
           usuarioId: 3,
           lineaProduccionId: 1,
           etapas: mockEtapas,
-          initialMuestras: [
-            {
-              id: 1,
-              pesoNeto: 15,
-              estadoValidacion: 'ok',
-              usuarioId: 3,
-              etapaId: 10,
-              lineaProduccionId: 1,
-              timestamp: new Date(),
-            },
-            {
-              id: 2,
-              pesoNeto: 15,
-              estadoValidacion: 'ok',
-              usuarioId: 3,
-              etapaId: 10,
-              lineaProduccionId: 1,
-              timestamp: new Date(),
-            }
-          ],
+          initialMuestras: [],
         })
       );
+
+      act(() => {
+        result.current.finalizarEtapaActual();
+      });
 
       const estados = result.current.etapasConEstado;
       expect(estados[0].estado).toBe('completada');
       expect(estados[1].estado).toBe('actual');
     });
 
-    it('All stages complete -> array has all completada, none actual', () => {
+    it('All stages manually complete -> array has all completada, none actual', () => {
       const { result } = renderHook(() =>
         usePasadaState({
           pasadaId: 101,
           usuarioId: 3,
           lineaProduccionId: 1,
           etapas: mockEtapas,
-          initialMuestras: [
-            {
-              id: 1,
-              pesoNeto: 15,
-              estadoValidacion: 'ok',
-              usuarioId: 3,
-              etapaId: 10,
-              lineaProduccionId: 1,
-              timestamp: new Date(),
-            },
-            {
-              id: 2,
-              pesoNeto: 15,
-              estadoValidacion: 'ok',
-              usuarioId: 3,
-              etapaId: 10,
-              lineaProduccionId: 1,
-              timestamp: new Date(),
-            },
-            {
-              id: 3,
-              pesoNeto: 35,
-              estadoValidacion: 'ok',
-              usuarioId: 3,
-              etapaId: 20,
-              lineaProduccionId: 1,
-              timestamp: new Date(),
-            }
-          ],
+          initialMuestras: [],
         })
       );
+
+      act(() => {
+        result.current.finalizarEtapaActual();
+      });
+      act(() => {
+        result.current.finalizarEtapaActual();
+      });
 
       const estados = result.current.etapasConEstado;
       expect(estados.every(e => e.estado === 'completada')).toBe(true);

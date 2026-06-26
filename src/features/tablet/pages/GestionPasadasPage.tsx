@@ -55,11 +55,12 @@ export const GestionPasadasPage: React.FC = () => {
   }
 
   // Task 2.2: Client-side filtering by user.id.
-  // The backend may return usuarioId as a flat field or nest it inside usuario.id.
+  // The backend may return usuarioId as a flat field, usuario as a number, or nested inside usuario.id.
   const filteredPasadas = pasadas.filter((pasada: Pasada) => {
-    const byFlat = pasada.usuarioId === user?.id;
-    const byNested = pasada.usuario?.id === user?.id;
-    return byFlat || byNested;
+    const byFlatId = pasada.usuarioId === user?.id;
+    const byUsuarioNumber = typeof pasada.usuario === 'number' && pasada.usuario === user?.id;
+    const byUsuarioObject = typeof pasada.usuario === 'object' && pasada.usuario !== null && pasada.usuario.id === user?.id;
+    return byFlatId || byUsuarioNumber || byUsuarioObject;
   });
 
   const handleVolver = async () => {

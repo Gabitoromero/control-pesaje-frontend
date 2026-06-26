@@ -13,19 +13,19 @@ describe('StageProgressPanel', () => {
   it('renders 3 stages in order (completada, actual, pendiente)', () => {
     const etapas: EtapaConEstado[] = [
       {
-        etapa: { id: 10, nombre: 'Stage 1' },
+        etapa: { id: 1, orden: 1, pesoMinimo: 0, pesoIdeal: 0, pesoMaximo: 0, cantidadMuestrasRequeridas: 2, etapa: { id: 10, nombre: 'Stage 1' } },
         estado: 'completada',
         muestrasOk: 2,
         muestrasRequeridas: 2,
       },
       {
-        etapa: { id: 20, nombre: 'Stage 2' },
+        etapa: { id: 2, orden: 2, pesoMinimo: 0, pesoIdeal: 0, pesoMaximo: 0, cantidadMuestrasRequeridas: 3, etapa: { id: 20, nombre: 'Stage 2' } },
         estado: 'actual',
         muestrasOk: 1,
         muestrasRequeridas: 3,
       },
       {
-        etapa: { id: 30, nombre: 'Stage 3' },
+        etapa: { id: 3, orden: 3, pesoMinimo: 0, pesoIdeal: 0, pesoMaximo: 0, cantidadMuestrasRequeridas: 1, etapa: { id: 30, nombre: 'Stage 3' } },
         estado: 'pendiente',
         muestrasOk: 0,
         muestrasRequeridas: 1,

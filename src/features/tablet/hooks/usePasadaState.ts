@@ -25,8 +25,8 @@ interface UsePasadaStateProps {
 const normalizeMuestra = (m: any): Muestra => {
   const pesoNeto = m.pesoNeto ?? m.peso_neto ?? 0;
   const estadoValidacion = m.estadoValidacion ?? m.estado_validacion ?? 'fuera_de_rango';
-  const usuarioId = m.usuarioId ?? m.usuario_id ?? 0;
-  const etapaId = m.etapaId ?? m.etapa_id ?? 0;
+  const usuarioId = m.usuarioId ?? m.usuario_id ?? (typeof m.usuario === 'object' && m.usuario !== null ? m.usuario.id : (typeof m.usuario === 'number' ? m.usuario : 0));
+  const etapaId = m.etapaId ?? m.etapa_id ?? (typeof m.etapa === 'object' && m.etapa !== null ? m.etapa.id : (typeof m.etapa === 'number' ? m.etapa : 0));
   const lineaProduccionId = m.lineaProduccionId ?? m.linea_produccion_id ?? 0;
   const articuloId = m.articuloId ?? m.articulo_id;
   const timestamp = m.timestamp ?? new Date();
@@ -78,6 +78,38 @@ export function usePasadaState({
 
 
 
+  const [completedEtapaIds, setCompletedEtapaIds] = useState<number[]>(() => {
+    if (!pasadaId) return [];
+    try {
+      const saved = localStorage.getItem(`pasada_${pasadaId}_completed`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const finalizarEtapaActual = useCallback(() => {
+    setCompletedEtapaIds((prev) => {
+      // Find the current active stage
+      if (!etapas || etapas.length === 0) return prev;
+      const sortedEtapas = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      let activeStageId: number | undefined;
+      for (const wrapper of sortedEtapas) {
+        if (!prev.includes(wrapper.etapa.id!)) {
+          activeStageId = wrapper.etapa.id;
+          break;
+        }
+      }
+      
+      if (activeStageId !== undefined && !prev.includes(activeStageId)) {
+        const next = [...prev, activeStageId];
+        localStorage.setItem(`pasada_${pasadaId}_completed`, JSON.stringify(next));
+        return next;
+      }
+      return prev;
+    });
+  }, [etapas, pasadaId]);
+
   const etapasConEstado = useMemo(() => {
     if (!etapas || etapas.length === 0) return [];
     
@@ -97,10 +129,10 @@ export function usePasadaState({
         return mEtapaId === stageId && mEstado === 'ok';
       }).length;
       
-      const completa = muestrasOk >= muestrasRequeridas;
+      const isMarcadaComoCompleta = stageId !== undefined && completedEtapaIds.includes(stageId);
       let estado: EstadoEtapa;
       
-      if (completa) {
+      if (isMarcadaComoCompleta) {
         estado = 'completada';
       } else if (!isActualFound) {
         estado = 'actual';
@@ -116,7 +148,7 @@ export function usePasadaState({
         muestrasRequeridas,
       };
     });
-  }, [etapas, muestras]);
+  }, [etapas, muestras, completedEtapaIds]);
 
   const etapaActiva = etapasConEstado.find(e => e.estado === 'actual')?.etapa ?? null;
 
@@ -191,7 +223,11 @@ export function usePasadaState({
 
   const clearPasada = useCallback(() => {
     setMuestras([]);
-  }, []);
+    setCompletedEtapaIds([]);
+    if (pasadaId) {
+      localStorage.removeItem(`pasada_${pasadaId}_completed`);
+    }
+  }, [pasadaId]);
 
   return {
     muestras,
@@ -200,6 +236,7 @@ export function usePasadaState({
     addSample,
     removeSample,
     clearPasada,
+    finalizarEtapaActual,
   };
 }
 
