@@ -1,16 +1,19 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Play, Plus, Loader2, X, AlertTriangle } from 'lucide-react';
+import { LogOut, Play, Plus, Loader2, X, AlertTriangle, FlaskConical, Trash2 } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
+import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
+import { MuestrasListPanel } from '../components/MuestrasListPanel';
 
 export const GestionPasadasPage: React.FC = () => {
-  const { user, closeLineSession, activeLineaId } = useAuth();
+  const { user, closeLineSession, activeLineaId, logout } = useAuth();
+  const { muestras, etapas, removeSample, clearSession } = useMuestrasLibresContext();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedArticuloId, setSelectedArticuloId] = React.useState<number | null>(null);
@@ -63,9 +66,15 @@ export const GestionPasadasPage: React.FC = () => {
     return byFlatId || byUsuarioNumber || byUsuarioObject;
   });
 
-  const handleVolver = async () => {
-    await closeLineSession();
-    navigate('/tablet/seleccion-linea');
+  const handleLogout = () => {
+    if (user?.rol === 'jefe' || user?.rol === 'administrador') {
+      navigate('/dashboard');
+      closeLineSession();
+    } else {
+      closeLineSession().finally(() => {
+        logout();
+      });
+    }
   };
 
   // Task 2.4: Redirect on selecting / continuing an active run
@@ -117,18 +126,19 @@ export const GestionPasadasPage: React.FC = () => {
     <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-white relative">
       <header className="bg-slate-800 border-b border-slate-700 p-4 md:px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button
-            onClick={handleVolver}
-            className="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-lg hover:bg-slate-650 transition-colors"
-            title="Volver"
-          >
-            <ArrowLeft size={20} />
-          </button>
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">Gestión de Pasadas</h1>
             <p className="text-slate-400 text-sm">Línea {activeLineaId} - {user?.nombreUsuario}</p>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium bg-slate-700/50 hover:bg-slate-700 px-4 py-2 rounded-lg"
+          title="Cerrar sesión"
+        >
+          <LogOut size={16} />
+          <span className="hidden sm:inline">Cerrar sesión</span>
+        </button>
       </header>
 
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
@@ -205,6 +215,47 @@ export const GestionPasadasPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Free quality samples section — visible only for authorized users with an active route */}
+      {user?.puedeTomarMuestrasLibres && !sinRutaAsignada && linea?.rutaPasadaActiva && (
+        <section
+          data-testid="muestras-libres-section"
+          className="w-full max-w-7xl mx-auto px-4 md:px-8 pb-8"
+        >
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FlaskConical size={20} className="text-purple-400" />
+                <h2 className="text-lg font-semibold text-white">Muestras de Calidad Libre</h2>
+              </div>
+              {muestras.length > 0 && (
+                <button
+                  onClick={clearSession}
+                  className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Limpiar sesión
+                </button>
+              )}
+            </div>
+
+            <MuestrasListPanel
+              muestras={muestras}
+              onRemoveSample={removeSample}
+              etapas={etapas}
+            />
+
+            <div className="mt-4">
+              <button
+                onClick={() => navigate('/tablet/muestras-libres/seleccion')}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all"
+              >
+                Registrar muestras libres
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Modern Glassmorphic Article Selection Modal */}
       {isModalOpen && (

@@ -7,7 +7,11 @@ import { vi } from 'vitest';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { getLinea } from '../../../api/lineas';
+import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 
+vi.mock('../context/MuestrasLibresContext', () => ({
+  useMuestrasLibresContext: vi.fn(),
+}));
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -36,6 +40,14 @@ const operarioUser: User = {
   nombreUsuario: 'operario1',
   rol: 'operario',
   puedeTomarMuestrasLibres: false,
+};
+
+const calidadUser: User = {
+  id: 5,
+  legajo: 'C1',
+  nombreUsuario: 'calidad1',
+  rol: 'operario',
+  puedeTomarMuestrasLibres: true,
 };
 
 const mockPasadas: any[] = [
@@ -76,13 +88,26 @@ describe('GestionPasadasPage', () => {
     vi.mocked(getPasadas).mockResolvedValue(mockPasadas);
     vi.mocked(getArticulosPorRuta).mockResolvedValue(mockArticulos);
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+
+    // Default context mock: no samples
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({
+      muestras: [],
+      etapas: [],
+      addSample: vi.fn().mockResolvedValue(undefined),
+      removeSample: vi.fn().mockResolvedValue(undefined),
+      clearSession: vi.fn(),
+      isRegistering: false,
+      selectedEtapaId: null,
+      setSelectedEtapaId: vi.fn(),
+    });
   });
 
-  it('llama a closeLineSession al hacer click en Volver', async () => {
+  it('llama a closeLineSession y logout al hacer click en Cerrar sesión', async () => {
     const { authValue } = renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
-    const btnVolver = await screen.findByRole('button', { name: /volver/i });
-    await userEvent.click(btnVolver);
+    const btnCerrar = await screen.findByRole('button', { name: /cerrar sesión/i });
+    await userEvent.click(btnCerrar);
     expect(authValue.closeLineSession).toHaveBeenCalled();
+    expect(authValue.logout).toHaveBeenCalled();
   });
 
   it('muestra la lista de pasadas mockeadas', async () => {
@@ -174,6 +199,108 @@ describe('GestionPasadasPage', () => {
       await userEvent.click(btnNuevaPasada);
 
       expect(screen.queryByText('Iniciar Nueva Pasada')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('sección de muestras libres (puedeTomarMuestrasLibres)', () => {
+    it('muestra la sección cuando el usuario tiene permiso y hay ruta activa', async () => {
+      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+
+      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
+
+      expect(await screen.findByTestId('muestras-libres-section')).toBeInTheDocument();
+    });
+
+    it('no muestra la sección cuando puedeTomarMuestrasLibres es false', async () => {
+      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      // Wait for the page to finish loading
+      await screen.findByText('Pasada #101');
+
+      expect(screen.queryByTestId('muestras-libres-section')).not.toBeInTheDocument();
+    });
+
+    it('no muestra la sección cuando la línea no tiene ruta activa', async () => {
+      vi.mocked(getLinea).mockResolvedValue(lineaSinRuta);
+
+      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
+
+      // Wait for the no-route warning to appear
+      await screen.findByText('Sin ruta de pesaje asignada');
+
+      expect(screen.queryByTestId('muestras-libres-section')).not.toBeInTheDocument();
+    });
+
+    it('muestra botón para ir a selección de etapa cuando el usuario tiene permiso y hay ruta activa', async () => {
+      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+
+      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
+
+      await screen.findByTestId('muestras-libres-section');
+
+      const btnRegistrar = screen.getByRole('button', { name: /registrar muestras libres/i });
+      await userEvent.click(btnRegistrar);
+      expect(navigateMock).toHaveBeenCalledWith('/tablet/muestras-libres/seleccion');
+    });
+
+    it('muestra las muestras acumuladas en la sección', async () => {
+      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+      vi.mocked(useMuestrasLibresContext).mockReturnValue({
+        muestras: [
+          {
+            id: 1,
+            pesoNeto: 12.5,
+            estadoValidacion: 'ok',
+            usuarioId: 5,
+            etapaId: 10,
+            lineaProduccionId: 1,
+            timestamp: new Date(),
+          },
+        ],
+        etapas: [],
+        addSample: vi.fn().mockResolvedValue(undefined),
+        removeSample: vi.fn().mockResolvedValue(undefined),
+        clearSession: vi.fn(),
+        isRegistering: false,
+        selectedEtapaId: 10,
+        setSelectedEtapaId: vi.fn(),
+      });
+
+      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
+
+      await screen.findByTestId('muestras-libres-section');
+      expect(screen.getByText('12.500 kg')).toBeInTheDocument();
+    });
+
+    it('muestra botón limpiar sesión cuando hay muestras', async () => {
+      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+      vi.mocked(useMuestrasLibresContext).mockReturnValue({
+        muestras: [
+          {
+            id: 2,
+            pesoNeto: 5.0,
+            estadoValidacion: 'ok',
+            usuarioId: 5,
+            etapaId: 10,
+            lineaProduccionId: 1,
+            timestamp: new Date(),
+          },
+        ],
+        etapas: [],
+        addSample: vi.fn().mockResolvedValue(undefined),
+        removeSample: vi.fn().mockResolvedValue(undefined),
+        clearSession: vi.fn(),
+        isRegistering: false,
+        selectedEtapaId: 10,
+        setSelectedEtapaId: vi.fn(),
+      });
+
+      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
+
+      await screen.findByTestId('muestras-libres-section');
+      expect(screen.getByRole('button', { name: /limpiar sesión/i })).toBeInTheDocument();
     });
   });
 });
