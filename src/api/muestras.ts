@@ -26,3 +26,11 @@ export const getMuestras = async (pasadaId: number): Promise<Muestra[]> => {
   const response = await api.get<ApiEnvelope<Muestra[]>>('/muestras', { params: { pasadaId } });
   return response.data.data;
 };
+
+export const updateMuestra = async (
+  id: number,
+  data: { observacion: string | null }
+): Promise<Muestra> => {
+  const response = await api.put<ApiEnvelope<Muestra>>(`/muestras/${id}`, data);
+  return response.data.data;
+};
