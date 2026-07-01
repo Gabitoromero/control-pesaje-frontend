@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePasadaState } from './usePasadaState';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
-import type { RutaPasadaEtapa } from '../../../shared/types/domain';
+import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 vi.mock('../../../api/muestras', () => ({
   registrarMuestra: vi.fn(),
@@ -76,7 +76,7 @@ describe('usePasadaState', () => {
       },
     ];
 
-    const { result, rerender } = renderHook(
+    const { result } = renderHook(
       ({ samples }) =>
         usePasadaState({
           pasadaId: 101,
@@ -126,7 +126,7 @@ describe('usePasadaState', () => {
   });
 
   it('registers a sample calling api and updates local list', async () => {
-    const mockMuestraResult: any = {
+    const mockMuestraResult: Muestra = {
       id: 50,
       pesoNeto: 15,
       estadoValidacion: 'ok',
@@ -180,7 +180,7 @@ describe('usePasadaState', () => {
       },
     ];
 
-    vi.mocked(deleteMuestra).mockResolvedValue(undefined as any);
+    vi.mocked(deleteMuestra).mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
       usePasadaState({
@@ -245,7 +245,7 @@ describe('usePasadaState', () => {
             etapa: { id: 20, nombre: 'Etapa 2' },
             lineaProduccionId: 1,
             timestamp: new Date(),
-          } as any,
+          } as unknown as Muestra,
           // Case 2: Flat IDs
           {
             id: 2,
@@ -255,7 +255,7 @@ describe('usePasadaState', () => {
             etapa: 10,
             lineaProduccionId: 1,
             timestamp: new Date(),
-          } as any,
+          } as unknown as Muestra,
         ],
       })
     );

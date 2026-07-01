@@ -250,7 +250,15 @@ describe('TabletWorkspace', () => {
             articuloId: 1,
             createdAt: '2026-06-23T18:44:38Z',
             updatedAt: '2026-06-23T18:44:38Z',
-            muestras: [
+          },
+        });
+      }),
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
               {
                 id: 1,
                 pesoNeto: 15,
@@ -279,8 +287,9 @@ describe('TabletWorkspace', () => {
                 timestamp: '2026-06-23T19:10:00Z',
               },
             ],
-          },
-        });
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
       })
     );
 

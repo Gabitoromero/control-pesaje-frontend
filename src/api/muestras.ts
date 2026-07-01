@@ -7,7 +7,7 @@ interface ApiEnvelope<T> {
 }
 
 export const registrarMuestra = async (data: {
-  pasadaId: number;
+  pasadaId?: number;
   etapaId: number;
   pesoNeto: number;
   usuarioId: number;

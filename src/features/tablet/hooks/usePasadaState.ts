@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
+import { normalizeMuestra } from '../utils/muestra.utils';
 
 export type EstadoEtapa = 'completada' | 'actual' | 'pendiente';
 
@@ -21,34 +22,6 @@ interface UsePasadaStateProps {
   onApiError?: (error: unknown) => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const normalizeMuestra = (m: any): Muestra => {
-  const pesoNeto = m.pesoNeto ?? m.peso_neto ?? 0;
-  const estadoValidacion = m.estadoValidacion ?? m.estado_validacion ?? 'fuera_de_rango';
-  const usuarioId = m.usuarioId ?? m.usuario_id ?? (typeof m.usuario === 'object' && m.usuario !== null ? m.usuario.id : (typeof m.usuario === 'number' ? m.usuario : 0));
-  const etapaId = m.etapaId ?? m.etapa_id ?? (typeof m.etapa === 'object' && m.etapa !== null ? m.etapa.id : (typeof m.etapa === 'number' ? m.etapa : 0));
-  const lineaProduccionId = m.lineaProduccionId ?? m.linea_produccion_id ?? 0;
-  const articuloId = m.articuloId ?? m.articulo_id;
-  const timestamp = m.timestamp ?? new Date();
-
-  return {
-    ...m,
-    id: m.id,
-    pesoNeto,
-    estadoValidacion,
-    usuarioId,
-    etapaId,
-    lineaProduccionId,
-    articuloId,
-    peso_neto: pesoNeto,
-    estado_validacion: estadoValidacion,
-    usuario_id: usuarioId,
-    etapa_id: etapaId,
-    linea_produccion_id: lineaProduccionId,
-    articulo_id: articuloId,
-    timestamp,
-  };
-};
 
 export function usePasadaState({
   pasadaId,
@@ -70,7 +43,6 @@ export function usePasadaState({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMuestras(initialMuestras.map(normalizeMuestra));
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMuestras([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

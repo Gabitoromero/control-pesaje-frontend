@@ -7,7 +7,9 @@ import { UsuarioRol } from './shared/types';
 import { TabletWorkspace } from './features/tablet/pages/TabletWorkspace';
 import { SeleccionLineaPage } from './features/tablet/pages/SeleccionLineaPage';
 import { GestionPasadasPage } from './features/tablet/pages/GestionPasadasPage';
-
+import { MuestrasLibresLayout } from './features/tablet/pages/MuestrasLibresLayout';
+import { MuestrasLibresSeleccionPage } from './features/tablet/pages/MuestrasLibresSeleccionPage';
+import { MuestrasLibresRegistroPage } from './features/tablet/pages/MuestrasLibresRegistroPage';
 
 import { ArticulosPage } from './features/dashboard/pages/ArticulosPage';
 import { UsuariosPage } from './features/dashboard/pages/UsuariosPage';
@@ -36,8 +38,12 @@ function App() {
         {/* Tablet Layer 2 flow (before workspace) */}
         <Route path="/tablet/seleccion-linea" element={<SeleccionLineaPage />} />
 
-        {/* Pasadas Management */}
-        <Route path="/tablet/pasadas" element={<GestionPasadasPage />} />
+        {/* Pasadas + free quality samples share a pathless layout so the Provider stays mounted across navigation */}
+        <Route element={<MuestrasLibresLayout />}>
+          <Route path="/tablet/pasadas" element={<GestionPasadasPage />} />
+          <Route path="/tablet/muestras-libres/seleccion" element={<MuestrasLibresSeleccionPage />} />
+          <Route path="/tablet/muestras-libres/registro" element={<MuestrasLibresRegistroPage />} />
+        </Route>
 
         {/* Tablet workspace (after Layer 2 activated) */}
         <Route path="/tablet" element={<TabletLayout />}>

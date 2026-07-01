@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMuestrasLibres } from './useMuestrasLibres';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
-import type { RutaPasadaEtapa } from '../../../shared/types/domain';
+import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 vi.mock('../../../api/muestras', () => ({
   registrarMuestra: vi.fn(),
@@ -65,7 +65,7 @@ describe('useMuestrasLibres', () => {
   });
 
   it('addSample calls registrarMuestra WITHOUT pasadaId', async () => {
-    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as any);
+    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as Muestra);
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     await act(async () => {
@@ -83,8 +83,8 @@ describe('useMuestrasLibres', () => {
     );
   });
 
-  it('addSample normalizes the response and prepends it to muestras', async () => {
-    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as any);
+  it('addSample normalizes the response and appends it to muestras', async () => {
+    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as Muestra);
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     await act(async () => {
@@ -95,24 +95,24 @@ describe('useMuestrasLibres', () => {
     expect(result.current.muestras[0].id).toBe(50);
   });
 
-  it('addSample prepends: second call lands at index 0', async () => {
+  it('addSample appends: first added lands at index 0, second at index 1', async () => {
     const first = { ...mockMuestra, id: 1 };
     const second = { ...mockMuestra, id: 2 };
     vi.mocked(registrarMuestra)
-      .mockResolvedValueOnce(first as any)
-      .mockResolvedValueOnce(second as any);
+      .mockResolvedValueOnce(first as Muestra)
+      .mockResolvedValueOnce(second as Muestra);
 
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     await act(async () => { await result.current.addSample(15); });
     await act(async () => { await result.current.addSample(15); });
 
-    expect(result.current.muestras[0].id).toBe(2);
-    expect(result.current.muestras[1].id).toBe(1);
+    expect(result.current.muestras[0].id).toBe(1);
+    expect(result.current.muestras[1].id).toBe(2);
   });
 
   it('addSample respects cap of 20: does not call API when list is full', async () => {
-    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as any);
+    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as Muestra);
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     // Fill to cap
@@ -124,7 +124,7 @@ describe('useMuestrasLibres', () => {
     expect(callsBefore).toBe(20);
     expect(result.current.muestras).toHaveLength(20);
 
-    let returnVal: any = 'sentinel';
+    let returnVal: Muestra | undefined;
     await act(async () => {
       returnVal = await result.current.addSample(15);
     });
@@ -135,7 +135,7 @@ describe('useMuestrasLibres', () => {
   });
 
   it('clearSession resets muestras to [] without additional API calls', async () => {
-    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as any);
+    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as Muestra);
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     await act(async () => { await result.current.addSample(15); });
@@ -154,7 +154,7 @@ describe('useMuestrasLibres', () => {
 
     expect(result.current.selectedEtapaId).toBeNull();
 
-    let returnVal: any = 'sentinel';
+    let returnVal: Muestra | undefined;
     await act(async () => {
       returnVal = await result.current.addSample(15);
     });
@@ -167,26 +167,26 @@ describe('useMuestrasLibres', () => {
 
   it('removeSample calls deleteMuestra and removes the entry from state', async () => {
     vi.mocked(registrarMuestra)
-      .mockResolvedValueOnce({ ...mockMuestra, id: 1 } as any)
-      .mockResolvedValueOnce({ ...mockMuestra, id: 2 } as any);
-    vi.mocked(deleteMuestra).mockResolvedValue(undefined as any);
+      .mockResolvedValueOnce({ ...mockMuestra, id: 1 } as Muestra)
+      .mockResolvedValueOnce({ ...mockMuestra, id: 2 } as Muestra);
+    vi.mocked(deleteMuestra).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     await act(async () => { await result.current.addSample(15); });
     await act(async () => { await result.current.addSample(15); });
 
-    // After two prepend calls: [id:2, id:1]
-    expect(result.current.muestras[0].id).toBe(2);
-    expect(result.current.muestras[1].id).toBe(1);
+    // After two append calls: [id:1, id:2]
+    expect(result.current.muestras[0].id).toBe(1);
+    expect(result.current.muestras[1].id).toBe(2);
 
     await act(async () => {
-      await result.current.removeSample(0); // removes id:2
+      await result.current.removeSample(0); // removes id:1
     });
 
-    expect(deleteMuestra).toHaveBeenCalledWith(2);
+    expect(deleteMuestra).toHaveBeenCalledWith(1);
     expect(result.current.muestras).toHaveLength(1);
-    expect(result.current.muestras[0].id).toBe(1);
+    expect(result.current.muestras[0].id).toBe(2);
   });
 
   it('addSample API error calls onApiError and leaves muestras unchanged', async () => {
@@ -219,10 +219,10 @@ describe('useMuestrasLibres', () => {
     const s2 = { ...mockMuestra, id: 2 };
     const s3 = { ...mockMuestra, id: 3 };
     vi.mocked(registrarMuestra)
-      .mockResolvedValueOnce(s1 as any)
-      .mockResolvedValueOnce(s2 as any)
-      .mockResolvedValueOnce(s3 as any);
-    vi.mocked(deleteMuestra).mockResolvedValue(undefined as any);
+      .mockResolvedValueOnce(s1 as Muestra)
+      .mockResolvedValueOnce(s2 as Muestra)
+      .mockResolvedValueOnce(s3 as Muestra);
+    vi.mocked(deleteMuestra).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
@@ -230,8 +230,8 @@ describe('useMuestrasLibres', () => {
     await act(async () => { await result.current.addSample(15); });
     await act(async () => { await result.current.addSample(15); });
 
-    // Prepend order: newest first → [s3, s2, s1]
-    expect(result.current.muestras.map((m) => m.id)).toEqual([3, 2, 1]);
+    // Append order: oldest first → [s1, s2, s3]
+    expect(result.current.muestras.map((m) => m.id)).toEqual([1, 2, 3]);
 
     // Capture a stable callback reference. Simulates a handler that saved
     // `removeSample` and fired two deletes without re-reading `result.current`
@@ -243,14 +243,14 @@ describe('useMuestrasLibres', () => {
     await act(async () => { await remove(0); });
 
     // Each DELETE call must target the CURRENT index 0 (no duplicate, no skip).
-    expect(vi.mocked(deleteMuestra)).toHaveBeenNthCalledWith(1, 3);
+    expect(vi.mocked(deleteMuestra)).toHaveBeenNthCalledWith(1, 1);
     expect(vi.mocked(deleteMuestra)).toHaveBeenNthCalledWith(2, 2);
     expect(result.current.muestras).toHaveLength(1);
-    expect(result.current.muestras[0].id).toBe(1);
+    expect(result.current.muestras[0].id).toBe(3);
   });
 
   it('isRegistering is false after a successful addSample', async () => {
-    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as any);
+    vi.mocked(registrarMuestra).mockResolvedValue(mockMuestra as Muestra);
     const { result } = renderHook(() => useMuestrasLibres(baseProps));
 
     await act(async () => {

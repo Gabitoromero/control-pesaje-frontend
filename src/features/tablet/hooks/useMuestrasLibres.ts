@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
 import { normalizeMuestra } from '../utils/muestra.utils';
@@ -14,6 +14,7 @@ export interface UseMuestrasLibresProps {
 
 export interface UseMuestrasLibresResult {
   muestras: Muestra[];
+  etapas: RutaPasadaEtapa[];
   selectedEtapaId: number | null;
   setSelectedEtapaId: (id: number) => void;
   addSample: (pesoNeto: number) => Promise<Muestra | undefined>;
@@ -35,9 +36,11 @@ export function useMuestrasLibres({
   // capturing `muestras` in their dependency arrays (stale closure / index
   // shift on rapid successive deletes). Updated on every render.
   const muestrasRef = useRef<Muestra[]>(muestras);
-  muestrasRef.current = muestras;
   const muestrasLengthRef = useRef(muestras.length);
-  muestrasLengthRef.current = muestras.length;
+  useLayoutEffect(() => {
+    muestrasRef.current = muestras;
+    muestrasLengthRef.current = muestras.length;
+  });
 
   const defaultEtapaId = useMemo<number | null>(() => {
     if (!etapas || etapas.length === 0) return null;
@@ -63,7 +66,7 @@ export function useMuestrasLibres({
         const normalized = normalizeMuestra(raw);
         setMuestras((prev) => {
           if (prev.length >= MAX_FREE_SAMPLES) return prev;
-          return [normalized, ...prev];
+          return [...prev, normalized];
         });
         return normalized;
       } catch (e) {
@@ -95,6 +98,7 @@ export function useMuestrasLibres({
 
   return {
     muestras,
+    etapas,
     selectedEtapaId,
     setSelectedEtapaId,
     addSample,
