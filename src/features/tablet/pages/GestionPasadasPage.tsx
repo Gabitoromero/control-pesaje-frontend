@@ -10,15 +10,17 @@ import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { MuestrasListPanel } from '../components/MuestrasListPanel';
+import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 
 export const GestionPasadasPage: React.FC = () => {
   const { user, closeLineSession, activeLineaId, logout } = useAuth();
-  const { muestras, etapas, removeSample, clearSession } = useMuestrasLibresContext();
+  const { muestras, etapas, removeSample, updateSample, clearSession } = useMuestrasLibresContext();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedArticuloId, setSelectedArticuloId] = React.useState<number | null>(null);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
+  const [selectedSampleIndex, setSelectedSampleIndex] = React.useState<number | null>(null);
 
   // Task 2.1: Query live active runs using React Query
   const { 
@@ -241,7 +243,7 @@ export const GestionPasadasPage: React.FC = () => {
 
             <MuestrasListPanel
               muestras={muestras}
-              onRemoveSample={removeSample}
+              onSampleClick={setSelectedSampleIndex}
               etapas={etapas}
             />
 
@@ -254,6 +256,23 @@ export const GestionPasadasPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {selectedSampleIndex !== null && (
+            <MuestraObservacionPopup
+              muestra={muestras[selectedSampleIndex]}
+              index={selectedSampleIndex}
+              isOpen={true}
+              onSave={async (i, observacion) => {
+                await updateSample(i, { observacion });
+                setSelectedSampleIndex(null);
+              }}
+              onDelete={async (i) => {
+                await removeSample(i);
+                setSelectedSampleIndex(null);
+              }}
+              onClose={() => setSelectedSampleIndex(null)}
+            />
+          )}
         </section>
       )}
 

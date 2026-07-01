@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getSesionesActivas } from '../../../api/auth';
-import { getUsuario } from '../../../api/usuarios';
 
 interface EnrichedSession {
   lineaId: number;
@@ -13,61 +13,22 @@ interface EnrichedSession {
 }
 
 export const SesionesActivasPage: React.FC = () => {
-  const [sessions, setSessions] = useState<EnrichedSession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        setLoading(true);
-        const data = await getSesionesActivas();
-        
-        const enrichedSessions: EnrichedSession[] = await Promise.all(
-          data.map(async (session: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-            let usuarioNombre = 'Desconocido';
-            let legajo = '-';
-            try {
-              if (session.usuarioId) {
-                const user = await getUsuario(session.usuarioId);
-                usuarioNombre = user.nombreUsuario;
-                legajo = user.legajo;
-              }
-            } catch (userErr) {
-              console.error(`Failed to fetch user ${session.usuarioId}`, userErr);
-            }
-            
-            return {
-              lineaId: session.lineaId,
-              lineaNombre: session.lineaNombre,
-              usuarioId: session.usuarioId,
-              usuarioNombre,
-              legajo,
-              fechaInicio: session.fechaInicio,
-              expiraEn: session.expiraEn,
-            };
-          })
-        );
-        
-        setSessions(enrichedSessions);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch sesiones activas:', err);
-        setError('No se pudieron cargar las sesiones activas.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSessions();
-  }, []);
+  const { data: sessions = [], isLoading: loading, error } = useQuery<EnrichedSession[]>({
+    queryKey: ['sesiones-activas'],
+    queryFn: async () => {
+      // Backend now returns legajo directly; no need for N+1 queries.
+      const data = await getSesionesActivas();
+      return data as EnrichedSession[];
+    },
+    refetchInterval: 3000, // Auto-refresh every 3 seconds
+  });
 
   if (loading) {
     return <div className="p-6 text-gray-500">Cargando sesiones...</div>;
   }
 
   if (error) {
-    return <div className="p-6 text-red-500">{error}</div>;
+    return <div className="p-6 text-red-500">Error al cargar las sesiones activas</div>;
   }
 
   return (

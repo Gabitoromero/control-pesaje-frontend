@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
-import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
+import { registrarMuestra, deleteMuestra, updateMuestra } from '../../../api/muestras';
 import { normalizeMuestra } from '../utils/muestra.utils';
 
 export const MAX_FREE_SAMPLES = 20;
@@ -18,6 +18,7 @@ export interface UseMuestrasLibresResult {
   selectedEtapaId: number | null;
   setSelectedEtapaId: (id: number) => void;
   addSample: (pesoNeto: number) => Promise<Muestra | undefined>;
+  updateSample: (index: number, data: { observacion: string | null }) => Promise<void>;
   removeSample: (index: number) => Promise<void>;
   clearSession: () => void;
   isRegistering: boolean;
@@ -92,6 +93,23 @@ export function useMuestrasLibres({
     []
   );
 
+  const updateSample = useCallback(
+    async (index: number, data: { observacion: string | null }): Promise<void> => {
+      const sample = muestrasRef.current[index];
+      if (!sample || sample.id === undefined) return;
+
+      try {
+        const updated = await updateMuestra(sample.id, data);
+        const normalized = normalizeMuestra(updated);
+        setMuestras((prev) => prev.map((m, i) => (i === index ? normalized : m)));
+      } catch (e) {
+        if (onApiError) onApiError(e);
+        throw e;
+      }
+    },
+    [onApiError]
+  );
+
   const clearSession = useCallback(() => {
     setMuestras([]);
   }, []);
@@ -102,6 +120,7 @@ export function useMuestrasLibres({
     selectedEtapaId,
     setSelectedEtapaId,
     addSample,
+    updateSample,
     removeSample,
     clearSession,
     isRegistering,

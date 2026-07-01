@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
-import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
+import { registrarMuestra, deleteMuestra, updateMuestra } from '../../../api/muestras';
 import { normalizeMuestra } from '../utils/muestra.utils';
 
 export type EstadoEtapa = 'completada' | 'actual' | 'pendiente';
@@ -168,6 +168,32 @@ export function usePasadaState({
     }
   }, [pasadaId, etapaActiva, usuarioId, lineaProduccionId, articuloId, onApiError]);
 
+  const updateSample = useCallback(async (index: number, data: { observacion: string | null }) => {
+    const sampleToUpdate = muestras[index];
+    if (!sampleToUpdate) {
+      console.warn('No sample found at index:', index);
+      return;
+    }
+
+    const sampleId = sampleToUpdate.id;
+    if (sampleId === undefined) {
+      console.warn('Cannot update sample: sample has no id');
+      return;
+    }
+
+    try {
+      const updated = await updateMuestra(sampleId, data);
+      const normalized = normalizeMuestra(updated);
+      setMuestras((prev) => prev.map((m, i) => (i === index ? normalized : m)));
+    } catch (error) {
+      console.error('Error updating sample:', error);
+      if (onApiError) {
+        onApiError(error);
+      }
+      throw error;
+    }
+  }, [muestras, onApiError]);
+
   const removeSample = useCallback(async (index: number) => {
     const sampleToRemove = muestras[index];
     if (!sampleToRemove) {
@@ -206,6 +232,7 @@ export function usePasadaState({
     etapaActiva,
     etapasConEstado,
     addSample,
+    updateSample,
     removeSample,
     clearPasada,
     finalizarEtapaActual,

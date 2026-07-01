@@ -7,7 +7,7 @@ interface ApiEnvelope<T> {
 }
 
 export const getPasadas = async (params: { estado?: string; lineaProduccionId?: number; linea_id?: number }): Promise<Pasada[]> => {
-  const queryParams: Record<string, any> = {};
+  const queryParams: Record<string, string | number> = {};
   if (params.estado !== undefined) queryParams.estado = params.estado;
   if (params.lineaProduccionId !== undefined) {
     queryParams.lineaProduccionId = params.lineaProduccionId;

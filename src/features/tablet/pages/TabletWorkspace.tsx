@@ -7,11 +7,12 @@ import { usePasadaState} from '../hooks/usePasadaState';
 //import  type { EtapaConEstado } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { StageProgressPanel } from '../components/StageProgressPanel';
+import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
-import { Scale, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
+import { Scale, CheckCircle2, Loader2 } from 'lucide-react';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
@@ -27,6 +28,7 @@ export const TabletWorkspace: React.FC = () => {
 
   const { pesoNeto, isConnected } = useBalanzaWebSocket(lineaId);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
   // Task 3.3: Load the active run using GET /api/pasadas/:id
   const {
@@ -67,6 +69,7 @@ export const TabletWorkspace: React.FC = () => {
     etapaActiva,
     etapasConEstado,
     addSample,
+    updateSample,
     removeSample,
     finalizarEtapaActual,
   } = usePasadaState({
@@ -115,10 +118,18 @@ export const TabletWorkspace: React.FC = () => {
   const handleRemoveSample = async (index: number) => {
     try {
       await removeSample(index);
+      setSelectedSampleIndex(null);
     } catch {
       // usePasadaState already triggers onApiError
     }
   };
+
+  // Task 3.2: Save observation from popup via updateSample
+  const handleSaveSample = async (index: number, observacion: string) => {
+    await updateSample(index, { observacion });
+    setSelectedSampleIndex(null);
+  };
+
 
   // Task 3.6: Finalizar Pasada action
   const handleFinalizarPasada = async () => {
@@ -237,7 +248,8 @@ export const TabletWorkspace: React.FC = () => {
                 {muestrasDeEtapaActiva.map(({ muestra, originalIndex }, displayIndex) => (
                   <li
                     key={muestra.id ?? originalIndex}
-                    className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100"
+                    onClick={() => setSelectedSampleIndex(originalIndex)}
+                    className="flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-4">
                       <span className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full font-bold text-slate-600 text-sm">
@@ -255,13 +267,6 @@ export const TabletWorkspace: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleRemoveSample(originalIndex)}
-                      className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                      aria-label="Descartar muestra"
-                    >
-                      <Trash2 className="w-6 h-6" />
-                    </button>
                   </li>
                 ))}
               </ul>
@@ -277,7 +282,7 @@ export const TabletWorkspace: React.FC = () => {
 
               return (
                 <button
-                  onClick={isLastStage ? () => navigate('/tablet/pasadas') : finalizarEtapaActual}
+                  onClick={isLastStage ? handleFinalizarPasada : finalizarEtapaActual}
                   disabled={!isActiveStageComplete}
                   className={`w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all
                     ${isActiveStageComplete
@@ -291,7 +296,7 @@ export const TabletWorkspace: React.FC = () => {
               );
             })() : etapas.length > 0 ? (
               <button
-                onClick={() => navigate('/tablet/pasadas')}
+                onClick={handleFinalizarPasada}
                 className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 active:scale-95"
               >
                 <CheckCircle2 className="w-6 h-6" />
@@ -301,6 +306,18 @@ export const TabletWorkspace: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* MuestraObservacionPopup — shared edit/delete popup (task 3.2) */}
+      {selectedSampleIndex !== null && muestras[selectedSampleIndex] && (
+        <MuestraObservacionPopup
+          muestra={muestras[selectedSampleIndex]}
+          index={selectedSampleIndex}
+          isOpen
+          onSave={handleSaveSample}
+          onDelete={handleRemoveSample}
+          onClose={() => setSelectedSampleIndex(null)}
+        />
+      )}
 
       {/* Lockout Overlay */}
       {showLockout && (

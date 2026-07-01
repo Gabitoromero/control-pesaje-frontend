@@ -1,12 +1,13 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePasadaState } from './usePasadaState';
-import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
+import { registrarMuestra, deleteMuestra, updateMuestra } from '../../../api/muestras';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 vi.mock('../../../api/muestras', () => ({
   registrarMuestra: vi.fn(),
   deleteMuestra: vi.fn(),
+  updateMuestra: vi.fn(),
 }));
 
 const mockEtapas: RutaPasadaEtapa[] = [
@@ -450,5 +451,96 @@ describe('usePasadaState', () => {
 
     // Should still be in Stage 1 since it requires 2 'ok' samples
     expect(result.current.etapaActiva?.etapa.id).toBe(10);
+  });
+
+  // ── updateSample ───────────────────────────────────────────────────────────
+
+  describe('updateSample', () => {
+    it('is exposed as a function on the hook result', () => {
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: mockEtapas,
+          initialMuestras: [],
+        })
+      );
+      expect(typeof result.current.updateSample).toBe('function');
+    });
+
+    it('calls updateMuestra with the sample id and patches muestras[index] on success', async () => {
+      const initialMuestras: Muestra[] = [
+        {
+          id: 100,
+          pesoNeto: 15,
+          estadoValidacion: 'ok',
+          usuarioId: 3,
+          etapaId: 10,
+          lineaProduccionId: 1,
+          timestamp: new Date().toISOString(),
+          observacion: '',
+        },
+      ];
+      const updated: Muestra = { ...initialMuestras[0], observacion: 'nota editada' };
+      vi.mocked(updateMuestra).mockResolvedValue(updated);
+
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: mockEtapas,
+          initialMuestras,
+        })
+      );
+
+      await act(async () => {
+        await result.current.updateSample(0, { observacion: 'nota editada' });
+      });
+
+      expect(updateMuestra).toHaveBeenCalledWith(100, { observacion: 'nota editada' });
+      expect(result.current.muestras[0].observacion).toBe('nota editada');
+      // Identity changed (new normalized object), length preserved
+      expect(result.current.muestras).toHaveLength(1);
+    });
+
+    it('leaves muestras unchanged when updateMuestra rejects and propagates to onApiError', async () => {
+      const initialMuestras: Muestra[] = [
+        {
+          id: 100,
+          pesoNeto: 15,
+          estadoValidacion: 'ok',
+          usuarioId: 3,
+          etapaId: 10,
+          lineaProduccionId: 1,
+          timestamp: new Date().toISOString(),
+          observacion: 'original',
+        },
+      ];
+      const apiError = new Error('boom');
+      vi.mocked(updateMuestra).mockRejectedValue(apiError);
+      const onApiError = vi.fn();
+
+      const { result } = renderHook(() =>
+        usePasadaState({
+          pasadaId: 101,
+          usuarioId: 3,
+          lineaProduccionId: 1,
+          etapas: mockEtapas,
+          initialMuestras,
+          onApiError,
+        })
+      );
+
+      await expect(
+        act(async () => {
+          await result.current.updateSample(0, { observacion: 'nueva' });
+        })
+      ).rejects.toThrow('boom');
+
+      expect(onApiError).toHaveBeenCalledWith(apiError);
+      expect(result.current.muestras[0].observacion).toBe('original');
+    });
   });
 });

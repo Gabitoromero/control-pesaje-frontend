@@ -28,6 +28,7 @@ const mockContextValue = {
   etapas: [],
   addSample: vi.fn().mockResolvedValue(undefined),
   removeSample: vi.fn().mockResolvedValue(undefined),
+  updateSample: vi.fn().mockResolvedValue(undefined),
   clearSession: vi.fn(),
   isRegistering: false,
   selectedEtapaId: null,

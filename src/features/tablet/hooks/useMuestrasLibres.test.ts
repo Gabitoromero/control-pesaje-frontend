@@ -1,12 +1,13 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useMuestrasLibres } from './useMuestrasLibres';
-import { registrarMuestra, deleteMuestra } from '../../../api/muestras';
+import { registrarMuestra, deleteMuestra, updateMuestra } from '../../../api/muestras';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 vi.mock('../../../api/muestras', () => ({
   registrarMuestra: vi.fn(),
   deleteMuestra: vi.fn(),
+  updateMuestra: vi.fn(),
 }));
 
 const mockEtapas: RutaPasadaEtapa[] = [
@@ -258,5 +259,57 @@ describe('useMuestrasLibres', () => {
     });
 
     expect(result.current.isRegistering).toBe(false);
+  });
+
+  // ── T7: updateSample ──────────────────────────────────────────────────────
+
+  describe('updateSample', () => {
+    it('is exposed as a function on the hook result', () => {
+      const { result } = renderHook(() => useMuestrasLibres(baseProps));
+      expect(typeof result.current.updateSample).toBe('function');
+    });
+
+    it('calls updateMuestra with the sample id and patches muestras[index] on success', async () => {
+      const initial: Muestra = { ...mockMuestra, id: 100, observacion: '' } as Muestra;
+      const updated: Muestra = { ...initial, observacion: 'nota editada' };
+      vi.mocked(registrarMuestra).mockResolvedValueOnce(initial);
+      vi.mocked(updateMuestra).mockResolvedValue(updated);
+
+      const { result } = renderHook(() => useMuestrasLibres(baseProps));
+
+      await act(async () => { await result.current.addSample(15); });
+      expect(result.current.muestras[0].observacion).toBe('');
+
+      await act(async () => {
+        await result.current.updateSample(0, { observacion: 'nota editada' });
+      });
+
+      expect(updateMuestra).toHaveBeenCalledWith(100, { observacion: 'nota editada' });
+      expect(result.current.muestras[0].observacion).toBe('nota editada');
+      expect(result.current.muestras).toHaveLength(1);
+    });
+
+    it('leaves muestras unchanged when updateMuestra rejects', async () => {
+      const initial: Muestra = { ...mockMuestra, id: 100, observacion: 'original' } as Muestra;
+      vi.mocked(registrarMuestra).mockResolvedValueOnce(initial);
+      const apiError = new Error('boom');
+      vi.mocked(updateMuestra).mockRejectedValue(apiError);
+      const onApiError = vi.fn();
+
+      const { result } = renderHook(() =>
+        useMuestrasLibres({ ...baseProps, onApiError })
+      );
+
+      await act(async () => { await result.current.addSample(15); });
+
+      await expect(
+        act(async () => {
+          await result.current.updateSample(0, { observacion: 'nueva' });
+        })
+      ).rejects.toThrow('boom');
+
+      expect(onApiError).toHaveBeenCalledWith(apiError);
+      expect(result.current.muestras[0].observacion).toBe('original');
+    });
   });
 });

@@ -2,14 +2,14 @@ import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 interface MuestrasListPanelProps {
   muestras: Muestra[];
-  onRemoveSample: (index: number) => Promise<void>;
+  onSampleClick: (index: number) => void;
   emptyMessage?: string;
   etapas?: RutaPasadaEtapa[];
 }
 
 export function MuestrasListPanel({
   muestras,
-  onRemoveSample,
+  onSampleClick,
   emptyMessage = 'No hay muestras registradas en esta sesión.',
   etapas,
 }: MuestrasListPanelProps) {
@@ -24,9 +24,11 @@ export function MuestrasListPanel({
       {muestras.map((m, i) => {
         const stageName = etapas?.find(e => e.etapa.id === m.etapaId)?.etapa.nombre;
         return (
-        <div
+        <button
           key={m.id ?? i}
-          className="flex items-center justify-between text-sm bg-slate-700/50 rounded-lg px-3 py-1.5"
+          type="button"
+          onClick={() => onSampleClick(i)}
+          className="w-full flex items-center justify-between text-sm bg-slate-700/50 hover:bg-slate-600/60 rounded-lg px-3 py-1.5 transition-colors text-left"
         >
           <span className="text-slate-300">#{i + 1}</span>
           {stageName && <span className="text-slate-400 text-xs truncate max-w-[100px]">{stageName}</span>}
@@ -40,15 +42,7 @@ export function MuestrasListPanel({
           >
             {m.estadoValidacion}
           </span>
-          <button
-            type="button"
-            aria-label="Eliminar muestra"
-            onClick={() => onRemoveSample(i)}
-            className="ml-2 text-slate-400 hover:text-red-400 transition-colors"
-          >
-            ✕
-          </button>
-        </div>
+        </button>
         );
       })}
     </div>

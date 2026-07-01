@@ -326,4 +326,83 @@ describe('TabletWorkspace', () => {
     const panel = screen.getByTestId('stage-progress-panel');
     expect(panel).toBeInTheDocument();
   });
+
+  // ── MuestraObservacionPopup integration (task 3.2) ──────────────────────────
+
+  it('clicking a sample row opens the MuestraObservacionPopup', async () => {
+    // Seed a muestra so the inline list has a clickable row
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
+              {
+                id: 50,
+                pesoNeto: 15,
+                estadoValidacion: 'ok',
+                usuarioId: 3,
+                etapaId: 1,
+                lineaProduccionId: 1,
+                timestamp: '2026-06-23T19:00:00Z',
+                observacion: '',
+              },
+            ],
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    // Wait for the sample row to render
+    expect(await screen.findByText('15.000 kg')).toBeInTheDocument();
+
+    // Click the row (the <li> is the clickable element)
+    const row = screen.getByText('15.000 kg').closest('li')!;
+    await userEvent.click(row);
+
+    // Popup should now be open showing the sample number
+    expect(await screen.findByText(/Muestra #1/)).toBeInTheDocument();
+  });
+
+  it('does not render an inline delete (Descartar) button on sample rows', async () => {
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
+              {
+                id: 50,
+                pesoNeto: 15,
+                estadoValidacion: 'ok',
+                usuarioId: 3,
+                etapaId: 1,
+                lineaProduccionId: 1,
+                timestamp: '2026-06-23T19:00:00Z',
+              },
+            ],
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect(await screen.findByText('15.000 kg')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /descartar muestra/i })).not.toBeInTheDocument();
+  });
 });

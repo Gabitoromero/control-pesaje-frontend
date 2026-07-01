@@ -1,18 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Scale } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { MuestrasListPanel } from '../components/MuestrasListPanel';
+import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 
 export function MuestrasLibresRegistroPage() {
   const { activeLineaId } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
   const { pesoNeto, isConnected } = useBalanzaWebSocket(activeLineaId);
-  const { muestras, etapas, addSample, removeSample, isRegistering, setSelectedEtapaId } =
+  const { muestras, etapas, addSample, updateSample, removeSample, isRegistering, setSelectedEtapaId } =
     useMuestrasLibresContext();
 
   // Sync etapaId from URL param on mount
@@ -30,6 +32,16 @@ export function MuestrasLibresRegistroPage() {
 
   const handleFinalizar = () => {
     navigate('/tablet/pasadas');
+  };
+
+  const handleSaveSample = async (index: number, observacion: string) => {
+    await updateSample(index, { observacion });
+    setSelectedSampleIndex(null);
+  };
+
+  const handleDeleteSample = async (index: number) => {
+    await removeSample(index);
+    setSelectedSampleIndex(null);
   };
 
   return (
@@ -71,7 +83,11 @@ export function MuestrasLibresRegistroPage() {
             <h2 className="text-lg font-bold text-white">Muestras Registradas</h2>
           </div>
           <div className="flex-1 p-4 overflow-y-auto">
-            <MuestrasListPanel muestras={muestras} onRemoveSample={removeSample} etapas={etapas} />
+            <MuestrasListPanel
+              muestras={muestras}
+              onSampleClick={setSelectedSampleIndex}
+              etapas={etapas}
+            />
           </div>
         </div>
       </div>
@@ -83,6 +99,18 @@ export function MuestrasLibresRegistroPage() {
       >
         Finalizar
       </button>
+
+      {/* MuestraObservacionPopup — shared edit/delete popup (task 3.3) */}
+      {selectedSampleIndex !== null && muestras[selectedSampleIndex] && (
+        <MuestraObservacionPopup
+          muestra={muestras[selectedSampleIndex]}
+          index={selectedSampleIndex}
+          isOpen
+          onSave={handleSaveSample}
+          onDelete={handleDeleteSample}
+          onClose={() => setSelectedSampleIndex(null)}
+        />
+      )}
     </div>
   );
 }

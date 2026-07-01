@@ -28,6 +28,7 @@ vi.mock('react-router-dom', async () => {
 
 const addSampleMock = vi.fn().mockResolvedValue(undefined);
 const removeSampleMock = vi.fn().mockResolvedValue(undefined);
+const updateSampleMock = vi.fn().mockResolvedValue(undefined);
 const setSelectedEtapaIdMock = vi.fn();
 
 const mockContextValue = {
@@ -35,6 +36,7 @@ const mockContextValue = {
   etapas: [],
   addSample: addSampleMock,
   removeSample: removeSampleMock,
+  updateSample: updateSampleMock,
   clearSession: vi.fn(),
   isRegistering: false,
   selectedEtapaId: 10,
@@ -57,6 +59,7 @@ const sampleMuestra: Muestra = {
   etapaId: 10,
   lineaProduccionId: 1,
   timestamp: '2026-06-30T10:00:00Z',
+  observacion: '',
 };
 
 describe('MuestrasLibresRegistroPage', () => {
@@ -64,6 +67,7 @@ describe('MuestrasLibresRegistroPage', () => {
     navigateMock.mockClear();
     addSampleMock.mockClear();
     removeSampleMock.mockClear();
+    updateSampleMock.mockClear();
     setSelectedEtapaIdMock.mockClear();
     vi.mocked(useMuestrasLibresContext).mockReturnValue({ ...mockContextValue, muestras: [] });
     vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 12.345, isConnected: true });
@@ -113,14 +117,30 @@ describe('MuestrasLibresRegistroPage', () => {
     expect(screen.getByText(/no hay muestras/i)).toBeInTheDocument();
   });
 
-  it('wires removeSample to the list — clicking delete calls removeSample', async () => {
+  // ── MuestraObservacionPopup integration (task 3.3) ───────────────────────────
+
+  it('clicking a sample row opens the MuestraObservacionPopup', async () => {
     vi.mocked(useMuestrasLibresContext).mockReturnValue({
       ...mockContextValue,
       muestras: [sampleMuestra],
     });
     renderWithAuth(<MuestrasLibresRegistroPage />, { user: operarioUser, activeLineaId: 1 });
-    const deleteBtn = screen.getByRole('button', { name: /eliminar muestra/i });
-    await userEvent.click(deleteBtn);
-    expect(removeSampleMock).toHaveBeenCalledWith(0);
+
+    // The row is rendered as a button in MuestrasListPanel; click it
+    const row = screen.getByRole('button', { name: /#1/i });
+    await userEvent.click(row);
+
+    // Popup opens showing the sample number
+    expect(await screen.findByText(/Muestra #1/)).toBeInTheDocument();
+  });
+
+  it('does not render an inline delete (Eliminar muestra) button on rows', async () => {
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({
+      ...mockContextValue,
+      muestras: [sampleMuestra],
+    });
+    renderWithAuth(<MuestrasLibresRegistroPage />, { user: operarioUser, activeLineaId: 1 });
+
+    expect(screen.queryAllByRole('button', { name: /eliminar muestra/i })).toHaveLength(0);
   });
 });
