@@ -13,6 +13,7 @@ import { UsuarioRol } from '../../../shared/types';
 import { Plus, Edit, Trash, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { useDialog } from '../../../components/dialogs/useDialog';
 
 const ROL_LABELS: Record<string, string> = {
   [UsuarioRol.ADMINISTRADOR]: 'Administrador',
@@ -39,6 +40,7 @@ const USUARIO_FIELDS: SearchField[] = [
 
 export const UsuariosPage = () => {
   const queryClient = useQueryClient();
+  const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -185,8 +187,15 @@ export const UsuariosPage = () => {
     });
   };
 
-  const handleDelete = () => {
-    if (editingUsuario?.id && window.confirm('¿Está seguro de eliminar este usuario?')) {
+  const handleDelete = async () => {
+    if (!editingUsuario?.id) return;
+    const confirmed = await confirm({
+      title: '¿Está seguro de eliminar este usuario?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (confirmed) {
       deleteMutation.mutate(editingUsuario.id);
     }
   };

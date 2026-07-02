@@ -7,6 +7,7 @@ import { vi } from 'vitest';
 import { AuthContext } from '../features/auth/context/AuthContext';
 import type { AuthContextType } from '../features/auth/context/AuthContext';
 import type { User } from '../shared/types/auth';
+import { DialogProvider } from '../components/dialogs/DialogProvider';
 
 function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -15,7 +16,9 @@ function makeQueryClient() {
 export function renderWithProviders(ui: ReactNode) {
   return render(
     <QueryClientProvider client={makeQueryClient()}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <DialogProvider>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </DialogProvider>
     </QueryClientProvider>
   );
 }
@@ -51,7 +54,9 @@ export function renderWithAuth(
     ...render(
       <QueryClientProvider client={makeQueryClient()}>
         <AuthContext.Provider value={authValue}>
-          <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+          <DialogProvider>
+            <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+          </DialogProvider>
         </AuthContext.Provider>
       </QueryClientProvider>
     ),
