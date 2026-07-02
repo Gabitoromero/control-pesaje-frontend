@@ -235,4 +235,78 @@ describe('LineasPage', () => {
       expect((requestPayload as Record<string, unknown>).rutaPasadaActiva).toBeNull();
     });
   });
+
+  describe('success/warning dialog after mutation', () => {
+    it('shows a success alertdialog after creating a línea with a ruta activa assigned', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      const rutaSelect = screen.getByRole('combobox', { name: /ruta activa/i });
+      await userEvent.selectOptions(rutaSelect, '1');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Línea creada exitosamente')).toBeInTheDocument();
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    it('shows a warning alertdialog after creating a línea without a ruta activa assigned', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Ruta');
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Línea creada sin ruta activa')).toBeInTheDocument();
+      expect(
+        within(dialog).getByText(
+          'La línea fue guardada correctamente, pero no tiene una ruta de pasada activa asignada.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('shows a success alertdialog after updating a línea that keeps a ruta activa assigned', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/lineas-produccion', () =>
+          HttpResponse.json({
+            success: true,
+            data: [
+              { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: { id: 1, nombre: 'Ruta Alpha' } },
+              ...lineasMock.slice(1),
+            ],
+          })
+        )
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Línea actualizada exitosamente')).toBeInTheDocument();
+    });
+  });
 });

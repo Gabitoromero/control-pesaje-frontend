@@ -9,8 +9,9 @@ import {
   type Articulo,
 } from '../../../api/articulos';
 import { Plus, Edit, Trash, X } from 'lucide-react';
-import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { useDialog } from '../../../components/dialogs/useDialog';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 const EMPTY_FORM = { nombre: '', descripcion: '', marca: '' };
 
@@ -22,6 +23,7 @@ const ARTICULO_FIELDS: SearchField[] = [
 
 export const ArticulosPage = () => {
   const queryClient = useQueryClient();
+  const { alertError } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -65,13 +67,10 @@ export const ArticulosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo crear el artículo:\n${msg}`);
+      alertError({
+        title: 'No se pudo crear el artículo',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -83,13 +82,10 @@ export const ArticulosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar el artículo:\n${msg}`);
+      alertError({
+        title: 'No se pudo guardar el artículo',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -101,13 +97,10 @@ export const ArticulosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar el artículo:\n${msg}`);
+      alertError({
+        title: 'No se pudo eliminar el artículo',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
