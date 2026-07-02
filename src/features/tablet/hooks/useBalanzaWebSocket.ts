@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSocket } from '../../../services/websocket';
+import { useAuth } from '../../auth/context/AuthContext';
 
 export interface BalanzaData {
   pesoNeto: number;
@@ -8,6 +9,7 @@ export interface BalanzaData {
 export function useBalanzaWebSocket(lineaId: number | null) {
   const [pesoNeto, setPesoNeto] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const { logout, user } = useAuth();
 
   useEffect(() => {
     if (!lineaId) return;
@@ -60,6 +62,11 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     socket.on('balanza-data', onBalanzaData);
     socket.on('balanza-status', onBalanzaStatus);
 
+    // DEBUG: Log ALL incoming events
+    socket.onAny((eventName, ...args) => {
+      console.log(`[Balanza WebSocket] EVENT RECEIVED: ${eventName}`, args);
+    });
+
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
@@ -69,7 +76,7 @@ export function useBalanzaWebSocket(lineaId: number | null) {
       socket.off('balanza-status', onBalanzaStatus);
       socket.emit('leave-linea', lineaId);
     };
-  }, [lineaId]);
+  }, [lineaId, logout, user]);
 
   return { pesoNeto, isConnected };
 }
