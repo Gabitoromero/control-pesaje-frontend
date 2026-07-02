@@ -143,6 +143,43 @@ describe('LineasPage', () => {
     });
   });
 
+  it('clicking "Activar Línea" shows an "activada" success dialog, not the generic "actualizada" copy', async () => {
+    server.use(
+      http.put('http://localhost:3000/api/lineas-produccion/:id', async ({ request }) => {
+        const body = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(body as object) } });
+      })
+    );
+
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getAllByRole('combobox')[0];
+    await userEvent.selectOptions(statusSelect, 'inactivo');
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 4 — Inactiva A')).toBeInTheDocument();
+    });
+
+    const lineaText = await screen.findByText('Línea 4 — Inactiva A');
+    const lineaRow = lineaText.closest('tr')!;
+    await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+    // Assign a ruta activa before activating so this hits the "success" branch,
+    // not the "no ruta" warning branch — isolates the accion-copy bug.
+    const rutaSelect = screen.getByRole('combobox', { name: /ruta activa/i });
+    await userEvent.selectOptions(rutaSelect, '1');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activar Línea' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Línea activada exitosamente')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Línea actualizada exitosamente')).not.toBeInTheDocument();
+  });
+
   it('editing and clearing rutaPasadaActiva on an active linea sends PUT with rutaPasadaActiva: null', async () => {
     let requestPayload: unknown = null;
     server.use(
