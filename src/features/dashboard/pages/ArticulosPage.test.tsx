@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import { vi } from 'vitest';
 import { handlers, articulosMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { ArticulosPage } from './ArticulosPage';
@@ -9,7 +10,10 @@ import { ArticulosPage } from './ArticulosPage';
 const server = setupServer(...handlers);
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
 afterAll(() => server.close());
 
 describe('ArticulosPage', () => {
@@ -225,6 +229,71 @@ describe('ArticulosPage', () => {
     await waitFor(() => {
       // +1 for the header row
       expect(screen.getAllByRole('row').length).toBe(articulosMock.length + 1);
+    });
+  });
+
+  describe('error dialog on mutation failure', () => {
+    it('shows an alertdialog with the API error message when creating fails', async () => {
+      server.use(
+        http.post('http://localhost:3000/api/articulos', () =>
+          HttpResponse.json(
+            { success: false, error: { message: 'El nombre ya está en uso' } },
+            { status: 400 }
+          )
+        )
+      );
+
+      renderWithProviders(<ArticulosPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nuevo artículo/i }));
+
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Repetido');
+      await userEvent.type(screen.getByLabelText('Marca'), 'Marca X');
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo crear el artículo')).toBeInTheDocument();
+      expect(within(dialog).getByText('El nombre ya está en uso')).toBeInTheDocument();
+
+      // Dismissal: single "Aceptar" button, no true/false branching.
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+      // The underlying edit modal must remain open — only the error dialog closed.
+      expect(screen.getByRole('heading', { name: 'Nuevo Artículo' })).toBeInTheDocument();
+    });
+
+    it('shows an alertdialog with the API error message when deleting fails', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      server.use(
+        http.delete('http://localhost:3000/api/articulos/:id', () =>
+          HttpResponse.json(
+            { success: false, error: { message: 'No se puede eliminar: en uso' } },
+            { status: 409 }
+          )
+        )
+      );
+
+      renderWithProviders(<ArticulosPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      });
+
+      const harinaText = await screen.findByText('Harina 000');
+      const harinaRow = harinaText.closest('tr')!;
+      await userEvent.click(within(harinaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo eliminar el artículo')).toBeInTheDocument();
+      expect(within(dialog).getByText('No se puede eliminar: en uso')).toBeInTheDocument();
     });
   });
 });
