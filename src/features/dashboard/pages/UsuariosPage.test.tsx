@@ -179,7 +179,6 @@ describe('UsuariosPage', () => {
 
   it('deleteMutation onError shows alert with backend error message', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     server.use(
       http.delete('http://localhost:3000/api/usuarios/:id', () =>
@@ -204,6 +203,9 @@ describe('UsuariosPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Eliminar Usuario/ }));
 
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(
         expect.stringContaining('No se puede eliminar: tiene registros asociados')
@@ -211,6 +213,84 @@ describe('UsuariosPage', () => {
     });
 
     alertSpy.mockRestore();
-    confirmSpy.mockRestore();
+  });
+
+  it('clicking "Eliminar Usuario" opens a confirm dialog instead of window.confirm', async () => {
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: /Eliminar Usuario/ }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    expect(confirmDialog).toHaveAccessibleName('¿Está seguro de eliminar este usuario?');
+  });
+
+  it('confirming the delete dialog sends the DELETE request and closes both dialogs', async () => {
+    let deleteRequested = false;
+    server.use(
+      http.delete('http://localhost:3000/api/usuarios/:id', () => {
+        deleteRequested = true;
+        return HttpResponse.json({ success: true, data: {} });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: /Eliminar Usuario/ }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+    await waitFor(() => {
+      expect(deleteRequested).toBe(true);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Editar Usuario' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('cancelling the delete dialog does NOT send a DELETE request and keeps the edit modal open', async () => {
+    let deleteRequested = false;
+    server.use(
+      http.delete('http://localhost:3000/api/usuarios/:id', () => {
+        deleteRequested = true;
+        return HttpResponse.json({ success: true, data: {} });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: /Eliminar Usuario/ }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+    expect(deleteRequested).toBe(false);
+    expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
   });
 });
