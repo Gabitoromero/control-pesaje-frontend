@@ -13,6 +13,7 @@ import { getRutas } from '../../../api/rutas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { useDialog } from '../../../components/dialogs/useDialog';
 
 const EMPTY_FORM = { nombre: '', numeroBalanza: 1, rutaPasadaActiva: '' };
 
@@ -23,6 +24,22 @@ const LINEA_FIELDS: SearchField[] = [
 
 export const LineasPage = () => {
   const queryClient = useQueryClient();
+  const { alertSuccess, alertWarning } = useDialog();
+
+  // Conservative, minimal integration: surfaces the outcome of a create/update
+  // that already succeeds silently today. Uses the existing optional
+  // `rutaPasadaActiva` field to decide success vs warning — does not add any
+  // new business rule, only a presentation choice on top of existing state.
+  const notifyOutcome = (accion: 'creada' | 'actualizada', rutaPasadaActiva: number | null | undefined) => {
+    if (rutaPasadaActiva) {
+      alertSuccess({ title: `Línea ${accion} exitosamente` });
+    } else {
+      alertWarning({
+        title: `Línea ${accion} sin ruta activa`,
+        description: 'La línea fue guardada correctamente, pero no tiene una ruta de pasada activa asignada.',
+      });
+    }
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLinea, setEditingLinea] = useState<Linea | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -65,10 +82,11 @@ export const LineasPage = () => {
 
   const createMutation = useMutation({
     mutationFn: createLinea,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
       queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       closeModal();
+      notifyOutcome('creada', variables.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
@@ -84,10 +102,11 @@ export const LineasPage = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<LineaCreate> & { activo?: boolean } }) =>
       updateLinea(id, data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
       queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       closeModal();
+      notifyOutcome('actualizada', variables.data.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
