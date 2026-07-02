@@ -238,7 +238,7 @@ export const LineasPage = () => {
             ))}
             {lineasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay líneas registradas.</td>
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay líneas de producción {status === 'activo' ? 'activas' : 'inactivas'}.</td>
               </tr>
             )}
           </tbody>

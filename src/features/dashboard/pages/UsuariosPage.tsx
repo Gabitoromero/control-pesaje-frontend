@@ -251,7 +251,7 @@ export const UsuariosPage = () => {
             ))}
             {usuariosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No hay usuarios registrados.</td>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
               </tr>
             )}
           </tbody>

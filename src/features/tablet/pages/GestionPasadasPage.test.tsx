@@ -8,6 +8,7 @@ import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { getLinea } from '../../../api/lineas';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
+import type { Pasada } from '../../../shared/types/domain';
 
 vi.mock('../context/MuestrasLibresContext', () => ({
   useMuestrasLibresContext: vi.fn(),
@@ -50,7 +51,7 @@ const calidadUser: User = {
   puedeTomarMuestrasLibres: true,
 };
 
-const mockPasadas: any[] = [
+const mockPasadas: Partial<Pasada>[] = [
   { id: 101, estado: 'en_curso', usuarioId: 3, articuloId: 1, createdAt: '', updatedAt: '' },
   { id: 102, estado: 'en_curso', usuarioId: 3, articuloId: 2, createdAt: '', updatedAt: '' },
 ];
@@ -85,7 +86,7 @@ describe('GestionPasadasPage', () => {
     vi.mocked(getLinea).mockReset();
 
     // Default mocks: line with route assigned
-    vi.mocked(getPasadas).mockResolvedValue(mockPasadas);
+    vi.mocked(getPasadas).mockResolvedValue(mockPasadas as Pasada[]);
     vi.mocked(getArticulosPorRuta).mockResolvedValue(mockArticulos);
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
 
@@ -131,7 +132,7 @@ describe('GestionPasadasPage', () => {
   });
 
   it('muestra el modal y permite iniciar una pasada', async () => {
-    vi.mocked(iniciarPasada).mockResolvedValue({ id: 200 } as any);
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 200 } as Pasada);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
     // Wait for linea to load so the button is enabled

@@ -221,7 +221,7 @@ export const ArticulosPage = () => {
             ))}
             {articulosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay artículos registrados.</td>
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay artículos {status === 'activo' ? 'activos' : 'inactivos'}.</td>
               </tr>
             )}
           </tbody>

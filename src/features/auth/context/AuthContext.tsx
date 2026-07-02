@@ -4,7 +4,7 @@ import Cookies from 'js-cookie';
 import type { User, AuthResponse } from '../../../shared/types/auth';
 import { setLogoutHandler } from '../../../api/axios';
 import { cerrarSesionLinea } from '../../../api/auth';
-import { resetSocket } from '../../../services/websocket';
+import { resetSocket, getSocket } from '../../../services/websocket';
 import { useCallback, useEffect } from 'react';
 
 export interface AuthContextType {
@@ -98,6 +98,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem('activeLineaId');
     } catch { /* storage unavailable */ }
   }, [activeLineaId]);
+
+  // Global listener for session termination
+  useEffect(() => {
+    if (!activeLineaId) return;
+
+    const socket = getSocket();
+    socket.connect();
+    
+    // Ensure the socket is in the room even if we are not in TabletWorkspace
+    socket.emit('join-linea', activeLineaId);
+
+    const onSesionCerrada = () => {
+      console.log('[AuthContext] Sesión forzada a cerrar por un administrador.');
+      alert('Tu sesión fue cerrada por un administrador.');
+      logout();
+      window.location.href = user?.rol === 'operario' ? '/' : '/dashboard';
+    };
+
+    socket.on('sesion-cerrada', onSesionCerrada);
+
+    return () => {
+      socket.off('sesion-cerrada', onSesionCerrada);
+    };
+  }, [activeLineaId, logout, user]);
 
   return (
     <AuthContext.Provider

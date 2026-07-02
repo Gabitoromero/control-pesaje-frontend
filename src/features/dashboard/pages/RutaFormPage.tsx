@@ -13,6 +13,7 @@ import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
 import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { rutaSchema } from './RutaFormPage.schemas.js';
+import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 
 type RutaFormValues = z.infer<typeof rutaSchema>;
 
@@ -291,9 +292,16 @@ export const RutaFormPage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-medium">Etapas de la Ruta</h2>
+        <CollapsibleSection
+          title="Etapas de la Ruta"
+          count={fields.length}
+          forceOpen={!!errors.etapas}
+        >
+          {errors.etapas?.message && (
+            <div className="text-red-500 text-sm mb-4">{errors.etapas.message}</div>
+          )}
+
+          <div className="flex justify-end mb-4">
             <button
               type="button"
               onClick={() => append({
@@ -308,10 +316,6 @@ export const RutaFormPage = () => {
               <Plus size={16} /> Agregar Etapa
             </button>
           </div>
-          
-          {errors.etapas?.message && (
-            <div className="text-red-500 text-sm mb-4">{errors.etapas.message}</div>
-          )}
 
           <div className="space-y-4" data-testid="etapas-container">
             {fields.map((field: { id: string }, index: number) => (
@@ -418,14 +422,13 @@ export const RutaFormPage = () => {
               </div>
             ))}
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Articulos asignados */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-medium">Artículos Asignados</h2>
-          </div>
-
+        <CollapsibleSection
+          title="Artículos Asignados"
+          count={articulosMostrados.length}
+        >
           {/* Selector to add a new articulo */}
           <div className="flex gap-2 mb-4">
             <select
@@ -485,7 +488,7 @@ export const RutaFormPage = () => {
               ))}
             </ul>
           )}
-        </div>
+        </CollapsibleSection>
 
         <div className="flex justify-between items-center">
           <div className="flex gap-2">
