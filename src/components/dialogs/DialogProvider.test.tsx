@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DialogProvider } from './DialogProvider';
+import type { DialogContextType } from './DialogProvider';
 import { useDialog } from './useDialog';
 
 function ConfirmHarness() {
@@ -47,6 +48,39 @@ function AlertHarness({ kind }: { kind: 'error' | 'success' | 'warning' }) {
       <span data-testid="result">{result}</span>
     </>
   );
+}
+
+function QueueHarness() {
+  const { confirm } = useDialog();
+  const [results, setResults] = useState<string[]>([]);
+
+  return (
+    <>
+      <button
+        onClick={() => {
+          // Fire both without awaiting the first — reproduces the
+          // single-slot orphaning bug when done naively.
+          confirm({ title: 'First' }).then((ok) => setResults((r) => [...r, `first:${ok}`]));
+          confirm({ title: 'Second' }).then((ok) => setResults((r) => [...r, `second:${ok}`]));
+        }}
+      >
+        Trigger both
+      </button>
+      <ul>
+        {results.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function UnmountHarness({ onReady }: { onReady: (dialog: DialogContextType) => void }) {
+  const dialog = useDialog();
+  useEffect(() => {
+    onReady(dialog);
+  }, [dialog, onReady]);
+  return null;
 }
 
 describe('DialogProvider / useDialog', () => {
@@ -157,6 +191,54 @@ describe('DialogProvider / useDialog', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     }
   );
+
+  it('queues a second confirm() call instead of orphaning the first when called concurrently', async () => {
+    const user = userEvent.setup();
+    render(
+      <DialogProvider>
+        <QueueHarness />
+      </DialogProvider>
+    );
+
+    await user.click(screen.getByText('Trigger both'));
+
+    let dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveAccessibleName('First');
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(screen.getByText('first:true')).toBeInTheDocument());
+
+    dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveAccessibleName('Second');
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(screen.getByText('second:false')).toBeInTheDocument());
+  });
+
+  it('resolves all pending requests instead of hanging forever when the provider unmounts', async () => {
+    let captured: DialogContextType | null = null;
+    const { unmount } = render(
+      <DialogProvider>
+        <UnmountHarness
+          onReady={(dialog) => {
+            captured = dialog;
+          }}
+        />
+      </DialogProvider>
+    );
+
+    await waitFor(() => expect(captured).not.toBeNull());
+
+    const confirmPromise = captured!.confirm({ title: 'Pending confirm' });
+    const alertPromise = captured!.alertError({ title: 'Pending alert' });
+
+    unmount();
+
+    await expect(confirmPromise).resolves.toBe(false);
+    await expect(alertPromise).resolves.toBeUndefined();
+  });
 
   it('useDialog throws when used outside a DialogProvider', () => {
     // Suppress the expected React error boundary console noise for this assertion.
