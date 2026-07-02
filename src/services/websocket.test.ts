@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Cookies from 'js-cookie';
 
+const mockCookiesGet = vi.mocked(Cookies.get);
+
 // Mock socket.io-client before importing websocket module
 vi.mock('socket.io-client', () => {
   const mockSocket = {
@@ -26,7 +28,7 @@ describe('websocket singleton', () => {
 
   it('getSocket() passes auth.token from the token cookie to io()', async () => {
     const { io } = await import('socket.io-client');
-    (vi.mocked(Cookies.get) as any).mockReturnValue('my-jwt-token');
+    mockCookiesGet.mockReturnValue('my-jwt-token' as any);
 
     const { getSocket } = await import('./websocket');
     getSocket();
@@ -38,7 +40,7 @@ describe('websocket singleton', () => {
 
   it('getSocket() passes auth.token as undefined when cookie is absent', async () => {
     const { io } = await import('socket.io-client');
-    (vi.mocked(Cookies.get) as any).mockReturnValue(undefined);
+    mockCookiesGet.mockReturnValue(undefined as any);
 
     const { getSocket } = await import('./websocket');
     getSocket();
@@ -50,7 +52,7 @@ describe('websocket singleton', () => {
 
   it('getSocket() returns the same instance on repeated calls (singleton)', async () => {
     const { io } = await import('socket.io-client');
-    (vi.mocked(Cookies.get) as any).mockReturnValue('token-a');
+    mockCookiesGet.mockReturnValue('token-a' as any);
 
     const { getSocket } = await import('./websocket');
     const s1 = getSocket();
@@ -64,7 +66,7 @@ describe('websocket singleton', () => {
     const { io } = await import('socket.io-client');
     const mockSocket = { disconnect: vi.fn(), removeAllListeners: vi.fn() };
     vi.mocked(io).mockReturnValue(mockSocket as unknown as ReturnType<typeof io>);
-    (vi.mocked(Cookies.get) as any).mockReturnValue('my-jwt-token');
+    mockCookiesGet.mockReturnValue('my-jwt-token' as any);
 
     const { getSocket, resetSocket } = await import('./websocket');
     getSocket(); // creates socket
@@ -75,7 +77,7 @@ describe('websocket singleton', () => {
     expect(mockSocket.removeAllListeners).toHaveBeenCalledOnce();
 
     // After reset, getSocket() must call io() again with fresh cookie
-    (vi.mocked(Cookies.get) as any).mockReturnValue('new-jwt-token');
+    mockCookiesGet.mockReturnValue('new-jwt-token' as any);
     getSocket();
     expect(io).toHaveBeenCalledTimes(2);
     const secondCallArgs = vi.mocked(io).mock.calls[1][1];

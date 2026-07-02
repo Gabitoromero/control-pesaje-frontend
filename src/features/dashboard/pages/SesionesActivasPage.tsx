@@ -1,6 +1,7 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getSesionesActivas } from '../../../api/auth';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getSesionesActivas, cerrarSesionLinea } from '../../../api/auth';
+import { Trash2 } from 'lucide-react';
 
 interface EnrichedSession {
   lineaId: number;
@@ -13,6 +14,8 @@ interface EnrichedSession {
 }
 
 export const SesionesActivasPage: React.FC = () => {
+  const queryClient = useQueryClient();
+
   const { data: sessions = [], isLoading: loading, error } = useQuery<EnrichedSession[]>({
     queryKey: ['sesiones-activas'],
     queryFn: async () => {
@@ -21,6 +24,13 @@ export const SesionesActivasPage: React.FC = () => {
       return data as EnrichedSession[];
     },
     refetchInterval: 3000, // Auto-refresh every 3 seconds
+  });
+
+  const closeSessionMutation = useMutation({
+    mutationFn: (lineaId: number) => cerrarSesionLinea(lineaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sesiones-activas'] });
+    },
   });
 
   if (loading) {
@@ -56,6 +66,9 @@ export const SesionesActivasPage: React.FC = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Expiración (aprox)
                 </th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -79,6 +92,20 @@ export const SesionesActivasPage: React.FC = () => {
                     <div className="text-sm text-gray-500">
                       {session.expiraEn ? new Date(session.expiraEn).toLocaleString() : 'N/A'}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`¿Estás seguro de que deseas cerrar la sesión de ${session.usuarioNombre} en ${session.lineaNombre}?`)) {
+                          closeSessionMutation.mutate(session.lineaId);
+                        }
+                      }}
+                      disabled={closeSessionMutation.isPending}
+                      className="text-red-600 hover:text-red-900 focus:outline-none disabled:opacity-50 flex items-center justify-end w-full"
+                      title="Cerrar sesión"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </td>
                 </tr>
               ))}

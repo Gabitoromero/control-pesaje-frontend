@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import type { Muestra } from '../../../shared/types/domain';
 
@@ -11,33 +11,15 @@ export interface MuestraObservacionPopupProps {
   onClose: () => void;
 }
 
-/**
- * Controlled popup that displays read-only sample info (number, weight,
- * validation badge) and an editable observation textarea. Save delegates to
- * the parent via `onSave(index, observacion)`; delete asks for confirmation
- * via `window.confirm` then delegates to `onDelete(index)`. Used by both
- * TabletWorkspace (pasada-bound) and MuestrasLibresRegistroPage (free samples).
- */
-export function MuestraObservacionPopup({
+function PopupContent({
   muestra,
   index,
-  isOpen,
   onSave,
   onDelete,
   onClose,
-}: MuestraObservacionPopupProps) {
+}: Omit<MuestraObservacionPopupProps, 'isOpen'>) {
   const [observacion, setObservacion] = useState(muestra.observacion ?? '');
   const [isSaving, setIsSaving] = useState(false);
-
-  // Re-sync the textarea whenever a different muestra is opened
-  useEffect(() => {
-    if (isOpen) {
-      setObservacion(muestra.observacion ?? '');
-      setIsSaving(false);
-    }
-  }, [isOpen, muestra]);
-
-  if (!isOpen) return null;
 
   const isOk = muestra.estadoValidacion === 'ok';
 
@@ -152,4 +134,14 @@ export function MuestraObservacionPopup({
       </div>
     </div>
   );
+}
+
+/**
+ * Controlled popup that displays read-only sample info (number, weight,
+ * validation badge) and an editable observation textarea. Uses `key` to
+ * force remount when a different muestra is opened, avoiding setState-in-effect.
+ */
+export function MuestraObservacionPopup(props: MuestraObservacionPopupProps) {
+  if (!props.isOpen) return null;
+  return <PopupContent key={props.muestra.id ?? props.index} {...props} />;
 }

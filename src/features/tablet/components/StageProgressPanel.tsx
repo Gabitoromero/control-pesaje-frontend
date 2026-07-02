@@ -16,11 +16,11 @@ export const StageProgressPanel: React.FC<StageProgressPanelProps> = ({ etapasCo
           const isLast = index === etapasConEstado.length - 1;
           const { etapa, estado, muestrasOk, muestrasRequeridas } = e;
 
-          let bgClass = '';
-          let textClass = '';
-          let borderClass = '';
-          let icon = null;
-          let counterText = null;
+          let bgClass: string;
+          let textClass: string;
+          let borderClass: string;
+          let icon: React.ReactNode;
+          let counterText: string | null = null;
 
           if (estado === 'completada') {
             bgClass = 'bg-emerald-50';
