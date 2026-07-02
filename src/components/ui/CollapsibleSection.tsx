@@ -73,7 +73,12 @@ export function CollapsibleSection({
         className="overflow-hidden transition-all duration-300"
         style={{ maxHeight: '0px' }}
       >
-        <div className="px-6 pb-6">{children}</div>
+        <div
+          className="px-6 pb-6"
+          style={{ visibility: isOpen ? 'visible' : 'hidden' }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

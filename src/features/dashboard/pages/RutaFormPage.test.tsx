@@ -112,7 +112,10 @@ describe('RutaFormPage Component', () => {
     );
 
     renderWithProviders(<RutaFormPage />);
-    
+
+    // Expand the Etapas section (collapsed by default via CollapsibleSection)
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+
     // Type nombre
     const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
     await userEvent.type(nombreInput, 'Nueva Ruta Prueba');
@@ -169,6 +172,9 @@ describe('RutaFormPage Component', () => {
       expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
     });
 
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
+
     // Scope to etapas-container to avoid picking up the articulos selector
     const etapasContainer = screen.getByTestId('etapas-container');
     const etapaSelects = within(etapasContainer).getAllByRole('combobox');
@@ -179,7 +185,10 @@ describe('RutaFormPage Component', () => {
 
   it('5. add row', async () => {
     renderWithProviders(<RutaFormPage />);
-    
+
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+
     const etapasContainer = screen.getByTestId('etapas-container');
     expect(within(etapasContainer).getAllByRole('combobox').length).toBe(1);
     await userEvent.click(screen.getByRole('button', { name: /agregar etapa/i }));
@@ -192,6 +201,8 @@ describe('RutaFormPage Component', () => {
     
     // findByTestId is async — waits for the loading state to resolve
     const etapasContainer = await screen.findByTestId('etapas-container');
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
       expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
@@ -205,7 +216,10 @@ describe('RutaFormPage Component', () => {
   it('7. remove single row asks for confirmation and clears list if confirmed', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
     renderWithProviders(<RutaFormPage />);
-    
+
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+
     const removeBtn = await screen.findByTitle(/eliminar etapa/i);
     expect(removeBtn).not.toBeDisabled();
     
@@ -221,7 +235,10 @@ describe('RutaFormPage Component', () => {
   it('7b. remove single row asks for confirmation and keeps row if cancelled', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
     renderWithProviders(<RutaFormPage />);
-    
+
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+
     const removeBtn = await screen.findByTitle(/eliminar etapa/i);
     expect(removeBtn).not.toBeDisabled();
     
@@ -248,6 +265,8 @@ describe('RutaFormPage Component', () => {
     
     // findByTestId is async — waits for the component to finish loading
     const etapasContainer = await screen.findByTestId('etapas-container');
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
       expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
@@ -282,6 +301,8 @@ describe('RutaFormPage Component', () => {
     renderWithProviders(<RutaFormPage />);
 
     const etapasContainer = await screen.findByTestId('etapas-container');
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
       expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
@@ -318,6 +339,8 @@ describe('RutaFormPage Component', () => {
 
     // findByTestId waits for the component to finish the loading state
     const etapasContainer = await screen.findByTestId('etapas-container');
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
       expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
@@ -350,6 +373,8 @@ describe('RutaFormPage Component', () => {
 
     // findByTestId waits for the component to finish the loading state
     const etapasContainer = await screen.findByTestId('etapas-container');
+    // Expand the Etapas section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
       expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
     });
@@ -447,6 +472,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
       expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
     });
 
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+
     await waitFor(() => {
       expect(screen.getByText('Harina 000')).toBeInTheDocument();
       expect(screen.getByText('Azúcar')).toBeInTheDocument();
@@ -460,6 +488,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
     await waitFor(() => {
       expect(screen.getByText('Harina 000')).toBeInTheDocument();
     });
+
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
 
     // articulosOptions has Harina 000 (1), Azucar (2), Sal fina (3)
     // After assigning 1 and 2, only Sal fina should be in the selector
@@ -486,6 +517,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
     });
+
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
 
     // Select Sal fina (id=3, not yet assigned)
     const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
@@ -517,6 +551,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
       expect(screen.getByText('Harina 000')).toBeInTheDocument();
     });
 
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+
     // Click the remove button for the first assigned articulo (pivot id=101)
     const removeButtons = screen.getAllByRole('button', { name: /quitar artículo/i });
     await userEvent.click(removeButtons[0]);
@@ -534,6 +571,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
     await waitFor(() => {
       expect(screen.getByText(/sin artículos asignados/i)).toBeInTheDocument();
     });
+
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
 
     // Wait for articulos options to load from the mock server
     const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
@@ -561,6 +601,28 @@ describe('RutaFormPage — Artículos Asignados', () => {
       expect(screen.queryByText('Harina 000')).not.toBeInTheDocument();
       expect(screen.getByText(/sin artículos asignados/i)).toBeInTheDocument();
     });
+  });
+});
+
+describe('RutaFormPage — Auto-Expand on Validation Errors', () => {
+  it('19. Etapas section auto-expands when etapas validation errors appear (forceOpen)', async () => {
+    // Create mode: default etapa has etapa=0 (invalid — schema requires min 1)
+    renderWithProviders(<RutaFormPage />);
+
+    const etapasToggle = screen.getByRole('button', { name: /etapas de la ruta/i });
+    // Section starts collapsed
+    expect(etapasToggle).toHaveAttribute('aria-expanded', 'false');
+
+    // Submit with invalid data — triggers validation errors on the etapas field array
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    // forceOpen={!!errors.etapas} expands the section automatically
+    await waitFor(() => {
+      expect(etapasToggle).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    // The etapa error message is now visible inside the expanded section
+    expect(await screen.findByText('Requerido')).toBeVisible();
   });
 });
 
