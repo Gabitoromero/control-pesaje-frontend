@@ -6,6 +6,7 @@ import { setLogoutHandler } from '../../../api/axios';
 import { cerrarSesionLinea } from '../../../api/auth';
 import { resetSocket, getSocket } from '../../../services/websocket';
 import { useCallback, useEffect } from 'react';
+import { useDialog } from '../../../components/dialogs/useDialog';
 
 export interface AuthContextType {
   user: User | null;
@@ -21,6 +22,8 @@ export interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { alertWarning } = useDialog();
+
   const [token, setToken] = useState<string | null>(() => {
     try { return Cookies.get('token') || null; } catch { return null; }
   });
@@ -109,9 +112,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Ensure the socket is in the room even if we are not in TabletWorkspace
     socket.emit('join-linea', activeLineaId);
 
-    const onSesionCerrada = () => {
+    const onSesionCerrada = async () => {
       console.log('[AuthContext] Sesión forzada a cerrar por un administrador.');
-      alert('Tu sesión fue cerrada por un administrador.');
+      await alertWarning({
+        title: 'Sesión cerrada',
+        description: 'Tu sesión fue cerrada por un administrador.',
+      });
       logout();
       window.location.href = user?.rol === 'operario' ? '/' : '/dashboard';
     };
@@ -121,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => {
       socket.off('sesion-cerrada', onSesionCerrada);
     };
-  }, [activeLineaId, logout, user]);
+  }, [activeLineaId, logout, user, alertWarning]);
 
   return (
     <AuthContext.Provider

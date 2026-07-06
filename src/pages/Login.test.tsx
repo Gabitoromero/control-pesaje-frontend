@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../features/auth/context/AuthContext';
+import { DialogProvider } from '../components/dialogs/DialogProvider';
 import Login from './Login';
 import { loginApi } from '../api/auth';
 import { vi } from 'vitest';
@@ -23,9 +24,11 @@ function renderLogin() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <DialogProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </DialogProvider>
     </QueryClientProvider>
   );
 }
