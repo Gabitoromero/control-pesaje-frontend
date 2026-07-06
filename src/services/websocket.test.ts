@@ -1,7 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import Cookies from 'js-cookie';
 
-const mockCookiesGet = vi.mocked(Cookies.get);
+// `Cookies.get` is overloaded (`get(name)` vs `get()`); `vi.mocked()` on an
+// overloaded function infers the last signature's return type, so callers
+// mocking the single-arg form need this one cast rather than `as any` at
+// every `mockReturnValue` call site.
+const mockCookiesGet = vi.mocked(Cookies.get) as unknown as Mock<
+  (name: string) => string | undefined
+>;
 
 // Mock socket.io-client before importing websocket module
 vi.mock('socket.io-client', () => {
