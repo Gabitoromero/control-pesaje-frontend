@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import { vi } from 'vitest';
 import { handlers } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { EtapasPage } from './EtapasPage';
@@ -291,6 +292,161 @@ describe('EtapasPage', () => {
       });
       // The modal should be closed
       expect(screen.queryByRole('heading', { name: 'Editar Etapa' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('delete confirm dialog (replaces window.confirm)', () => {
+    it('clicking "Eliminar Etapa" opens a confirm dialog instead of window.confirm', async () => {
+      const confirmSpy = vi.spyOn(window, 'confirm');
+
+      renderWithProviders(<EtapasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Amasado')).toBeInTheDocument();
+      });
+
+      const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+      await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar etapa/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      expect(confirmDialog).toHaveAccessibleName('¿Está seguro de eliminar esta etapa?');
+      expect(confirmSpy).not.toHaveBeenCalled();
+    });
+
+    it('confirming the delete dialog sends the DELETE request and closes both dialogs', async () => {
+      let deleteRequested = false;
+      server.use(
+        http.delete('http://localhost:3000/api/etapas/:id', () => {
+          deleteRequested = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      renderWithProviders(<EtapasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Amasado')).toBeInTheDocument();
+      });
+
+      const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+      await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar etapa/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      await waitFor(() => {
+        expect(deleteRequested).toBe(true);
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Editar Etapa' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('cancelling the delete dialog does NOT send a DELETE request and keeps the edit modal open', async () => {
+      let deleteRequested = false;
+      server.use(
+        http.delete('http://localhost:3000/api/etapas/:id', () => {
+          deleteRequested = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      renderWithProviders(<EtapasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Amasado')).toBeInTheDocument();
+      });
+
+      const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+      await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar etapa/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      });
+      expect(deleteRequested).toBe(false);
+      expect(screen.getByRole('heading', { name: 'Editar Etapa' })).toBeInTheDocument();
+    });
+  });
+
+  describe('error dialogs on mutation failure (replaces window.alert)', () => {
+    it('create failure shows an alertdialog titled "No se pudo guardar la etapa" (createMutation previously had no onError at all)', async () => {
+      server.use(
+        http.post('http://localhost:3000/api/etapas', () =>
+          HttpResponse.json({ success: false, error: { message: 'Nombre duplicado' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<EtapasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Amasado')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /Nueva Etapa/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Repetida');
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo guardar la etapa')).toBeInTheDocument();
+      expect(within(dialog).getByText('Nombre duplicado')).toBeInTheDocument();
+    });
+
+    it('update failure shows an alertdialog titled "No se pudo guardar la etapa"', async () => {
+      server.use(
+        http.put('http://localhost:3000/api/etapas/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'No se pudo actualizar' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<EtapasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Amasado')).toBeInTheDocument();
+      });
+
+      const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+      await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo guardar la etapa')).toBeInTheDocument();
+      expect(within(dialog).getByText('No se pudo actualizar')).toBeInTheDocument();
+    });
+
+    it('delete failure shows an alertdialog titled "No se pudo eliminar la etapa" including the "Nota de sistema" detail', async () => {
+      server.use(
+        http.delete('http://localhost:3000/api/etapas/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'En uso' } }, { status: 409 })
+        )
+      );
+
+      renderWithProviders(<EtapasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Amasado')).toBeInTheDocument();
+      });
+
+      const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+      await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar etapa/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      const errorDialog = await screen.findByRole('alertdialog');
+      expect(within(errorDialog).getByText('No se pudo eliminar la etapa')).toBeInTheDocument();
+      expect(within(errorDialog).getByText(/En uso/)).toBeInTheDocument();
+      expect(within(errorDialog).getByText(/Nota de sistema/)).toBeInTheDocument();
     });
   });
 });

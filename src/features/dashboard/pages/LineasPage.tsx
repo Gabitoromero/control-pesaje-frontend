@@ -11,9 +11,9 @@ import {
 } from '../../../api/lineas';
 import { getRutas } from '../../../api/rutas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
-import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 const EMPTY_FORM = { nombre: '', numeroBalanza: 1, rutaPasadaActiva: '' };
 
@@ -24,7 +24,7 @@ const LINEA_FIELDS: SearchField[] = [
 
 export const LineasPage = () => {
   const queryClient = useQueryClient();
-  const { alertSuccess, alertWarning } = useDialog();
+  const { alertSuccess, alertWarning, alertError, confirm } = useDialog();
 
   // Conservative, minimal integration: surfaces the outcome of a create/update
   // that already succeeds silently today. Uses the existing optional
@@ -89,13 +89,10 @@ export const LineasPage = () => {
       notifyOutcome('creada', variables.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo crear la línea:\n${msg}`);
+      alertError({
+        title: 'No se pudo crear la línea',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -112,13 +109,10 @@ export const LineasPage = () => {
       notifyOutcome(variables.accion, variables.data.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar la línea:\n${msg}`);
+      alertError({
+        title: 'No se pudo guardar la línea',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -130,13 +124,10 @@ export const LineasPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar la línea:\n${msg}`);
+      alertError({
+        title: 'No se pudo eliminar la línea',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -184,8 +175,15 @@ export const LineasPage = () => {
     }
   };
 
-  const handleDelete = () => {
-    if (editingLinea?.id && window.confirm('¿Está seguro de eliminar esta línea?')) {
+  const handleDelete = async () => {
+    if (!editingLinea?.id) return;
+    const confirmed = await confirm({
+      title: '¿Está seguro de eliminar esta línea?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (confirmed) {
       deleteMutation.mutate(editingLinea.id);
     }
   };

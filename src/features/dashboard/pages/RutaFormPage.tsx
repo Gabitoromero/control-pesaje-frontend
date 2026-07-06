@@ -11,9 +11,10 @@ import { getArticulos } from '../../../api/articulos';
 import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
 import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
 import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save, RefreshCw } from 'lucide-react';
-import { isAxiosError } from 'axios';
 import { rutaSchema } from './RutaFormPage.schemas.js';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
+import { useDialog } from '../../../components/dialogs/useDialog';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 type RutaFormValues = z.infer<typeof rutaSchema>;
 
@@ -21,6 +22,7 @@ export const RutaFormPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { confirm, alertError } = useDialog();
   const isEditing = Boolean(id);
 
   const { data: etapasOptions = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
@@ -95,13 +97,10 @@ export const RutaFormPage = () => {
       navigate('/dashboard/rutas');
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar:\n${msg}`);
+      alertError({
+        title: 'No se pudo guardar',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -112,13 +111,10 @@ export const RutaFormPage = () => {
       navigate('/dashboard/rutas');
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar:\n${msg}`);
+      alertError({
+        title: 'No se pudo guardar',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -130,13 +126,10 @@ export const RutaFormPage = () => {
       setSelectedArticuloId(0);
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo agregar el artículo:\n${msg}`);
+      alertError({
+        title: 'No se pudo agregar el artículo',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -146,13 +139,10 @@ export const RutaFormPage = () => {
       refetchArticulosAsignados();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar el artículo:\n${msg}`);
+      alertError({
+        title: 'No se pudo eliminar el artículo',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -205,24 +195,30 @@ export const RutaFormPage = () => {
       navigate('/dashboard/rutas');
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar la ruta:\n${msg}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Líneas en el sistema.`);
+      alertError({
+        title: 'No se pudo eliminar la ruta',
+        description: `${getApiErrorMessage(err, 'Ocurrió un error inesperado')}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Líneas en el sistema.`,
+      });
     },
   });
 
-  const handleDelete = () => {
-    if (window.confirm('¿Está seguro de eliminar esta ruta?')) {
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: '¿Está seguro de eliminar esta ruta?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (confirmed) {
       deleteMutation.mutate(Number(id));
     }
   };
 
-  const handleReactivar = () => {
-    if (window.confirm('¿Está seguro de reactivar esta ruta?')) {
+  const handleReactivar = async () => {
+    const confirmed = await confirm({
+      title: '¿Está seguro de reactivar esta ruta?',
+    });
+    if (confirmed) {
       updateMutation.mutate({ id: Number(id), data: { activo: true } });
     }
   };
@@ -406,9 +402,15 @@ export const RutaFormPage = () => {
                   type="button"
                   title="Eliminar etapa"
                   aria-label="Eliminar etapa"
-                  onClick={() => {
+                  onClick={async () => {
                     if (fields.length === 1) {
-                      if (window.confirm("¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion")) {
+                      const confirmed = await confirm({
+                        title: "¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion",
+                        confirmText: 'Eliminar',
+                        cancelText: 'Cancelar',
+                        variant: 'destructive',
+                      });
+                      if (confirmed) {
                         remove(index);
                       }
                     } else {

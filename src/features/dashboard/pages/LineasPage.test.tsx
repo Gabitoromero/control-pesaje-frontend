@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import { vi } from 'vitest';
 import { handlers, lineasMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { LineasPage } from './LineasPage';
@@ -270,6 +271,165 @@ describe('LineasPage', () => {
 
     await waitFor(() => {
       expect((requestPayload as Record<string, unknown>).rutaPasadaActiva).toBeNull();
+    });
+  });
+
+  describe('delete confirm dialog (replaces window.confirm)', () => {
+    it('clicking "Eliminar Línea" opens a confirm dialog instead of window.confirm', async () => {
+      const confirmSpy = vi.spyOn(window, 'confirm');
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar línea/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      expect(confirmDialog).toHaveAccessibleName('¿Está seguro de eliminar esta línea?');
+      expect(confirmSpy).not.toHaveBeenCalled();
+    });
+
+    it('confirming the delete dialog sends the DELETE request and closes both dialogs', async () => {
+      let deleteRequested = false;
+      server.use(
+        http.delete('http://localhost:3000/api/lineas-produccion/:id', () => {
+          deleteRequested = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar línea/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      await waitFor(() => {
+        expect(deleteRequested).toBe(true);
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Editar Línea' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('cancelling the delete dialog does NOT send a DELETE request and keeps the edit modal open', async () => {
+      let deleteRequested = false;
+      server.use(
+        http.delete('http://localhost:3000/api/lineas-produccion/:id', () => {
+          deleteRequested = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar línea/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      });
+      expect(deleteRequested).toBe(false);
+      expect(screen.getByRole('heading', { name: 'Editar Línea' })).toBeInTheDocument();
+    });
+  });
+
+  describe('error dialogs on mutation failure (replaces window.alert)', () => {
+    it('create failure shows an alertdialog titled "No se pudo crear la línea"', async () => {
+      server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', () =>
+          HttpResponse.json({ success: false, error: { message: 'Balanza ya en uso' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo crear la línea')).toBeInTheDocument();
+      expect(within(dialog).getByText('Balanza ya en uso')).toBeInTheDocument();
+    });
+
+    it('update failure shows an alertdialog titled "No se pudo guardar la línea"', async () => {
+      server.use(
+        http.put('http://localhost:3000/api/lineas-produccion/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'No se pudo actualizar' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo guardar la línea')).toBeInTheDocument();
+      expect(within(dialog).getByText('No se pudo actualizar')).toBeInTheDocument();
+    });
+
+    it('delete failure shows an alertdialog titled "No se pudo eliminar la línea"', async () => {
+      server.use(
+        http.delete('http://localhost:3000/api/lineas-produccion/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'En uso' } }, { status: 409 })
+        )
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar línea/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      const errorDialog = await screen.findByRole('alertdialog');
+      expect(within(errorDialog).getByText('No se pudo eliminar la línea')).toBeInTheDocument();
+      expect(within(errorDialog).getByText('En uso')).toBeInTheDocument();
     });
   });
 

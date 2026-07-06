@@ -213,8 +213,8 @@ describe('RutaFormPage Component', () => {
     expect(within(etapasContainer).getAllByRole('combobox').length).toBe(1);
   });
 
-  it('7. remove single row asks for confirmation and clears list if confirmed', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
+  it('7. remove single row opens a confirm dialog (not window.confirm) and clears list if confirmed', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
     renderWithProviders(<RutaFormPage />);
 
     // Expand the Etapas section (collapsed by default)
@@ -222,18 +222,24 @@ describe('RutaFormPage Component', () => {
 
     const removeBtn = await screen.findByTitle(/eliminar etapa/i);
     expect(removeBtn).not.toBeDisabled();
-    
+
     await userEvent.click(removeBtn);
-    expect(confirmSpy).toHaveBeenCalledWith("¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion");
-    
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveAccessibleName(
+      '¿Esta seguro que desea eliminar la ultima etapa? No se podra asignar una ruta sin etapas a una linea de produccion'
+    );
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
     // Only etapa comboboxes should be gone (articulos selector remains)
     const etapasContainer = screen.getByTestId('etapas-container');
     expect(within(etapasContainer).queryAllByRole('combobox').length).toBe(0);
-    confirmSpy.mockRestore();
   });
 
-  it('7b. remove single row asks for confirmation and keeps row if cancelled', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
+  it('7b. remove single row keeps the row if the confirm dialog is cancelled', async () => {
     renderWithProviders(<RutaFormPage />);
 
     // Expand the Etapas section (collapsed by default)
@@ -241,13 +247,15 @@ describe('RutaFormPage Component', () => {
 
     const removeBtn = await screen.findByTitle(/eliminar etapa/i);
     expect(removeBtn).not.toBeDisabled();
-    
+
     await userEvent.click(removeBtn);
-    expect(confirmSpy).toHaveBeenCalledWith("¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion");
-    
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
     const etapasContainer = screen.getByTestId('etapas-container');
     expect(within(etapasContainer).queryAllByRole('combobox').length).toBe(1);
-    confirmSpy.mockRestore();
   });
 
   it('8. reorder rows and assert orden in PUT body', async () => {
@@ -406,7 +414,7 @@ describe('RutaFormPage Component', () => {
     expect(requestPayload.etapas[2].pesoIdeal).toBe(7);
   });
 
-  it('12. delete fires on confirm in edit mode', async () => {
+  it('12. delete opens a confirm dialog (not window.confirm); cancel keeps ruta, confirm fires DELETE', async () => {
     paramsMock = { id: '1' };
     let deleteFired = false;
     server.use(
@@ -415,26 +423,34 @@ describe('RutaFormPage Component', () => {
         return new HttpResponse(null, { status: 204 });
       })
     );
+    const confirmSpy = vi.spyOn(window, 'confirm');
     renderWithProviders(<RutaFormPage />);
-    
+
     await waitFor(() => {
       expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
     });
 
     const deleteBtn = screen.getByText(/eliminar ruta/i).closest('button') as HTMLButtonElement;
-    
-    const spy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
     await userEvent.click(deleteBtn);
-    expect(spy).toHaveBeenCalled();
+    let dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveAccessibleName('¿Está seguro de eliminar esta ruta?');
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(deleteFired).toBe(false);
 
-    spy.mockReturnValue(true);
     await userEvent.click(deleteBtn);
+    dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar' }));
+
     await waitFor(() => {
       expect(deleteFired).toBe(true);
     });
   });
-  it('13. clicking Reactivar sends PUT with activo:true', async () => {
+
+  it('13. clicking Reactivar opens a confirm dialog (not window.confirm); confirming sends PUT with activo:true', async () => {
     paramsMock = { id: '4' }; // Ruta Delta is inactive
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
@@ -444,22 +460,158 @@ describe('RutaFormPage Component', () => {
         return HttpResponse.json({ success: true, data: { id: 4, ...requestPayload } });
       })
     );
+    const confirmSpy = vi.spyOn(window, 'confirm');
     renderWithProviders(<RutaFormPage />);
-    
+
     await waitFor(() => {
       expect(screen.getByDisplayValue('Ruta Delta')).toBeInTheDocument();
     });
 
     const reactivarBtn = screen.getByText(/reactivar ruta/i).closest('button') as HTMLButtonElement;
-    
-    const spy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
     await userEvent.click(reactivarBtn);
-    expect(spy).toHaveBeenCalled();
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveAccessibleName('¿Está seguro de reactivar esta ruta?');
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
 
     await waitFor(() => {
       expect(requestPayload).toBeDefined();
     });
     expect(requestPayload.activo).toBe(true);
+  });
+
+  describe('error dialogs on mutation failure (replaces window.alert)', () => {
+    it('create failure shows an alertdialog titled "No se pudo guardar" with the API error message', async () => {
+      server.use(
+        http.post('http://localhost:3000/api/rutas-pasadas', () =>
+          HttpResponse.json({ success: false, error: { message: 'Nombre duplicado' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<RutaFormPage />);
+
+      await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+
+      const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
+      await userEvent.type(nombreInput, 'Ruta X');
+
+      const selects = screen.getAllByRole('combobox');
+      await userEvent.selectOptions(selects[0], '1');
+
+      const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
+      const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
+      const pesosIdeal = document.querySelectorAll('input[name$=".pesoIdeal"]')[0] as HTMLInputElement;
+      await userEvent.clear(pesosMin);
+      await userEvent.type(pesosMin, '10');
+      await userEvent.clear(pesosMax);
+      await userEvent.type(pesosMax, '20');
+      await userEvent.clear(pesosIdeal);
+      await userEvent.type(pesosIdeal, '15');
+
+      await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo guardar')).toBeInTheDocument();
+      expect(within(dialog).getByText('Nombre duplicado')).toBeInTheDocument();
+    });
+
+    it('update failure shows an alertdialog titled "No se pudo guardar" with the API error message', async () => {
+      paramsMock = { id: '1' };
+      server.use(
+        http.put('http://localhost:3000/api/rutas-pasadas/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'No se pudo actualizar' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<RutaFormPage />);
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo guardar')).toBeInTheDocument();
+      expect(within(dialog).getByText('No se pudo actualizar')).toBeInTheDocument();
+    });
+
+    it('add articulo failure shows an alertdialog titled "No se pudo agregar el artículo"', async () => {
+      paramsMock = { id: '1' };
+      server.use(
+        http.post('http://localhost:3000/api/rutas-pasadas-articulos', () =>
+          HttpResponse.json({ success: false, error: { message: 'Ya está asignado' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<RutaFormPage />);
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+
+      const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
+      await userEvent.selectOptions(selector, '3');
+      await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo agregar el artículo')).toBeInTheDocument();
+      expect(within(dialog).getByText('Ya está asignado')).toBeInTheDocument();
+    });
+
+    it('remove articulo failure shows an alertdialog titled "No se pudo eliminar el artículo"', async () => {
+      paramsMock = { id: '1' };
+      server.use(
+        http.delete('http://localhost:3000/api/rutas-pasadas-articulos/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'No se puede quitar' } }, { status: 400 })
+        )
+      );
+
+      renderWithProviders(<RutaFormPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+
+      const removeButtons = screen.getAllByRole('button', { name: /quitar artículo/i });
+      await userEvent.click(removeButtons[0]);
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('No se pudo eliminar el artículo')).toBeInTheDocument();
+      expect(within(dialog).getByText('No se puede quitar')).toBeInTheDocument();
+    });
+
+    it('delete ruta failure shows an alertdialog titled "No se pudo eliminar la ruta" including the "Nota de sistema" detail', async () => {
+      paramsMock = { id: '1' };
+      server.use(
+        http.delete('http://localhost:3000/api/rutas-pasadas/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'En uso' } }, { status: 409 })
+        )
+      );
+
+      renderWithProviders(<RutaFormPage />);
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+      });
+
+      const deleteBtn = screen.getByText(/eliminar ruta/i).closest('button') as HTMLButtonElement;
+      await userEvent.click(deleteBtn);
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      const errorDialog = await screen.findByRole('alertdialog');
+      expect(within(errorDialog).getByText('No se pudo eliminar la ruta')).toBeInTheDocument();
+      expect(within(errorDialog).getByText(/En uso/)).toBeInTheDocument();
+      expect(within(errorDialog).getByText(/Nota de sistema/)).toBeInTheDocument();
+    });
   });
 });
 
