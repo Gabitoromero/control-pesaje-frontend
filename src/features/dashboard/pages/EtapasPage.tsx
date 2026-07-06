@@ -10,9 +10,10 @@ import {
   type EtapaCreate,
 } from '../../../api/etapas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
-import { isAxiosError } from 'axios';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { useDialog } from '../../../components/dialogs/useDialog';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 const EMPTY_FORM = { nombre: '', descripcion: '' };
 
@@ -23,6 +24,7 @@ const ETAPA_FIELDS: SearchField[] = [
 
 export const EtapasPage = () => {
   const queryClient = useQueryClient();
+  const { confirm, alertError } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -66,6 +68,12 @@ export const EtapasPage = () => {
       closeModal();
       toast.success('Etapa creada exitosamente');
     },
+    onError: (err: unknown) => {
+      alertError({
+        title: 'No se pudo guardar la etapa',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
+    },
   });
 
   const updateMutation = useMutation({
@@ -78,13 +86,10 @@ export const EtapasPage = () => {
       toast.success(`Etapa ${variables.accion} exitosamente`);
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar la etapa:\n${msg}`);
+      alertError({
+        title: 'No se pudo guardar la etapa',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -96,13 +101,10 @@ export const EtapasPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar la etapa:\n${msg}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Rutas en el sistema.`);
+      alertError({
+        title: 'No se pudo eliminar la etapa',
+        description: `${getApiErrorMessage(err, 'Ocurrió un error inesperado')}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Rutas en el sistema.`,
+      });
     }
   });
 
@@ -136,8 +138,15 @@ export const EtapasPage = () => {
     }
   };
 
-  const handleDelete = () => {
-    if (editingEtapa?.id && window.confirm('¿Está seguro de eliminar esta etapa?')) {
+  const handleDelete = async () => {
+    if (!editingEtapa?.id) return;
+    const confirmed = await confirm({
+      title: '¿Está seguro de eliminar esta etapa?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (confirmed) {
       deleteMutation.mutate(editingEtapa.id);
     }
   };
