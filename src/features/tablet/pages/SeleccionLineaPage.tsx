@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Factory, ArrowRight, LogOut, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../../../api/axios';
 import { isAxiosError } from 'axios';
@@ -13,7 +14,6 @@ export const SeleccionLineaPage: React.FC = () => {
   const { isAuthenticated, user, logout, openLineSession } = useAuth();
   const navigate = useNavigate();
   const [activatingId, setActivatingId] = React.useState<number | null>(null);
-  const [activarError, setActivarError] = React.useState<string | null>(null);
 
   const { data: lineas = [], isLoading: loading, error, refetch } = useQuery<Linea[]>({
     queryKey: ['lineas-produccion'],
@@ -36,15 +36,14 @@ export const SeleccionLineaPage: React.FC = () => {
     if (linea.estado === 'ocupada') return;
     try {
       setActivatingId(linea.id);
-      setActivarError(null);
       await abrirSesionLinea(linea.id);
       openLineSession(linea.id);
       navigate('/tablet/pasadas', { state: { lineaId: linea.id, lineaNombre: linea.nombre } });
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
-        setActivarError(err.response.data?.error?.message || 'Línea ocupada');
+        toast.error(err.response.data?.error?.message || 'Línea ocupada');
       } else {
-        setActivarError('Error al activar la línea');
+        toast.error('Error al activar la línea');
       }
     } finally {
       setActivatingId(null);
@@ -103,11 +102,6 @@ export const SeleccionLineaPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {activarError && (
-              <div className="bg-red-900/30 border border-red-700/50 rounded-2xl p-4 text-red-300 text-sm text-center max-w-lg mx-auto">
-                {activarError}
-              </div>
-            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {lineas.map((linea) => (
                 <button

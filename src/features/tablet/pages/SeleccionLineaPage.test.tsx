@@ -1,10 +1,13 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
 import { SeleccionLineaPage } from './SeleccionLineaPage';
 import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
 import { handlers } from '../../../test/handlers';
+
+const BASE = 'http://localhost:3000/api';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -109,5 +112,43 @@ describe('SeleccionLineaPage', () => {
     await userEvent.click(btnSalir);
     expect(authValue.logout).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('muestra un toast de error con el mensaje del backend cuando la línea está ocupada (409)', async () => {
+    server.use(
+      http.post(`${BASE}/auth/sesion-linea`, () =>
+        HttpResponse.json({ error: { message: 'Línea ocupada por otro operario' } }, { status: 409 })
+      )
+    );
+
+    renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+    const button = await screen.findByText('Línea 1 — Envasado A');
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      const liveRegion = document.querySelector('[aria-live]');
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Línea ocupada por otro operario')).toBeInTheDocument();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('muestra un toast de error genérico cuando falla la activación por un motivo no-409', async () => {
+    server.use(
+      http.post(`${BASE}/auth/sesion-linea`, () =>
+        HttpResponse.json({ error: { message: 'boom' } }, { status: 500 })
+      )
+    );
+
+    renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+    const button = await screen.findByText('Línea 1 — Envasado A');
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      const liveRegion = document.querySelector('[aria-live]');
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Error al activar la línea')).toBeInTheDocument();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });
