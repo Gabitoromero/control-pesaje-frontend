@@ -28,7 +28,7 @@ describe('websocket singleton', () => {
 
   it('getSocket() passes auth.token from the token cookie to io()', async () => {
     const { io } = await import('socket.io-client');
-    mockCookiesGet.mockReturnValue('my-jwt-token' as any);
+    mockCookiesGet.mockReturnValue('my-jwt-token');
 
     const { getSocket } = await import('./websocket');
     getSocket();
@@ -40,7 +40,7 @@ describe('websocket singleton', () => {
 
   it('getSocket() passes auth.token as undefined when cookie is absent', async () => {
     const { io } = await import('socket.io-client');
-    mockCookiesGet.mockReturnValue(undefined as any);
+    mockCookiesGet.mockReturnValue(undefined);
 
     const { getSocket } = await import('./websocket');
     getSocket();
@@ -52,7 +52,7 @@ describe('websocket singleton', () => {
 
   it('getSocket() returns the same instance on repeated calls (singleton)', async () => {
     const { io } = await import('socket.io-client');
-    mockCookiesGet.mockReturnValue('token-a' as any);
+    mockCookiesGet.mockReturnValue('token-a');
 
     const { getSocket } = await import('./websocket');
     const s1 = getSocket();
@@ -66,7 +66,7 @@ describe('websocket singleton', () => {
     const { io } = await import('socket.io-client');
     const mockSocket = { disconnect: vi.fn(), removeAllListeners: vi.fn() };
     vi.mocked(io).mockReturnValue(mockSocket as unknown as ReturnType<typeof io>);
-    mockCookiesGet.mockReturnValue('my-jwt-token' as any);
+    mockCookiesGet.mockReturnValue('my-jwt-token');
 
     const { getSocket, resetSocket } = await import('./websocket');
     getSocket(); // creates socket
@@ -77,7 +77,7 @@ describe('websocket singleton', () => {
     expect(mockSocket.removeAllListeners).toHaveBeenCalledOnce();
 
     // After reset, getSocket() must call io() again with fresh cookie
-    mockCookiesGet.mockReturnValue('new-jwt-token' as any);
+    mockCookiesGet.mockReturnValue('new-jwt-token');
     getSocket();
     expect(io).toHaveBeenCalledTimes(2);
     const secondCallArgs = vi.mocked(io).mock.calls[1][1];
