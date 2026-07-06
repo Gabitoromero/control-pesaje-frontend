@@ -23,7 +23,7 @@ const ARTICULO_FIELDS: SearchField[] = [
 
 export const ArticulosPage = () => {
   const queryClient = useQueryClient();
-  const { alertError } = useDialog();
+  const { alertError, confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -137,8 +137,15 @@ export const ArticulosPage = () => {
     }
   };
 
-  const handleDelete = () => {
-    if (editingArticulo?.id && window.confirm('¿Está seguro de eliminar este artículo?')) {
+  const handleDelete = async () => {
+    if (!editingArticulo?.id) return;
+    const confirmed = await confirm({
+      title: '¿Está seguro de eliminar este artículo?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (confirmed) {
       deleteMutation.mutate(editingArticulo.id);
     }
   };

@@ -268,8 +268,6 @@ describe('ArticulosPage', () => {
     });
 
     it('shows an alertdialog with the API error message when deleting fails', async () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-
       server.use(
         http.delete('http://localhost:3000/api/articulos/:id', () =>
           HttpResponse.json(
@@ -291,9 +289,96 @@ describe('ArticulosPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
 
-      const dialog = await screen.findByRole('alertdialog');
-      expect(within(dialog).getByText('No se pudo eliminar el artículo')).toBeInTheDocument();
-      expect(within(dialog).getByText('No se puede eliminar: en uso')).toBeInTheDocument();
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      const errorDialog = await screen.findByRole('alertdialog');
+      expect(within(errorDialog).getByText('No se pudo eliminar el artículo')).toBeInTheDocument();
+      expect(within(errorDialog).getByText('No se puede eliminar: en uso')).toBeInTheDocument();
+    });
+  });
+
+  describe('delete confirm dialog (replaces window.confirm)', () => {
+    it('clicking "Eliminar Artículo" opens a confirm dialog instead of window.confirm', async () => {
+      const confirmSpy = vi.spyOn(window, 'confirm');
+
+      renderWithProviders(<ArticulosPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      });
+
+      const harinaText = await screen.findByText('Harina 000');
+      const harinaRow = harinaText.closest('tr')!;
+      await userEvent.click(within(harinaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      expect(confirmDialog).toHaveAccessibleName('¿Está seguro de eliminar este artículo?');
+      expect(confirmSpy).not.toHaveBeenCalled();
+    });
+
+    it('confirming the delete dialog sends the DELETE request and closes both dialogs', async () => {
+      let deleteRequested = false;
+      server.use(
+        http.delete('http://localhost:3000/api/articulos/:id', () => {
+          deleteRequested = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      renderWithProviders(<ArticulosPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      });
+
+      const harinaText = await screen.findByText('Harina 000');
+      const harinaRow = harinaText.closest('tr')!;
+      await userEvent.click(within(harinaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      await waitFor(() => {
+        expect(deleteRequested).toBe(true);
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Editar Artículo' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('cancelling the delete dialog does NOT send a DELETE request and keeps the edit modal open', async () => {
+      let deleteRequested = false;
+      server.use(
+        http.delete('http://localhost:3000/api/articulos/:id', () => {
+          deleteRequested = true;
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+
+      renderWithProviders(<ArticulosPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      });
+
+      const harinaText = await screen.findByText('Harina 000');
+      const harinaRow = harinaText.closest('tr')!;
+      await userEvent.click(within(harinaRow).getByTitle('Editar'));
+
+      await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
+
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      });
+      expect(deleteRequested).toBe(false);
+      expect(screen.getByRole('heading', { name: 'Editar Artículo' })).toBeInTheDocument();
     });
   });
 });
