@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import type { Muestra } from '../../../shared/types/domain';
+import { useDialog } from '../../../components/dialogs/useDialog';
 
 export interface MuestraObservacionPopupProps {
   muestra: Muestra;
@@ -20,6 +21,7 @@ function PopupContent({
 }: Omit<MuestraObservacionPopupProps, 'isOpen'>) {
   const [observacion, setObservacion] = useState(muestra.observacion ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const { confirm } = useDialog();
 
   const isOk = muestra.estadoValidacion === 'ok';
 
@@ -33,7 +35,12 @@ function PopupContent({
   };
 
   const handleDelete = async () => {
-    const confirmed = window.confirm('¿Está seguro de eliminar esta muestra?');
+    const confirmed = await confirm({
+      title: '¿Está seguro de eliminar esta muestra?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
     if (!confirmed) return;
     await onDelete(index);
   };
