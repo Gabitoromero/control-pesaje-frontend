@@ -1,12 +1,12 @@
 # Dialog & Notification System — Rollout Checklist
 
-Tracks manual-QA coverage for the pilot phase of `dialog-notification-system`
-and enumerates every remaining ad-hoc `window.confirm()` / `window.alert()` /
-inline-error site left in the codebase for a future full-rollout SDD change.
+Tracks manual-QA coverage for the `dialog-notification-system` rollout, which
+replaced every ad-hoc `window.confirm()` / `window.alert()` / inline-error
+site in the codebase with the shared `Dialog`/`AlertDialog`/toast system.
 
-Generated as part of PR 4/4 (final PR in the `dialog-notification-system`
-chain). Re-verify this list before starting the follow-up rollout — pages
-change over time and this snapshot may drift.
+**Rollout status: COMPLETE.** PR4 (final PR in the chain) migrated the last
+2 remaining sites. `rg -n "window\.confirm|window\.alert" src` (excluding
+test files) returns zero matches anywhere in `src/` as of this PR.
 
 ## Pilot Sites (DONE)
 
@@ -33,22 +33,16 @@ change over time and this snapshot may drift.
 | Delete etapa | `src/features/dashboard/pages/EtapasPage.tsx` | `useDialog().confirm()` (blocking, destructive variant) | DONE | Go to Etapas, click "Eliminar Etapa" → a modal appears instead of the native browser confirm. |
 | Save/delete errors + missing create onError | `src/features/dashboard/pages/EtapasPage.tsx` | `useDialog().alertError()` via `getApiErrorMessage()` (blocking) | DONE | Trigger a failing create/update/delete for an etapa → a modal shows the backend's error message; delete failure keeps the "Nota de sistema" detail. `createMutation` previously had no `onError` at all (silent failure on create) — now fixed. Toast-success path (pilot) is unaffected. |
 
-## Remaining Sites (NOT migrated — future rollout scope)
+## PR4 Sites (DONE)
 
-| Location | File | Current mechanism | Target type | Status | How to manually test |
-|---|---|---|---|---|---|
-| Delete muestra (tablet) | `src/features/tablet/components/MuestraObservacionPopup.tsx` (~L36) | `window.confirm('¿Está seguro de eliminar esta muestra?')` | N/A — see dedicated row below | Follow-up debt | See "Full modal rewrite" row below. |
-| Inline activation error | `src/features/tablet/pages/SeleccionLineaPage.tsx` (~L44) | Local component state (`setActivarError`) rendered inline, not a native browser popup | `toast.error()` (non-blocking, tablet-friendly) | TODO | Attempt to activate an already-occupied línea from the tablet UI → an inline error message renders in the page today instead of a toast. |
-| `DispositivosConectadosPage.tsx` | `src/features/dashboard/pages/DispositivosConectadosPage.tsx` | Verified clean — no `window.confirm`/`window.alert` found as of this PR | N/A | Verified, no action needed | Re-grep before rollout in case this changes. |
+| Location | File | Dialog/Toast type | Status | How to manually verify |
+|---|---|---|---|---|
+| Delete muestra (tablet) | `src/features/tablet/components/MuestraObservacionPopup.tsx` (~L36) | `useDialog().confirm()` (blocking, destructive variant) | DONE | On the tablet UI, open a muestra observación popup and click "Eliminar" → the shared `AlertDialog` (role `alertdialog`) appears instead of the native browser confirm, with "Cancelar"/destructive "Eliminar" buttons. |
+| Inline activation error | `src/features/tablet/pages/SeleccionLineaPage.tsx` (~L44) | `toast.error()` (non-blocking, tablet-friendly, Sonner) | DONE | Attempt to activate an already-occupied línea from the tablet UI → a non-blocking toast appears in the corner (409 → backend message or "Línea ocupada"; other errors → "Error al activar la línea") instead of the old inline error block. |
+| `DispositivosConectadosPage.tsx` | `src/features/dashboard/pages/DispositivosConectadosPage.tsx` | Verified clean — no `window.confirm`/`window.alert` found | N/A | Verified, no action needed. |
 
-## Explicit Follow-Up Debt
+## Notes
 
-| Location | File | Current mechanism | Target type | Status | How to manually test |
-|---|---|---|---|---|---|
-| Delete muestra popup | `src/features/tablet/components/MuestraObservacionPopup.tsx` | `window.confirm(...)` inside a fully custom popup component | Full modal rewrite (not a simple swap) — this component has its own bespoke popup/backdrop implementation that would need a structural rewrite to adopt `Dialog`/`AlertDialog`, not just a 1:1 `confirm()` call swap | Follow-up debt (explicitly out of scope for the whole `dialog-notification-system` pilot) | On the tablet UI, open a muestra observación popup and attempt delete → native browser confirm dialog appears today; the popup itself is not built on the new `Dialog`/`AlertDialog` primitives. |
-
-## Notes for the Next Rollout SDD Change
-
-- Re-run `grep -rn "window.confirm\|window.alert" frontend/src` before starting — this snapshot is current as of PR3 of the follow-up rollout (2026-07-06).
-- After PR3, the only remaining native-dialog sites in scope for a future rollout are `SeleccionLineaPage.tsx` (inline-error-to-toast migration) and `MuestraObservacionPopup.tsx` (structural rewrite, explicit follow-up debt below). All `RutaFormPage`, `LineasPage`, `UsuariosPage`, and `EtapasPage` `window.confirm`/`window.alert` sites are migrated.
-- `MuestraObservacionPopup.tsx` needs design/estimation time before touching — it is not a drop-in replacement like the other sites.
+- Re-run `rg -n "window\.confirm|window\.alert" src` (excluding test files) before any future change — this snapshot is current as of PR4, the final PR of the `dialog-notification-system` rollout (2026-07-06). It returns zero matches.
+- The rollout is now fully complete: `RutaFormPage`, `LineasPage`, `UsuariosPage`, `EtapasPage` (PR2/PR3), and `SeleccionLineaPage`/`MuestraObservacionPopup` (PR4) have all been migrated off native `window.confirm`/`window.alert`/inline-error state.
+- **Correction to a prior estimate**: PR3's notes flagged `MuestraObservacionPopup.tsx` as needing a "full modal rewrite" because it has its own bespoke popup/backdrop implementation rather than being built on the shared `Dialog`/`AlertDialog` primitive. That turned out to be an overestimate. Since `DialogProvider` already wraps the whole app in `main.tsx`, `useDialog()` is available from any component tree, custom modal or not — no structural changes were needed. The actual fix was the same shape as `ArticulosPage.tsx`'s `handleDelete` (which also nests a `confirm()` call inside its own custom `fixed inset-0` modal): swap `window.confirm(...)` for `await confirm({ title, confirmText, cancelText, variant: 'destructive' })`, a ~6-line diff. Lesson: a component being a "custom modal" (not built on `Dialog`) does not imply it needs a structural rewrite to use `useDialog()` — the hook only needs a `DialogProvider` ancestor, which was already global.
