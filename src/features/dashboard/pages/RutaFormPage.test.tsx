@@ -318,14 +318,14 @@ describe('RutaFormPage Component', () => {
     // Update pesoIdeal of the first etapa (currently 15)
     const pesoIdealInputs = document.querySelectorAll('input[name$=".pesoIdeal"]');
     await userEvent.clear(pesoIdealInputs[0] as HTMLElement);
-    await userEvent.type(pesoIdealInputs[0] as HTMLElement, '99');
+    await userEvent.type(pesoIdealInputs[0] as HTMLElement, '18');
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
     await waitFor(() => expect(requestPayload).toBeDefined());
 
     expect(requestPayload.etapas[0].etapa).toBe(1);
-    expect(requestPayload.etapas[0].pesoIdeal).toBe(99);
+    expect(requestPayload.etapas[0].pesoIdeal).toBe(18);
     expect(requestPayload.etapas[0].orden).toBe(1);
     // second etapa unchanged
     expect(requestPayload.etapas[1].etapa).toBe(2);
