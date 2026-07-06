@@ -45,6 +45,18 @@ function makeFakeJwt(payload: object): string {
   return `${b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${b64url(JSON.stringify(payload))}.fakesig`;
 }
 
+export const sesionesActivasMock = [
+  {
+    lineaId: 1,
+    lineaNombre: 'Línea 1 — Envasado A',
+    usuarioId: 3,
+    usuarioNombre: 'Pedro Operario',
+    legajo: '333333',
+    fechaInicio: '2026-07-06T10:00:00.000Z',
+    expiraEn: '2026-07-06T18:00:00.000Z',
+  },
+];
+
 export const lineasMock = [
   { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible' as const, activo: true, numeroBalanza: 1 },
   { id: 2, nombre: 'Línea 2 — Envasado B', estado: 'ocupada' as const,    activo: true, numeroBalanza: 2 },
@@ -105,6 +117,13 @@ export const handlers = [
     return HttpResponse.json({ success: true, data: { sessionActive: true } });
   }),
 
+  http.get(`${BASE}/auth/sesiones-activas`, () =>
+    HttpResponse.json({ success: true, data: sesionesActivasMock })
+  ),
+
+  http.post(`${BASE}/auth/cerrar-sesion`, () =>
+    HttpResponse.json({ success: true, data: {} })
+  ),
 
   http.get(`${BASE}/lineas-produccion`, () =>
     HttpResponse.json({ success: true, data: lineasMock })

@@ -2,6 +2,8 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSesionesActivas, cerrarSesionLinea } from '../../../api/auth';
 import { Trash2 } from 'lucide-react';
+import { useDialog } from '../../../components/dialogs/useDialog';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 interface EnrichedSession {
   lineaId: number;
@@ -15,6 +17,7 @@ interface EnrichedSession {
 
 export const SesionesActivasPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { confirm, alertError } = useDialog();
 
   const { data: sessions = [], isLoading: loading, error } = useQuery<EnrichedSession[]>({
     queryKey: ['sesiones-activas'],
@@ -31,7 +34,25 @@ export const SesionesActivasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sesiones-activas'] });
     },
+    onError: (err: unknown) => {
+      alertError({
+        title: 'No se pudo cerrar la sesión',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
+    },
   });
+
+  const handleCloseSession = async (session: EnrichedSession) => {
+    const confirmed = await confirm({
+      title: `¿Estás seguro de que deseas cerrar la sesión de ${session.usuarioNombre} en ${session.lineaNombre}?`,
+      confirmText: 'Cerrar sesión',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (confirmed) {
+      closeSessionMutation.mutate(session.lineaId);
+    }
+  };
 
   if (loading) {
     return <div className="p-6 text-gray-500">Cargando sesiones...</div>;
@@ -95,11 +116,7 @@ export const SesionesActivasPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
-                      onClick={() => {
-                        if (window.confirm(`¿Estás seguro de que deseas cerrar la sesión de ${session.usuarioNombre} en ${session.lineaNombre}?`)) {
-                          closeSessionMutation.mutate(session.lineaId);
-                        }
-                      }}
+                      onClick={() => handleCloseSession(session)}
                       disabled={closeSessionMutation.isPending}
                       className="text-red-600 hover:text-red-900 focus:outline-none disabled:opacity-50 flex items-center justify-end w-full"
                       title="Cerrar sesión"
