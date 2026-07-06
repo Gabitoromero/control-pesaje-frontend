@@ -8,6 +8,7 @@ import { AuthContext } from '../features/auth/context/AuthContext';
 import type { AuthContextType } from '../features/auth/context/AuthContext';
 import type { User } from '../shared/types/auth';
 import { DialogProvider } from '../components/dialogs/DialogProvider';
+import { Toaster } from '../components/ui/sonner';
 
 function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -18,6 +19,7 @@ export function renderWithProviders(ui: ReactNode) {
     <QueryClientProvider client={makeQueryClient()}>
       <DialogProvider>
         <MemoryRouter>{ui}</MemoryRouter>
+        <Toaster />
       </DialogProvider>
     </QueryClientProvider>
   );
@@ -56,6 +58,7 @@ export function renderWithAuth(
         <AuthContext.Provider value={authValue}>
           <DialogProvider>
             <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+            <Toaster />
           </DialogProvider>
         </AuthContext.Provider>
       </QueryClientProvider>

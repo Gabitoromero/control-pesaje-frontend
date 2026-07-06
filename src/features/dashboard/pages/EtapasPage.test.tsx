@@ -176,6 +176,79 @@ describe('EtapasPage', () => {
     });
   });
 
+  it('saving an edit shows a success toast announced via an aria-live region', async () => {
+    renderWithProviders(<EtapasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Amasado')).toBeInTheDocument();
+    });
+
+    const amasadoRow = (await screen.findByText('Amasado')).closest('tr')!;
+    await userEvent.click(within(amasadoRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      const liveRegion = document.querySelector('[aria-live]');
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Etapa actualizada exitosamente')).toBeInTheDocument();
+    });
+
+    // Should not block interaction — modal already closed as before
+    expect(screen.queryByRole('heading', { name: 'Editar Etapa' })).not.toBeInTheDocument();
+  });
+
+  it('creating a new etapa shows a success toast with creation-specific copy', async () => {
+    renderWithProviders(<EtapasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Amasado')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /Nueva Etapa/i }));
+
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Enfriado');
+    await userEvent.type(screen.getByRole('textbox', { name: /descripción/i }), 'Etapa de enfriado');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      const liveRegion = document.querySelector('[aria-live]');
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Etapa creada exitosamente')).toBeInTheDocument();
+    });
+  });
+
+  it('clicking "Activar Etapa" shows a success toast with activation-specific copy (not the generic "actualizada" copy)', async () => {
+    server.use(
+      http.put('http://localhost:3000/api/etapas/:id', async ({ request }) => {
+        const payload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 4, ...(payload as object) } });
+      })
+    );
+
+    renderWithProviders(<EtapasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Amasado')).toBeInTheDocument();
+    });
+
+    await userEvent.selectOptions(screen.getAllByRole('combobox')[0], 'inactivo');
+    await waitFor(() => expect(screen.getByText('Reposo')).toBeInTheDocument());
+
+    const reposoRow = (await screen.findByText('Reposo')).closest('tr')!;
+    await userEvent.click(within(reposoRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activar Etapa' }));
+
+    await waitFor(() => {
+      const liveRegion = document.querySelector('[aria-live]');
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Etapa activada exitosamente')).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).queryByText('Etapa actualizada exitosamente')).not.toBeInTheDocument();
+    });
+  });
+
   it('clicking "Activar Etapa" sends PUT with activo:true in body; on 200, query keys are invalidated and modal closes', async () => {
     let requestPayload: unknown = null;
     server.use(

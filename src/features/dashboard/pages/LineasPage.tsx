@@ -30,7 +30,7 @@ export const LineasPage = () => {
   // that already succeeds silently today. Uses the existing optional
   // `rutaPasadaActiva` field to decide success vs warning — does not add any
   // new business rule, only a presentation choice on top of existing state.
-  const notifyOutcome = (accion: 'creada' | 'actualizada', rutaPasadaActiva: number | null | undefined) => {
+  const notifyOutcome = (accion: 'creada' | 'actualizada' | 'activada', rutaPasadaActiva: number | null | undefined) => {
     if (rutaPasadaActiva) {
       alertSuccess({ title: `Línea ${accion} exitosamente` });
     } else {
@@ -100,13 +100,16 @@ export const LineasPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<LineaCreate> & { activo?: boolean } }) =>
-      updateLinea(id, data),
+    mutationFn: ({ id, data }: {
+      id: number;
+      data: Partial<LineaCreate> & { activo?: boolean };
+      accion: 'actualizada' | 'activada';
+    }) => updateLinea(id, data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
       queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       closeModal();
-      notifyOutcome('actualizada', variables.data.rutaPasadaActiva);
+      notifyOutcome(variables.accion, variables.data.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
@@ -169,6 +172,7 @@ export const LineasPage = () => {
           numeroBalanza: Number(formData.numeroBalanza),
           rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         },
+        accion: 'actualizada',
       });
     } else {
       createMutation.mutate({
@@ -196,6 +200,7 @@ export const LineasPage = () => {
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         activo: true,
       },
+      accion: 'activada',
     });
   };
 

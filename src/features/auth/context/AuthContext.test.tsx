@@ -16,6 +16,13 @@ vi.mock('../../../api/axios', () => ({
 }));
 vi.mock('../../../services/websocket', () => ({
   resetSocket: vi.fn(),
+  getSocket: vi.fn(() => ({
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+    emit: vi.fn(),
+  })),
 }));
 
 describe('AuthContext', () => {

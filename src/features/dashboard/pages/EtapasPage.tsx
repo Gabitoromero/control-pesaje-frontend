@@ -11,6 +11,7 @@ import {
 } from '../../../api/etapas';
 import { Plus, Edit, Trash, X } from 'lucide-react';
 import { isAxiosError } from 'axios';
+import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 
 const EMPTY_FORM = { nombre: '', descripcion: '' };
@@ -63,15 +64,18 @@ export const EtapasPage = () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
       queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
+      toast.success('Etapa creada exitosamente');
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<EtapaCreate> & { activo?: boolean } }) => updateEtapa(id, data),
-    onSuccess: () => {
+    mutationFn: ({ id, data }: { id: number; data: Partial<EtapaCreate> & { activo?: boolean }; accion: 'actualizada' | 'activada' }) =>
+      updateEtapa(id, data),
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
       queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
+      toast.success(`Etapa ${variables.accion} exitosamente`);
     },
     onError: (err: unknown) => {
       let msg = 'Ocurrió un error inesperado';
@@ -125,6 +129,7 @@ export const EtapasPage = () => {
       updateMutation.mutate({
         id: editingEtapa.id,
         data: { nombre: formData.nombre, descripcion: formData.descripcion.trim() || null },
+        accion: 'actualizada',
       });
     } else {
       createMutation.mutate({ nombre: formData.nombre, descripcion: formData.descripcion || undefined, activo: true });
@@ -146,6 +151,7 @@ export const EtapasPage = () => {
         descripcion: formData.descripcion.trim() || null,
         activo: true,
       },
+      accion: 'activada',
     });
   };
 
