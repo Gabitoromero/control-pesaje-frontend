@@ -11,9 +11,9 @@ import {
 } from '../../../api/usuarios';
 import { UsuarioRol } from '../../../shared/types';
 import { Plus, Edit, Trash, X } from 'lucide-react';
-import { isAxiosError } from 'axios';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
+import { getApiErrorMessage } from '../../../utils/errors';
 
 const ROL_LABELS: Record<string, string> = {
   [UsuarioRol.ADMINISTRADOR]: 'Administrador',
@@ -40,7 +40,7 @@ const USUARIO_FIELDS: SearchField[] = [
 
 export const UsuariosPage = () => {
   const queryClient = useQueryClient();
-  const { confirm } = useDialog();
+  const { confirm, alertError } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -82,13 +82,10 @@ export const UsuariosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo crear el usuario:\n${msg}`);
+      alertError({
+        title: 'No se pudo crear el usuario',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -100,13 +97,10 @@ export const UsuariosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo guardar el usuario:\n${msg}`);
+      alertError({
+        title: 'No se pudo guardar el usuario',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 
@@ -118,13 +112,10 @@ export const UsuariosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      let msg = 'Ocurrió un error inesperado';
-      if (isAxiosError(err)) {
-        msg = err.response?.data?.error?.message || err.message;
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      alert(`No se pudo eliminar el usuario:\n${msg}`);
+      alertError({
+        title: 'No se pudo eliminar el usuario',
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+      });
     },
   });
 

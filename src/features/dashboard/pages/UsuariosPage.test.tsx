@@ -177,9 +177,7 @@ describe('UsuariosPage', () => {
     expect(screen.getByRole('button', { name: /Eliminar Usuario/ })).toBeInTheDocument();
   });
 
-  it('deleteMutation onError shows alert with backend error message', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-
+  it('deleteMutation onError shows an alertdialog titled "No se pudo eliminar el usuario" with the backend error message', async () => {
     server.use(
       http.delete('http://localhost:3000/api/usuarios/:id', () =>
         HttpResponse.json(
@@ -206,13 +204,60 @@ describe('UsuariosPage', () => {
     const confirmDialog = await screen.findByRole('alertdialog');
     await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
 
+    const errorDialog = await screen.findByRole('alertdialog');
+    expect(within(errorDialog).getByText('No se pudo eliminar el usuario')).toBeInTheDocument();
+    expect(within(errorDialog).getByText('No se puede eliminar: tiene registros asociados')).toBeInTheDocument();
+  });
+
+  it('createMutation onError shows an alertdialog titled "No se pudo crear el usuario"', async () => {
+    server.use(
+      http.post('http://localhost:3000/api/usuarios', () =>
+        HttpResponse.json({ success: false, error: { message: 'Nombre de usuario en uso' } }, { status: 400 })
+      )
+    );
+
+    renderWithProviders(<UsuariosPage />);
+
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        expect.stringContaining('No se puede eliminar: tiene registros asociados')
-      );
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
     });
 
-    alertSpy.mockRestore();
+    await userEvent.click(screen.getByRole('button', { name: /nuevo usuario/i }));
+
+    await userEvent.type(screen.getByLabelText('Legajo'), '999');
+    await userEvent.type(screen.getByLabelText('Nombre completo'), 'Test User');
+    await userEvent.type(screen.getByLabelText('Nombre de usuario'), 'testuser');
+    await userEvent.type(screen.getByLabelText(/PIN/), '1234');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('No se pudo crear el usuario')).toBeInTheDocument();
+    expect(within(dialog).getByText('Nombre de usuario en uso')).toBeInTheDocument();
+  });
+
+  it('updateMutation onError shows an alertdialog titled "No se pudo guardar el usuario"', async () => {
+    server.use(
+      http.put('http://localhost:3000/api/usuarios/:id', () =>
+        HttpResponse.json({ success: false, error: { message: 'No se pudo actualizar' } }, { status: 400 })
+      )
+    );
+
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const adminText = await screen.findByText('Admin Istrador');
+    const adminRow = adminText.closest('tr')!;
+    await userEvent.click(within(adminRow).getByTitle('Editar'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('No se pudo guardar el usuario')).toBeInTheDocument();
+    expect(within(dialog).getByText('No se pudo actualizar')).toBeInTheDocument();
   });
 
   it('clicking "Eliminar Usuario" opens a confirm dialog instead of window.confirm', async () => {
