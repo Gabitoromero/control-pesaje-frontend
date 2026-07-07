@@ -87,4 +87,19 @@ describe('PasadaCard', () => {
 
     expect(await screen.findByText(/Inicio --:--/)).toBeInTheDocument();
   });
+
+  it('counts a finished stage even when the API returns muestras in raw (unpopulated) shape', async () => {
+    // The list endpoint doesn't eager-load muestra->etapa, so real API
+    // responses carry `etapa` as a raw FK number and have no `etapaId`
+    // field at all — this reproduces that exact shape, not the
+    // already-normalized one the other tests use implicitly via [].
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(getMuestras).mockResolvedValue([
+      { id: 1, etapa: 10, estadoValidacion: 'ok', pesoNeto: 1.5 } as any,
+    ]);
+
+    renderWithProviders(<PasadaCard pasada={basePasada} etapas={etapas} />);
+
+    expect(await screen.findByText(/Avance: Etapa 2 de 2/)).toBeInTheDocument();
+  });
 });

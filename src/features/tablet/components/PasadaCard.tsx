@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
 import { getMuestras } from '../../../api/muestras';
+import { normalizeMuestra } from '../utils/muestra.utils';
 import { deriveStageProgress } from '../utils/stageProgress';
 import { StagePillRow } from './StagePillRow';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
@@ -25,11 +26,17 @@ function getArticuloNombre(pasada: Pasada): string {
 export function PasadaCard({ pasada, etapas }: PasadaCardProps) {
   const navigate = useNavigate();
 
-  const { data: muestras = [] } = useQuery({
+  // The backend's list endpoint doesn't eager-load the muestra->etapa
+  // relation, so raw API results carry `etapa` as an FK number, not the
+  // `etapaId` field this component (and deriveStageProgress) reads.
+  // normalizeMuestra resolves both shapes — same convention usePasadaState
+  // already applies to TabletWorkspace's initial muestras.
+  const { data: rawMuestras = [] } = useQuery({
     queryKey: ['muestras', pasada.id],
     queryFn: () => getMuestras(pasada.id),
     enabled: !!pasada.id,
   });
+  const muestras = rawMuestras.map(normalizeMuestra);
 
   const { currentIndex, total } = deriveStageProgress(etapas, muestras);
 
