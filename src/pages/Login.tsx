@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { User, Lock, Factory } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { loginApi } from '../api/auth';
@@ -84,7 +85,7 @@ const Login: React.FC = () => {
           key={d}
           onClick={() => handleDigit(d)}
           disabled={loading}
-          className="h-16 rounded-2xl bg-slate-700 hover:bg-slate-600 active:scale-95 text-2xl font-bold transition-all disabled:opacity-50"
+          className="h-16 rounded-2xl bg-secondary hover:bg-muted active:scale-95 text-2xl font-bold text-foreground transition-all disabled:opacity-50"
         >
           {d}
         </button>
@@ -92,7 +93,7 @@ const Login: React.FC = () => {
       <button
         onClick={handleBackspace}
         disabled={loading}
-        className="h-16 rounded-2xl bg-slate-700 hover:bg-slate-600 active:scale-95 text-2xl font-bold transition-all disabled:opacity-50"
+        className="h-16 rounded-2xl bg-secondary hover:bg-muted active:scale-95 text-2xl font-bold text-muted-foreground transition-all disabled:opacity-50"
       >
         ⌫
       </button>
@@ -100,35 +101,89 @@ const Login: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col md:flex-row font-sans text-white">
-      {/* Branding Side - Hidden on mobile, visible on md and up */}
-      <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-slate-800 flex-col items-center justify-center p-12 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans text-foreground">
+      {/* Branding Side — theme-aware like the rest of the page. Hidden on mobile. */}
+      <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-card flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Decorative background elements */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-slate-900/50 pointer-events-none" />
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-cyan-400" />
-        
+        <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-background/60 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand to-brand-hover" />
+
         <div className="z-10 text-center max-w-lg">
-          <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-blue-900/40">
-            <Factory size={48} className="text-white" />
-          </div>
-          <h1 className="text-4xl lg:text-5xl font-bold mb-4 tracking-tight">Controlador de Pesaje</h1>
-          <p className="text-slate-400 text-lg lg:text-xl leading-relaxed">
+          {/* The system's own name "settles onto the scale": the scale
+              assembles itself (base, pedestal, plate) as the icon drops in
+              with a spring bounce; the plate squashes right as the icon
+              lands, like it just received the weight, then recovers. */}
+          <motion.div
+            className="mb-8"
+            initial={{ y: -40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 140, damping: 12, delay: 0.1 }}
+          >
+            <motion.div
+              className="w-24 h-24 bg-brand rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-black/30"
+              initial={{ rotate: -8 }}
+              animate={{ rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 90, damping: 7, delay: 0.5 }}
+            >
+              <Factory size={48} className="text-white" />
+            </motion.div>
+            <svg viewBox="0 0 160 50" className="w-32 h-10 mx-auto mt-2" aria-hidden="true">
+              <motion.rect
+                x="45" y="34" width="70" height="8" rx="3"
+                className="fill-brand/25"
+                style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+                initial={{ opacity: 0, scaleX: 0.6 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.35, duration: 0.3 }}
+              />
+              <motion.rect
+                x="65" y="18" width="30" height="18" rx="2"
+                className="fill-brand/25"
+                style={{ transformBox: 'fill-box', transformOrigin: 'bottom' }}
+                initial={{ opacity: 0, scaleY: 0 }}
+                animate={{ opacity: 1, scaleY: 1 }}
+                transition={{ delay: 0.45, duration: 0.25 }}
+              />
+              <motion.rect
+                x="10" y="10" width="140" height="10" rx="4"
+                className="fill-brand/40"
+                style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+                initial={{ opacity: 0, scaleY: 0.4 }}
+                animate={{ opacity: 1, scaleY: [0.4, 1, 0.75, 1] }}
+                transition={{ delay: 0.55, duration: 0.45, times: [0, 0.35, 0.7, 1] }}
+              />
+            </svg>
+          </motion.div>
+          <motion.h1
+            className="text-4xl lg:text-5xl font-bold mb-4 tracking-tight text-foreground"
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.8, duration: 0.4 }}
+          >
+            Controlador de Pesaje
+          </motion.h1>
+          <motion.p
+            className="text-muted-foreground text-lg lg:text-xl leading-relaxed"
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.9, duration: 0.4 }}
+          >
             Plataforma integral para gestión y monitoreo de líneas de producción en tiempo real.
-          </p>
+          </motion.p>
         </div>
       </div>
 
       {/* Login Form Side */}
-      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col items-center justify-center p-6 sm:p-12 min-h-screen md:min-h-0 bg-slate-900">
+      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col items-center justify-center p-6 sm:p-12 min-h-screen md:min-h-0 bg-background">
         <div className="w-full max-w-sm space-y-6">
 
           {/* Header UI - Only visible on mobile since branding side handles desktop */}
           <div className="text-center mb-8 md:hidden">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/20">
-              <Lock size={32} />
+            <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand/20">
+              <Lock size={32} className="text-white" />
             </div>
             <h1 className="text-2xl font-bold mb-1">Controlador de Pesaje</h1>
-            <p className="text-slate-400">Ingreso al sistema</p>
+            <p className="text-muted-foreground">Ingreso al sistema</p>
           </div>
 
           {/* Stepper UI */}
@@ -137,9 +192,9 @@ const Login: React.FC = () => {
             data-testid="stepper-step-legajo"
             onClick={() => { if (!loading) setStep('legajo'); }}
             className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 cursor-pointer ${
-              isLegajoStep 
-                ? 'border-blue-500 bg-blue-500/20 text-blue-400' 
-                : 'border-slate-600 bg-slate-700 text-slate-300'
+              isLegajoStep
+                ? 'border-brand bg-brand-muted text-brand'
+                : 'border-border bg-secondary text-muted-foreground'
             }`}
           >
             <User size={24} />
@@ -147,15 +202,15 @@ const Login: React.FC = () => {
           <div
             data-testid="stepper-line"
             className={`w-16 h-1 transition-colors duration-300 ${
-              isLegajoStep ? 'bg-slate-700' : 'bg-blue-500'
+              isLegajoStep ? 'bg-secondary' : 'bg-brand'
             }`}
           />
           <div
             data-testid="stepper-step-pin"
             className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
               isLegajoStep
-                ? 'border-slate-700 bg-slate-800 text-slate-500'
-                : 'border-blue-500 bg-blue-500/20 text-blue-400'
+                ? 'border-border bg-secondary text-muted-foreground'
+                : 'border-brand bg-brand-muted text-brand'
             }`}
           >
             <Lock size={24} />
@@ -163,7 +218,7 @@ const Login: React.FC = () => {
         </div>
 
         <div className="text-center h-8">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             {isLegajoStep ? 'Ingresá tu legajo' : 'Ingresá tu PIN'}
           </p>
         </div>
@@ -173,13 +228,13 @@ const Login: React.FC = () => {
           if (isLegajoStep && legajo) setStep('pin');
           else if (!isLegajoStep && pin.length >= 4) handleLogin();
         }}>
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 text-center text-3xl font-mono tracking-widest min-h-16 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-2xl px-6 py-4 text-center text-3xl font-mono tracking-widest min-h-16 flex items-center justify-center">
             {isLegajoStep ? (
               <input
                 autoFocus
                 type="text"
                 aria-label="Usuario o Legajo"
-                className="bg-transparent text-center w-full outline-none placeholder-slate-600"
+                className="bg-transparent text-center w-full outline-none text-foreground placeholder-muted-foreground"
                 value={legajo}
                 onChange={e => setLegajo(e.target.value)}
               />
@@ -188,7 +243,7 @@ const Login: React.FC = () => {
                 autoFocus
                 type="password"
                 aria-label="Contraseña"
-                className="bg-transparent text-center w-full outline-none tracking-widest placeholder-slate-600"
+                className="bg-transparent text-center w-full outline-none tracking-widest text-foreground placeholder-muted-foreground"
                 value={pin}
                 onChange={e => {
                   const val = e.target.value;
@@ -200,7 +255,7 @@ const Login: React.FC = () => {
         </form>
 
         {error && (
-          <p className="text-red-400 text-sm text-center animate-pulse mt-2">{error}</p>
+          <p className="text-destructive text-sm text-center animate-pulse mt-2">{error}</p>
         )}
 
         {keypad}
@@ -209,7 +264,7 @@ const Login: React.FC = () => {
           <button
             onClick={() => setStep('pin')}
             disabled={!legajo || loading}
-            className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold transition-all mt-4"
+            className="w-full h-14 rounded-2xl bg-primary hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold text-primary-foreground transition-all mt-4"
           >
             Continuar
           </button>
@@ -218,7 +273,7 @@ const Login: React.FC = () => {
             <button
               onClick={handleLogin}
               disabled={pin.length < 4 || loading}
-              className="w-full h-14 rounded-2xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold transition-all flex items-center justify-center gap-2"
+              className="w-full h-14 rounded-2xl bg-brand-light hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
             >
               {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
               Ingresar

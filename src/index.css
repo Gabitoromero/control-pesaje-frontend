@@ -10,32 +10,37 @@
        tertiary = recessed elements (inputs, muted/accent fills) inside cards.
        Changing a value here re-themes every shadcn-sourced component with
        zero component code changes. */
-    --background: 0 0% 98%; /* surface-light-primary (#fafafa) */
+    /* Shifted one tier darker than the raw OpenPencil light values (fafafa
+       page bg felt too bright/glary on real screens per user feedback) —
+       background/card/secondary each dropped to the next darker zinc step,
+       and border got a new, slightly darker zinc-300 tone since e4e4e7 is
+       now the recessed (secondary/muted/accent) fill instead of the border. */
+    --background: 240 4.8% 95.9%; /* zinc-100 (#f4f4f5) */
     --foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --card: 0 0% 100%; /* surface-light-secondary (#ffffff) */
+    --card: 0 0% 98%; /* zinc-50 (#fafafa) */
     --card-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --popover: 0 0% 100%; /* surface-light-secondary (#ffffff) */
+    --popover: 0 0% 98%; /* zinc-50 (#fafafa) */
     --popover-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
     --primary: 189 94% 43%; /* brand-primary (#06b6d4) */
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 240 10% 3.9%; /* #09090b — dark text reads better on the mid-bright cyan than white */
 
-    --secondary: 240 4.8% 95.9%; /* surface-light-tertiary (#f4f4f5) */
+    --secondary: 240 5.9% 90%; /* zinc-200 (#e4e4e7) */
     --secondary-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --muted: 240 4.8% 95.9%; /* surface-light-tertiary (#f4f4f5) */
+    --muted: 240 5.9% 90%; /* zinc-200 (#e4e4e7) */
     --muted-foreground: 240 3.8% 46.1%; /* text-light-secondary (#71717a) */
 
-    --accent: 240 4.8% 95.9%; /* surface-light-tertiary (#f4f4f5) */
+    --accent: 240 5.9% 90%; /* zinc-200 (#e4e4e7) */
     --accent-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
     --destructive: 0 84% 60%; /* danger (#ef4444) */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5.9% 90%; /* #e4e4e7, used directly across the OpenPencil pages */
-    --input: 240 5.9% 90%;
+    --border: 240 5% 83.9%; /* zinc-300 (#d4d4d8) */
+    --input: 240 5% 83.9%;
     --ring: 189 94% 43%; /* brand-primary (#06b6d4) */
 
     --radius: 0.5rem;
@@ -56,7 +61,7 @@
     --popover-foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
 
     --primary: 189 94% 43%; /* brand-primary (#06b6d4) */
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 240 10% 3.9%; /* #09090b — dark text reads better on the mid-bright cyan than white */
 
     --secondary: 240 3.7% 15.9%; /* surface-dark-tertiary (#27272a) */
     --secondary-foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
