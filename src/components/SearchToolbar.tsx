@@ -22,7 +22,7 @@ export function SearchToolbar({
   return (
     <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 mb-4">
       <select
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
         value={status}
         onChange={(e) => onStatusChange(e.target.value as 'activo' | 'inactivo')}
       >
@@ -31,7 +31,7 @@ export function SearchToolbar({
       </select>
 
       <select
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
         value={field}
         onChange={(e) => onFieldChange(e.target.value)}
       >
@@ -43,7 +43,7 @@ export function SearchToolbar({
       </select>
 
       <input
-        className="flex-1 min-w-[12rem] rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="flex-1 min-w-[12rem] rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
         placeholder="Buscar..."
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
