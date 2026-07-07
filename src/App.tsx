@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import { useAuth } from './features/auth/context/AuthContext';
+import { ThemeToggle } from './features/theme/ThemeToggle';
 import { TabletLayout } from './layouts/TabletLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { UsuarioRol } from './shared/types';
@@ -30,8 +31,13 @@ function App() {
     return (user?.rol as string) === UsuarioRol.OPERARIO ? "/tablet/seleccion-linea" : "/dashboard";
   };
 
+  // Dev-only theme toggle: never shown to real operators, reachable only via
+  // the exact query param `?devTheme=1` (allow-list match, not truthy coercion).
+  const showDevTheme = new URLSearchParams(window.location.search).get('devTheme') === '1';
+
   return (
     <Router>
+      {showDevTheme && <ThemeToggle />}
       <Routes>
         <Route path="/login" element={<Login />} />
 
