@@ -173,9 +173,9 @@ describe('TabletWorkspace', () => {
     });
 
     // Verify it renders Line name and stage name from MSW handlers
-    expect(await screen.findByText('Línea 1')).toBeInTheDocument();
+    expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
     expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
-    expect(screen.getByText('Muestras: 0 / 2')).toBeInTheDocument();
+    expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
   });
 
   it('simula el registro exitoso de una muestra y actualiza el conteo', async () => {
@@ -193,7 +193,7 @@ describe('TabletWorkspace', () => {
 
     // After clicking register, the sample list should contain the new sample
     expect(await screen.findByText('15.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('Muestras: 1 / 2')).toBeInTheDocument();
+    expect(screen.getByText('1 / 2 muestras OK')).toBeInTheDocument();
   });
 
   it('muestra el lockout overlay cuando la balanza se desconecta', async () => {

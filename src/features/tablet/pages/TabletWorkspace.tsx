@@ -13,6 +13,7 @@ import { getLinea } from '../../../api/lineas';
 import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, CheckCircle2, Loader2 } from 'lucide-react';
+import { getAvatarInitials } from '../utils/avatarInitials';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
@@ -156,7 +157,6 @@ export const TabletWorkspace: React.FC = () => {
     .map((muestra, originalIndex) => ({ muestra, originalIndex }))
     .filter(({ muestra }) => muestra.etapaId === currentStageId);
 
-  const activeStageName = etapaActiva?.etapa?.nombre ?? etapaActiva?.etapa.nombre ?? 'Completado';
   const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidadMuestrasRequeridas ?? 0;
   
   // Task 3.7: Render Lockout Overlay when isConnected is false or API requests fail
@@ -165,27 +165,33 @@ export const TabletWorkspace: React.FC = () => {
   return (
     <div className="h-full flex flex-col p-6 bg-background gap-6 relative">
 
-      {/* Header Info */}
+      {/* Topbar */}
       <div className="flex justify-between items-center bg-card p-4 rounded-xl shadow-sm border border-border">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Línea {lineaId}</h2>
-          <p className="text-muted-foreground">Operario: {user?.nombreUsuario ?? 'Desconocido'}</p>
+        <div className="flex items-center gap-4">
+          <span className="px-2 py-0.5 rounded-md border border-primary bg-primary/10 text-primary text-xs font-bold tracking-wide">
+            {linea?.nombre ?? `Línea ${lineaId}`}
+          </span>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-foreground">
+              {pasada?.articulo?.nombre ?? '—'}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              Ruta: {linea?.rutaPasadaActiva?.nombre ?? '—'} · Pasada #{pasada?.numero ?? '—'}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-6 text-right">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">
-              {activeStageName}
-            </h3>
-            {etapaActiva ? (
-              <p className="text-muted-foreground">
-                Muestras: {samplesForActiveStage.length} / {activeStageRequired}
-              </p>
-            ) : (
-              <p className="text-success font-semibold flex items-center gap-1 justify-end">
-                <CheckCircle2 className="w-4 h-4" />
-                Listo para finalizar
-              </p>
-            )}
+        <div className="flex items-center gap-4">
+          {pasada?.estado === 'en_curso' && (
+            <span className="px-3 py-1 rounded-full bg-success-muted text-success text-xs font-semibold">
+              En curso
+            </span>
+          )}
+          <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
+            {getAvatarInitials(user?.nombreUsuario)}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-foreground">{user?.nombreUsuario}</span>
+            <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
           </div>
           <button
             onClick={() => navigate('/tablet/pasadas')}
