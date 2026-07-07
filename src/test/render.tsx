@@ -9,6 +9,7 @@ import type { AuthContextType } from '../features/auth/context/AuthContext';
 import type { User } from '../shared/types/auth';
 import { DialogProvider } from '../components/dialogs/DialogProvider';
 import { Toaster } from '../components/ui/sonner';
+import { ThemeProvider } from '../features/theme/ThemeContext';
 
 function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -16,12 +17,14 @@ function makeQueryClient() {
 
 export function renderWithProviders(ui: ReactNode) {
   return render(
-    <QueryClientProvider client={makeQueryClient()}>
-      <DialogProvider>
-        <MemoryRouter>{ui}</MemoryRouter>
-        <Toaster />
-      </DialogProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={makeQueryClient()}>
+        <DialogProvider>
+          <MemoryRouter>{ui}</MemoryRouter>
+          <Toaster />
+        </DialogProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
@@ -54,14 +57,16 @@ export function renderWithAuth(
 
   return {
     ...render(
-      <QueryClientProvider client={makeQueryClient()}>
-        <AuthContext.Provider value={authValue}>
-          <DialogProvider>
-            <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-            <Toaster />
-          </DialogProvider>
-        </AuthContext.Provider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={makeQueryClient()}>
+          <AuthContext.Provider value={authValue}>
+            <DialogProvider>
+              <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+              <Toaster />
+            </DialogProvider>
+          </AuthContext.Provider>
+        </QueryClientProvider>
+      </ThemeProvider>
     ),
     authValue,
   };

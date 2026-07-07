@@ -1,14 +1,17 @@
 import { Toaster as Sonner } from 'sonner';
 import type { ToasterProps } from 'sonner';
+import { useTheme } from '../../features/theme/ThemeContext';
 
 // Adapted from shadcn/ui's sonner.tsx: the upstream version reads the active
-// theme from `next-themes`, which this project does not use. This app has no
-// dark-mode toggle yet, so we default to the light theme and drive all
-// visuals through the CSS-variable tokens declared in src/index.css.
+// theme from `next-themes`, which this project does not use. Instead we
+// drive it from this app's own `useTheme()` context so toasts stay in sync
+// with the rest of the UI.
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme } = useTheme();
+
   return (
     <Sonner
-      theme="light"
+      theme={theme}
       className="toaster group"
       toastOptions={{
         classNames: {
