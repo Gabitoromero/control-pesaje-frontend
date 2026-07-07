@@ -8,21 +8,13 @@
     <script>
       // MIRRORS src/features/theme/resolveTheme.ts — keep in sync.
       // Runs before the module graph loads (cannot import ESM), so this
-      // logic is hand-duplicated. Resolution order: localStorage -> OS
-      // prefers-color-scheme -> dark (default). Negating the "light" query
-      // means both "OS prefers dark" and "no/undetectable preference"
-      // resolve to dark, matching resolveTheme.ts's default fallback.
+      // logic is hand-duplicated. resolveTheme.ts always resolves to dark
+      // UNLESS the user explicitly stored 'light' — OS prefers-color-scheme
+      // is never allowed to produce light on its own. Mirror that exactly.
       (function () {
         try {
           var stored = localStorage.getItem('theme');
-          var isDark =
-            stored === 'dark' ||
-            (stored !== 'light' &&
-              !(
-                window.matchMedia &&
-                window.matchMedia('(prefers-color-scheme: light)').matches
-              ));
-          if (isDark) {
+          if (stored !== 'light') {
             document.documentElement.classList.add('dark');
           }
         } catch (e) {
