@@ -107,4 +107,32 @@ describe('ThemeContext', () => {
     expect(mockStorage[STORAGE_KEY]).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
+
+  it('still applies the theme and toggles the .dark class when localStorage.setItem throws', () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: (key: string) => mockStorage[key] ?? null,
+        setItem: () => {
+          throw new Error('storage unavailable');
+        },
+        removeItem: (key: string) => {
+          delete mockStorage[key];
+        },
+        clear: () => {
+          mockStorage = {};
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useTheme(), { wrapper: Wrapper });
+
+    act(() => {
+      result.current.setTheme('dark');
+    });
+
+    expect(result.current.theme).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
 });
