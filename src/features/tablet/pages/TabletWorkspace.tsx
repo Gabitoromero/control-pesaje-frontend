@@ -96,8 +96,8 @@ export const TabletWorkspace: React.FC = () => {
 
   if (loadingPasada || loadingLinea || loadingMuestras) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="animate-spin text-blue-500" size={36} />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 text-muted-foreground">
+        <Loader2 className="animate-spin text-primary" size={36} />
         <p className="text-sm font-medium">Cargando espacio de trabajo...</p>
       </div>
     );
@@ -163,25 +163,25 @@ export const TabletWorkspace: React.FC = () => {
   const showLockout = !isConnected || !!apiError || !!errorPasada || !!errorLinea;
 
   return (
-    <div className="h-full flex flex-col p-6 bg-slate-50 gap-6 relative">
-      
+    <div className="h-full flex flex-col p-6 bg-background gap-6 relative">
+
       {/* Header Info */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex justify-between items-center bg-card p-4 rounded-xl shadow-sm border border-border">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Línea {lineaId}</h2>
-          <p className="text-slate-500">Operario: {user?.nombreUsuario ?? 'Desconocido'}</p>
+          <h2 className="text-xl font-bold text-foreground">Línea {lineaId}</h2>
+          <p className="text-muted-foreground">Operario: {user?.nombreUsuario ?? 'Desconocido'}</p>
         </div>
         <div className="flex items-center gap-6 text-right">
           <div>
-            <h3 className="text-lg font-semibold text-slate-700">
+            <h3 className="text-lg font-semibold text-foreground">
               {activeStageName}
             </h3>
             {etapaActiva ? (
-              <p className="text-slate-500">
+              <p className="text-muted-foreground">
                 Muestras: {samplesForActiveStage.length} / {activeStageRequired}
               </p>
             ) : (
-              <p className="text-green-600 font-semibold flex items-center gap-1 justify-end">
+              <p className="text-success font-semibold flex items-center gap-1 justify-end">
                 <CheckCircle2 className="w-4 h-4" />
                 Listo para finalizar
               </p>
@@ -189,7 +189,7 @@ export const TabletWorkspace: React.FC = () => {
           </div>
           <button
             onClick={() => navigate('/tablet/pasadas')}
-            className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg font-bold transition-colors"
+            className="px-4 py-2 bg-secondary text-secondary-foreground hover:bg-accent rounded-lg font-bold transition-colors"
           >
             Volver
           </button>
@@ -202,19 +202,19 @@ export const TabletWorkspace: React.FC = () => {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Balanza Panel */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center">
-          <Scale className={`w-24 h-24 mb-6 ${isConnected ? 'text-blue-500' : 'text-slate-300'}`} />
-          
+        <div className="bg-card rounded-xl shadow-sm border border-border p-8 flex flex-col items-center justify-center">
+          <Scale className={`w-24 h-24 mb-6 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
+
           <div className="text-center mb-8">
-            <span className="text-8xl font-black text-slate-800 tabular-nums">
+            <span className="text-8xl font-black text-foreground tabular-nums">
               {pesoNeto.toFixed(3)}
             </span>
-            <span className="text-3xl text-slate-500 ml-2">kg</span>
+            <span className="text-3xl text-muted-foreground ml-2">kg</span>
           </div>
 
           <div className="flex items-center gap-3 mb-10">
-            <div className={`w-4 h-4 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'}`} />
-            <span className="text-xl font-medium text-slate-600">
+            <div className={`w-4 h-4 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
+            <span className="text-xl font-medium text-muted-foreground">
               {isConnected ? 'Conectado' : 'Sin señal'}
             </span>
           </div>
@@ -224,8 +224,8 @@ export const TabletWorkspace: React.FC = () => {
             disabled={!isConnected || etapaActiva === null}
             className={`w-full py-6 rounded-2xl text-2xl font-bold transition-all shadow-lg
               ${isConnected && etapaActiva !== null
-                ? 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                ? 'bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95'
+                : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
           >
             Registrar Muestra
@@ -233,14 +233,14 @@ export const TabletWorkspace: React.FC = () => {
         </div>
 
         {/* Muestras List */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
-          <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
-            <h3 className="text-lg font-bold text-slate-800">Muestras Registradas</h3>
+        <div className="bg-card rounded-xl shadow-sm border border-border flex flex-col">
+          <div className="p-4 border-b border-border flex justify-between items-center bg-muted rounded-t-xl">
+            <h3 className="text-lg font-bold text-foreground">Muestras Registradas</h3>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-4">
             {muestrasDeEtapaActiva.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                 <p>No hay muestras en esta etapa.</p>
               </div>
             ) : (
@@ -249,20 +249,20 @@ export const TabletWorkspace: React.FC = () => {
                   <li
                     key={muestra.id ?? originalIndex}
                     onClick={() => setSelectedSampleIndex(originalIndex)}
-                    className="flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 cursor-pointer transition-colors"
+                    className="flex justify-between items-center p-4 bg-muted hover:bg-accent rounded-xl border border-border cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <span className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full font-bold text-slate-600 text-sm">
+                      <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-secondary-foreground text-sm">
                         {displayIndex + 1}
                       </span>
                       <div>
-                        <span className="text-xl font-bold tabular-nums text-slate-800">
+                        <span className="text-xl font-bold tabular-nums text-foreground">
                           {muestra.pesoNeto.toFixed(3)} kg
                         </span>
                         <div className="text-sm mt-1 flex items-center gap-2">
                           {muestra.estadoValidacion === 'ok'
-                            ? <span className="text-green-600 font-medium">En Rango</span>
-                            : <span className="text-red-500 font-medium">Fuera de Rango</span>
+                            ? <span className="text-success font-medium">En Rango</span>
+                            : <span className="text-danger font-medium">Fuera de Rango</span>
                           }
                         </div>
                       </div>
@@ -274,10 +274,10 @@ export const TabletWorkspace: React.FC = () => {
           </div>
 
           {/* Task 3.6: Manual Stage / Pasada progression button */}
-          <div className="p-4 border-t border-slate-100">
+          <div className="p-4 border-t border-border">
             {etapaActiva !== null ? (() => {
               const isActiveStageComplete = samplesForActiveStage.length >= activeStageRequired;
-              const isLastStage = etapasConEstado.length > 0 && 
+              const isLastStage = etapasConEstado.length > 0 &&
                                   etapasConEstado[etapasConEstado.length - 1].etapa.etapa.id === etapaActiva.etapa.id;
 
               return (
@@ -286,8 +286,8 @@ export const TabletWorkspace: React.FC = () => {
                   disabled={!isActiveStageComplete}
                   className={`w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all
                     ${isActiveStageComplete
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 active:scale-95'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      ? 'bg-success hover:bg-success/90 text-white shadow-lg active:scale-95'
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
                     }`}
                 >
                   <CheckCircle2 className="w-6 h-6" />
@@ -297,7 +297,7 @@ export const TabletWorkspace: React.FC = () => {
             })() : etapas.length > 0 ? (
               <button
                 onClick={handleFinalizarPasada}
-                className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 active:scale-95"
+                className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-success hover:bg-success/90 text-white shadow-lg active:scale-95"
               >
                 <CheckCircle2 className="w-6 h-6" />
                 Finalizar Pasada
@@ -321,24 +321,24 @@ export const TabletWorkspace: React.FC = () => {
 
       {/* Lockout Overlay */}
       {showLockout && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 select-none animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl flex flex-col items-center">
-            <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-500 animate-pulse">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-md p-6 select-none animate-fade-in">
+          <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full text-center shadow-2xl flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-danger-muted border border-danger/20 flex items-center justify-center mb-6 text-danger animate-pulse">
               <Scale size={32} />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">
+            <h3 className="text-2xl font-bold text-foreground mb-2">
               {!isConnected ? 'Señal de Balanza Perdida' : 'Error de Conexión'}
             </h3>
-            <p className="text-slate-400 text-sm mb-6">
-              {!isConnected 
+            <p className="text-muted-foreground text-sm mb-6">
+              {!isConnected
                 ? 'La comunicación con la balanza se ha interrumpido. Verifique la conexión para continuar.'
                 : 'Hubo un problema al comunicarse con el servidor o procesar la solicitud.'}
             </p>
             {(apiError || errorPasada || errorLinea) && (
-              <div className="bg-red-950/50 border border-red-900/50 rounded-xl p-3 text-xs text-red-400 mb-6 font-mono break-all max-h-32 overflow-y-auto">
-                {apiError || (errorPasada as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message || 
-                   (errorPasada as { message?: string })?.message || 
-                   (errorLinea as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message || 
+              <div className="bg-danger-muted border border-danger/30 rounded-xl p-3 text-xs text-danger mb-6 font-mono break-all max-h-32 overflow-y-auto">
+                {apiError || (errorPasada as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message ||
+                   (errorPasada as { message?: string })?.message ||
+                   (errorLinea as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message ||
                    (errorLinea as { message?: string })?.message}
               </div>
             )}
@@ -347,7 +347,7 @@ export const TabletWorkspace: React.FC = () => {
                 setApiError(null);
                 refetchPasada();
               }}
-              className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-sm font-semibold transition-all"
+              className="w-full py-3.5 bg-secondary hover:bg-accent active:scale-95 text-secondary-foreground rounded-xl text-sm font-semibold transition-all"
             >
               Reintentar
             </button>

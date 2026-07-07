@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
 import type { EtapaConEstado } from '../hooks/usePasadaState';
 
@@ -7,10 +7,17 @@ interface StageProgressPanelProps {
 }
 
 export const StageProgressPanel: React.FC<StageProgressPanelProps> = ({ etapasConEstado }) => {
+  const activeRef = useRef<HTMLDivElement | null>(null);
+  const activeEtapaId = etapasConEstado?.find((e) => e.estado === 'actual')?.etapa.etapa.id ?? null;
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeEtapaId]);
+
   if (!etapasConEstado || etapasConEstado.length === 0) return null;
 
   return (
-    <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 p-4" data-testid="stage-progress-panel">
+    <div className="w-full bg-card rounded-xl shadow-sm border border-border p-4" data-testid="stage-progress-panel">
       <div className="flex flex-row items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
         {etapasConEstado.map((e, index) => {
           const isLast = index === etapasConEstado.length - 1;
@@ -23,39 +30,44 @@ export const StageProgressPanel: React.FC<StageProgressPanelProps> = ({ etapasCo
           let counterText: string | null = null;
 
           if (estado === 'completada') {
-            bgClass = 'bg-emerald-50';
-            textClass = 'text-emerald-700';
-            borderClass = 'border-emerald-200';
-            icon = <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+            bgClass = 'bg-success-muted';
+            textClass = 'text-success';
+            borderClass = 'border-success/30';
+            icon = <CheckCircle2 className="w-5 h-5 text-success" />;
           } else if (estado === 'actual') {
-            bgClass = 'bg-blue-50';
-            textClass = 'text-blue-700 font-semibold';
-            borderClass = 'border-blue-300 ring-2 ring-blue-500/20';
-            icon = <Circle className="w-5 h-5 text-blue-500 fill-blue-500/20" />;
+            bgClass = 'bg-card';
+            textClass = 'text-foreground font-semibold';
+            borderClass = 'border-primary ring-2 ring-primary/20';
+            icon = <Circle className="w-5 h-5 text-primary fill-primary/20" />;
             counterText = `${muestrasOk} / ${muestrasRequeridas} muestras OK`;
           } else {
-            bgClass = 'bg-slate-50 opacity-50 pointer-events-none';
-            textClass = 'text-slate-500';
-            borderClass = 'border-slate-200 dashed';
-            icon = <Circle className="w-5 h-5 text-slate-300" />;
+            bgClass = 'bg-muted opacity-50 pointer-events-none';
+            textClass = 'text-muted-foreground';
+            borderClass = 'border-border border-dashed';
+            icon = <Circle className="w-5 h-5 text-muted-foreground/50" />;
           }
+
+          const passed = estado === 'completada';
 
           return (
             <React.Fragment key={etapa.id ?? index}>
-              <div className={`flex flex-col flex-shrink-0 min-w-[160px] p-3 rounded-lg border ${bgClass} ${textClass} ${borderClass}`}>
+              <div
+                ref={estado === 'actual' ? activeRef : undefined}
+                className={`flex flex-col flex-shrink-0 min-w-[160px] p-3 rounded-lg border ${bgClass} ${textClass} ${borderClass}`}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   {icon}
                   <span className="text-sm">{etapa.etapa.nombre}</span>
                 </div>
                 {counterText && (
-                  <span className="text-xs font-medium text-blue-600 pl-7">
+                  <span className="text-xs font-medium text-primary pl-7">
                     {counterText}
                   </span>
                 )}
               </div>
-              
+
               {!isLast && (
-                <div className="flex-shrink-0 w-4 h-[2px] bg-slate-200" />
+                <div className={`flex-shrink-0 w-4 h-[2px] ${passed ? 'bg-success' : 'bg-border'}`} />
               )}
             </React.Fragment>
           );

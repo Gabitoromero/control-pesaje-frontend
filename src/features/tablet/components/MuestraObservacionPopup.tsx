@@ -47,22 +47,22 @@ function PopupContent({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
       role="dialog"
       aria-modal="true"
       aria-label={`Detalle de muestra #${index + 1}`}
     >
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
-          <h3 className="text-lg font-bold text-white">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h3 className="text-lg font-bold text-foreground">
             Muestra #{index + 1}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="text-slate-400 hover:text-white transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -71,19 +71,19 @@ function PopupContent({
         {/* Read-only sample info */}
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-sm">Peso</span>
-            <span className="text-2xl font-black tabular-nums text-white">
+            <span className="text-muted-foreground text-sm">Peso</span>
+            <span className="text-2xl font-black tabular-nums text-foreground">
               {muestra.pesoNeto.toFixed(3)}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-sm">Validación</span>
+            <span className="text-muted-foreground text-sm">Validación</span>
             <span
               className={`text-xs px-3 py-1 rounded-full font-medium ${
                 isOk
-                  ? 'bg-green-900/50 text-green-400'
-                  : 'bg-red-900/50 text-red-400'
+                  ? 'bg-success-muted text-success'
+                  : 'bg-danger-muted text-danger'
               }`}
             >
               {muestra.estadoValidacion}
@@ -95,13 +95,13 @@ function PopupContent({
         <div className="px-4 pb-4">
           <label
             htmlFor="muestra-observacion"
-            className="block text-sm text-slate-400 mb-1"
+            className="block text-sm text-muted-foreground mb-1"
           >
             Observación
           </label>
           <textarea
             id="muestra-observacion"
-            className="w-full min-h-[80px] bg-slate-900 border border-slate-700 rounded-lg p-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full min-h-[80px] bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
             value={observacion}
             onChange={(e) => setObservacion(e.target.value)}
             placeholder="Sin observaciones"
@@ -109,11 +109,11 @@ function PopupContent({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 p-4 border-t border-slate-700">
+        <div className="flex items-center gap-2 p-4 border-t border-border">
           <button
             type="button"
             onClick={handleDelete}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg text-red-400 hover:bg-red-900/30 transition-colors text-sm font-medium"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg text-danger hover:bg-danger-muted transition-colors text-sm font-medium"
             aria-label="Eliminar muestra"
           >
             <Trash2 className="w-4 h-4" />
@@ -125,7 +125,7 @@ function PopupContent({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-700 transition-colors text-sm font-medium"
+            className="px-4 py-2 rounded-lg text-muted-foreground hover:bg-accent transition-colors text-sm font-medium"
           >
             Cancelar
           </button>
@@ -133,7 +133,7 @@ function PopupContent({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors"
+            className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-sm font-bold transition-colors"
           >
             Confirmar
           </button>
