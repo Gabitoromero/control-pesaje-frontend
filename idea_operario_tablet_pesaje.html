@@ -1,0 +1,727 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+
+  .screen {
+    background: #0f1117;
+    border-radius: var(--border-radius-lg);
+    padding: 0;
+    overflow: hidden;
+    min-height: 680px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #2a2d38;
+  }
+
+  .topbar {
+    background: #171a24;
+    border-bottom: 1px solid #2a2d38;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+
+  .linea-badge {
+    background: #1e2a1e;
+    border: 1px solid #2d4a2d;
+    color: #5cc96c;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .articulo-label {
+    color: #e8e8e8;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .articulo-sub {
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 1px;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+
+  .operario-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1c1f2e;
+    border: 1px solid #2a2d38;
+    border-radius: 20px;
+    padding: 5px 12px 5px 8px;
+  }
+
+  .avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #253a56;
+    color: #7ab5e8;
+    font-size: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .operario-name { color: #c0c8d8; font-size: 13px; }
+
+  .tiempo {
+    color: #6b7280;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pasada-pill {
+    color: #8b6fcc;
+    font-size: 11px;
+    background: #1e1a2e;
+    border: 1px solid #3d2f6e;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  /* Etapas nav */
+  .etapas-nav {
+    background: #13151f;
+    border-bottom: 1px solid #2a2d38;
+    padding: 0 20px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+
+  .etapa-tab {
+    padding: 12px 18px;
+    font-size: 13px;
+    color: #4b5263;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: color 0.15s;
+  }
+
+  .etapa-tab.done {
+    color: #3d7a45;
+    border-bottom-color: #2d5a33;
+  }
+
+  .etapa-tab.done .etapa-dot {
+    background: #3d7a45;
+  }
+
+  .etapa-tab.active {
+    color: #e8e8e8;
+    border-bottom-color: #5b9cf6;
+  }
+
+  .etapa-tab.active .etapa-dot {
+    background: #5b9cf6;
+  }
+
+  .etapa-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2a2d38;
+    flex-shrink: 0;
+  }
+
+  /* Main content */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+  }
+
+  /* Zona de pesaje */
+  .zona-pesaje {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-right: 1px solid #2a2d38;
+  }
+
+  .etapa-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .etapa-nombre {
+    color: #e8e8e8;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .etapa-meta {
+    color: #5b7a9c;
+    font-size: 13px;
+  }
+
+  /* Display de peso */
+  .peso-display {
+    background: #0d1117;
+    border: 1px solid #2a2d38;
+    border-radius: 10px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+
+  .peso-label {
+    color: #4b5263;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .peso-valor {
+    font-size: 72px;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -2px;
+    line-height: 1;
+    color: #f0f4ff;
+  }
+
+  .peso-unidad {
+    color: #6b7280;
+    font-size: 20px;
+    font-weight: 400;
+    align-self: flex-end;
+    margin-bottom: 12px;
+    margin-left: -4px;
+  }
+
+  .peso-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .tolerancia-bar {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .tol-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #4b5263;
+    margin-bottom: 6px;
+  }
+
+  .tol-track {
+    width: 100%;
+    height: 6px;
+    background: #1c1f2e;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tol-range {
+    position: absolute;
+    height: 100%;
+    background: #1e3a2a;
+    left: 20%;
+    width: 60%;
+  }
+
+  .tol-cursor {
+    position: absolute;
+    width: 3px;
+    height: 100%;
+    background: #5cc96c;
+    left: 55%;
+    border-radius: 2px;
+    box-shadow: 0 0 6px #5cc96c88;
+  }
+
+  .estado-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+
+  .estado-ok {
+    background: #152b1b;
+    color: #5cc96c;
+    border: 1px solid #2a5a35;
+  }
+
+  .estado-fuera {
+    background: #2b1515;
+    color: #e24b4b;
+    border: 1px solid #5a2a2a;
+  }
+
+  /* Parámetros */
+  .params-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .param-card {
+    background: #13151f;
+    border: 1px solid #2a2d38;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .param-card-label {
+    font-size: 10px;
+    color: #4b5263;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .param-card-val {
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .param-ideal { color: #5b9cf6; }
+  .param-min { color: #6b7280; }
+  .param-max { color: #6b7280; }
+
+  /* Botón confirmar */
+  .btn-confirmar {
+    background: #163a25;
+    border: 1.5px solid #2a6640;
+    color: #5cc96c;
+    font-size: 22px;
+    font-weight: 500;
+    padding: 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: background 0.15s, transform 0.1s;
+    width: 100%;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-confirmar:active { transform: scale(0.98); background: #1e5035; }
+
+  .btn-confirmar i { font-size: 24px; }
+
+  /* Panel lateral */
+  .panel-lateral {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: #0d1117;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    color: #4b5263;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+
+  /* Muestras lista */
+  .muestras-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .muestra-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #13151f;
+    border: 1px solid #2a2d38;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .muestra-num {
+    color: #4b5263;
+    font-size: 12px;
+    font-weight: 500;
+    width: 20px;
+  }
+
+  .muestra-peso {
+    color: #c0c8d8;
+    font-size: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    flex: 1;
+    padding-left: 10px;
+  }
+
+  .muestra-peso span {
+    font-size: 12px;
+    color: #4b5263;
+    font-weight: 400;
+  }
+
+  .muestra-ok {
+    color: #5cc96c;
+    font-size: 11px;
+    background: #152b1b;
+    border: 1px solid #2a5a35;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  .muestra-fuera {
+    color: #e24b4b;
+    font-size: 11px;
+    background: #2b1515;
+    border: 1px solid #5a2a2a;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  .muestra-item-pending {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0f1117;
+    border: 1px dashed #2a2d38;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .muestra-num-pend { color: #2a2d38; font-size: 12px; width: 20px; }
+  .muestra-pend-label { color: #2a2d38; font-size: 13px; flex: 1; padding-left: 10px; }
+
+  /* Promedio */
+  .promedio-block {
+    background: #13151f;
+    border: 1px solid #2a2d38;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .prom-label { color: #4b5263; font-size: 12px; }
+  .prom-val {
+    font-size: 22px;
+    font-weight: 500;
+    color: #5b9cf6;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prom-unit { font-size: 13px; color: #4b5263; font-weight: 400; }
+
+  /* Progreso etapa */
+  .progreso-etapa {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .prog-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .prog-track {
+    width: 100%;
+    height: 4px;
+    background: #1c1f2e;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .prog-fill {
+    height: 100%;
+    background: #5b9cf6;
+    border-radius: 2px;
+    width: 60%;
+  }
+
+  /* Notas */
+  .notas-input {
+    background: #13151f;
+    border: 1px solid #2a2d38;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #c0c8d8;
+    font-size: 13px;
+    width: 100%;
+    resize: none;
+    height: 52px;
+    font-family: var(--font-sans);
+    outline: none;
+  }
+
+  .notas-input::placeholder { color: #3a3e50; }
+
+  .notas-input:focus { border-color: #2a4a7a; }
+
+  /* Pasada selector */
+  .pasada-block {
+    background: #13151f;
+    border: 1px solid #2a2d38;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .pasada-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .pasada-id {
+    color: #e8e8e8;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .pasada-hora {
+    color: #4b5263;
+    font-size: 11px;
+  }
+
+  .pasada-avance {
+    font-size: 11px;
+    color: #4b5263;
+    display: flex;
+    gap: 6px;
+  }
+
+  .etapa-pill-done {
+    background: #152b1b;
+    color: #3d7a45;
+    border: 1px solid #2a5a35;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  .etapa-pill-act {
+    background: #16264a;
+    color: #5b9cf6;
+    border: 1px solid #2a4a8a;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  .etapa-pill-pend {
+    background: #1c1f2e;
+    color: #4b5263;
+    border: 1px solid #2a2d38;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  /* Scroll */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2d38; border-radius: 2px; }
+</style>
+
+<h2 class="sr-only">Pantalla del operario – control de pesaje en tablet</h2>
+
+<div class="screen">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="linea-badge"><i class="ti ti-device-desktop-analytics" aria-hidden="true" style="font-size:12px; margin-right:4px;"></i>Línea 3</div>
+      <div>
+        <div class="articulo-label">Helado Choco 80ml</div>
+        <div class="articulo-sub">Ruta: Ruta Estándar Envasado · Pasada #7</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="pasada-pill"><i class="ti ti-layers-intersect" aria-hidden="true" style="font-size:12px; margin-right:3px;"></i>Pasada en curso</div>
+      <div class="operario-chip">
+        <div class="avatar">JR</div>
+        <span class="operario-name">J. Romero</span>
+      </div>
+      <div class="tiempo"><i class="ti ti-clock" aria-hidden="true" style="font-size:14px; vertical-align:-2px; margin-right:3px;"></i>14:32</div>
+    </div>
+  </div>
+
+  <!-- Etapas nav -->
+  <div class="etapas-nav">
+    <div class="etapa-tab done">
+      <div class="etapa-dot"></div>
+      Relleno
+    </div>
+    <div class="etapa-tab done">
+      <div class="etapa-dot"></div>
+      Cobertura
+    </div>
+    <div class="etapa-tab active">
+      <div class="etapa-dot"></div>
+      Palito
+    </div>
+    <div class="etapa-tab">
+      <div class="etapa-dot"></div>
+      Envoltura
+    </div>
+    <div class="etapa-tab">
+      <div class="etapa-dot"></div>
+      Control final
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Zona pesaje -->
+    <div class="zona-pesaje">
+      <div class="etapa-header">
+        <div class="etapa-nombre">Etapa: Palito</div>
+        <div class="etapa-meta">Muestras: 3 · Tolerancia ±1.5 g</div>
+      </div>
+
+      <!-- Display peso -->
+      <div class="peso-display">
+        <div class="estado-badge estado-ok"><i class="ti ti-check" aria-hidden="true" style="font-size:12px; margin-right:3px;"></i>OK</div>
+        <div class="peso-label">Peso neto en balanza</div>
+        <div class="peso-row">
+          <div class="peso-valor">82.4</div>
+          <div class="peso-unidad">g</div>
+        </div>
+        <div class="tolerancia-bar">
+          <div class="tol-labels">
+            <span>Mín 80.5 g</span>
+            <span>Ideal 82.0 g</span>
+            <span>Máx 83.5 g</span>
+          </div>
+          <div class="tol-track">
+            <div class="tol-range"></div>
+            <div class="tol-cursor"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Params -->
+      <div class="params-row">
+        <div class="param-card">
+          <div class="param-card-label">Ideal</div>
+          <div class="param-card-val param-ideal">82.0 <span style="font-size:12px; color:#4b5263;">g</span></div>
+        </div>
+        <div class="param-card">
+          <div class="param-card-label">Mínimo</div>
+          <div class="param-card-val param-min">80.5 <span style="font-size:12px; color:#4b5263;">g</span></div>
+        </div>
+        <div class="param-card">
+          <div class="param-card-label">Máximo</div>
+          <div class="param-card-val param-max">83.5 <span style="font-size:12px; color:#4b5263;">g</span></div>
+        </div>
+      </div>
+
+      <!-- Botón confirmar -->
+      <button class="btn-confirmar">
+        <i class="ti ti-circle-check"></i>
+        Confirmar muestra
+      </button>
+
+    </div>
+
+    <!-- Panel lateral -->
+    <div class="panel-lateral">
+
+      <div>
+        <div class="panel-title">Pasada activa</div>
+        <div class="pasada-block">
+          <div class="pasada-row">
+            <div class="pasada-id">Pasada #7</div>
+            <div class="pasada-hora">Inicio 13:51</div>
+          </div>
+          <div class="pasada-avance">
+            <span class="etapa-pill-done">Relleno ✓</span>
+            <span class="etapa-pill-done">Cobertura ✓</span>
+            <span class="etapa-pill-act">Palito →</span>
+            <span class="etapa-pill-pend">+2</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">Muestras — Palito</div>
+        <div class="progreso-etapa" style="margin-bottom: 10px;">
+          <div class="prog-row">
+            <span>Progreso</span>
+            <span style="color: #c0c8d8; font-weight: 500;">2 / 3 OK</span>
+          </div>
+          <div class="prog-track"><div class="prog-fill" style="width: 66%;"></div></div>
+        </div>
+        <div class="muestras-lista">
+          <div class="muestra-item">
+            <div class="muestra-num">1</div>
+            <div class="muestra-peso">81.8 <span>g</span></div>
+            <div class="muestra-ok">OK</div>
+          </div>
+          <div class="muestra-item">
+            <div class="muestra-num">2</div>
+            <div class="muestra-peso">82.6 <span>g</span></div>
+            <div class="muestra-ok">OK</div>
+          </div>
+          <div class="muestra-item-pending">
+            <div class="muestra-num-pend">3</div>
+            <div class="muestra-pend-label">Esperando…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="promedio-block">
+        <div>
+          <div class="prom-label">Promedio etapa</div>
+          <div style="color:#4b5263; font-size:11px; margin-top:2px;">2 muestras</div>
+        </div>
+        <div class="prom-val">82.2 <span class="prom-unit">g</span></div>
+      </div>
+
+      <div>
+        <div class="panel-title" style="margin-bottom: 6px;">Nota (opcional)</div>
+        <textarea class="notas-input" placeholder="Ej: temperatura cobertura 28°C…"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+</div>

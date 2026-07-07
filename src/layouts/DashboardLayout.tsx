@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from '../components/ui/Sidebar';
+import { UnassignedDeviceBanner } from '../features/dashboard/components/UnassignedDeviceBanner';
 
 export const DashboardLayout: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -72,6 +73,9 @@ export const DashboardLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+      
+      {/* Unassigned Device Banner */}
+      <UnassignedDeviceBanner />
     </div>
   );
 };
