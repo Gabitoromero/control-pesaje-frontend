@@ -14,6 +14,8 @@ import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, CheckCircle2, Loader2 } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { getToleranceLayout } from '../utils/toleranceRange';
+import { isWithinTolerance } from '../utils/toleranceStatus';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
@@ -162,6 +164,24 @@ export const TabletWorkspace: React.FC = () => {
   // Task 3.7: Render Lockout Overlay when isConnected is false or API requests fail
   const showLockout = !isConnected || !!apiError || !!errorPasada || !!errorLinea;
 
+  // Phase 4: Tolerance bar + OK/Fuera-de-Rango badge (only meaningful with an active stage)
+  // Note: `etapaActiva` (from usePasadaState) is the RutaPasadaEtapa wrapper itself —
+  // pesoMinimo/pesoIdeal/pesoMaximo live directly on it, NOT nested under `.etapa`
+  // (that nested `.etapa` is only the stage name/id detail, e.g. `.etapa.nombre`).
+  const pesoMinimo = etapaActiva?.pesoMinimo;
+  const pesoIdeal = etapaActiva?.pesoIdeal;
+  const pesoMaximo = etapaActiva?.pesoMaximo;
+  const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
+  const toleranceLayout = hasTolerancia ? getToleranceLayout(pesoMinimo, pesoIdeal, pesoMaximo) : null;
+  const isInRange = hasTolerancia ? isWithinTolerance(pesoNeto, pesoMinimo, pesoMaximo) : false;
+
+  // Phase 4: PasadaBlock start-time formatting (native Intl, no date library)
+  const inicioLabel = pasada?.horaInicio
+    ? new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(
+        new Date(pasada.horaInicio),
+      )
+    : '--:--';
+
   return (
     <div className="h-full flex flex-col p-6 bg-background gap-6 relative">
 
@@ -211,12 +231,58 @@ export const TabletWorkspace: React.FC = () => {
         <div className="bg-card rounded-xl shadow-sm border border-border p-8 flex flex-col items-center justify-center">
           <Scale className={`w-24 h-24 mb-6 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
 
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <span className="text-8xl font-black text-foreground tabular-nums">
               {pesoNeto.toFixed(3)}
             </span>
             <span className="text-3xl text-muted-foreground ml-2">kg</span>
           </div>
+
+          {etapaActiva && pesoNeto > 0 && (
+            <div className="flex justify-center mb-4">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  isInRange ? 'bg-success-muted text-success' : 'bg-danger-muted text-danger'
+                }`}
+              >
+                {isInRange ? 'OK' : 'Fuera de Rango'}
+              </span>
+            </div>
+          )}
+
+          {etapaActiva && toleranceLayout && hasTolerancia ? (
+            <div className="w-full mb-8">
+              <div className="relative w-full h-2 rounded-full bg-muted mb-4">
+                <div
+                  className="absolute h-full rounded-full bg-primary/20"
+                  style={{ left: `${toleranceLayout.left}%`, width: `${toleranceLayout.width}%` }}
+                />
+                <div
+                  className="absolute top-[-2px] w-[2px] h-3 bg-primary"
+                  style={{ left: `${toleranceLayout.idealLeft}%` }}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-card border border-border rounded-lg p-2 text-center">
+                  <div className="text-xs text-muted-foreground">IDEAL</div>
+                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal!.toFixed(3)} kg</div>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-2 text-center">
+                  <div className="text-xs text-muted-foreground">MINIMO</div>
+                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo!.toFixed(3)} kg</div>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-2 text-center">
+                  <div className="text-xs text-muted-foreground">MAXIMO</div>
+                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoMaximo!.toFixed(3)} kg</div>
+                </div>
+              </div>
+            </div>
+          ) : etapaActiva === null ? (
+            <div className="w-full mb-8 flex items-center justify-center gap-2 text-success font-semibold">
+              <CheckCircle2 className="w-6 h-6" />
+              Listo para finalizar
+            </div>
+          ) : null}
 
           <div className="flex items-center gap-3 mb-10">
             <div className={`w-4 h-4 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
@@ -230,7 +296,7 @@ export const TabletWorkspace: React.FC = () => {
             disabled={!isConnected || etapaActiva === null}
             className={`w-full py-6 rounded-2xl text-2xl font-bold transition-all shadow-lg
               ${isConnected && etapaActiva !== null
-                ? 'bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95'
+                ? 'bg-success hover:bg-success/90 text-white active:scale-95'
                 : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
           >
@@ -242,6 +308,10 @@ export const TabletWorkspace: React.FC = () => {
         <div className="bg-card rounded-xl shadow-sm border border-border flex flex-col">
           <div className="p-4 border-b border-border flex justify-between items-center bg-muted rounded-t-xl">
             <h3 className="text-lg font-bold text-foreground">Muestras Registradas</h3>
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-semibold text-foreground">Pasada #{pasada?.numero ?? '—'}</span>
+              <span className="text-xs text-muted-foreground">Inicio {inicioLabel}</span>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">

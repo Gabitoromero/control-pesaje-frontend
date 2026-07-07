@@ -176,6 +176,45 @@ describe('TabletWorkspace', () => {
     expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
     expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
     expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
+
+    // Tolerance OK badge + params row (pesoNeto=15 is within [10,20] for Amasado)
+    expect(screen.getByText('OK')).toBeInTheDocument();
+    expect(screen.getByText('15.000 kg')).toBeInTheDocument();
+    expect(screen.getByText('10.000 kg')).toBeInTheDocument();
+    expect(screen.getByText('20.000 kg')).toBeInTheDocument();
+
+    // Registrar Muestra button uses success token, not primary
+    const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
+    expect(btnRegistrar.className).toContain('bg-success');
+    expect(btnRegistrar.className).not.toContain('bg-primary');
+  });
+
+  it('muestra el badge "Fuera de Rango" cuando el peso está fuera de tolerancia', async () => {
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+      pesoNeto: 5.0,
+      isConnected: true,
+    });
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
+    expect(screen.getByText('Fuera de Rango')).toBeInTheDocument();
+  });
+
+  it('muestra "Listo para finalizar" cuando todas las etapas están completadas', async () => {
+    window.localStorage.setItem('pasada_101_completed', JSON.stringify([1, 2]));
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect((await screen.findAllByText('Listo para finalizar'))[0]).toBeInTheDocument();
   });
 
   it('simula el registro exitoso de una muestra y actualiza el conteo', async () => {
@@ -191,8 +230,9 @@ describe('TabletWorkspace', () => {
     const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
     await userEvent.click(btnRegistrar);
 
-    // After clicking register, the sample list should contain the new sample
-    expect(await screen.findByText('15.000 kg')).toBeInTheDocument();
+    // After clicking register, the sample list should contain the new sample.
+    // Note: '15.000 kg' also matches the tolerance params row (IDEAL=15 for Amasado).
+    expect((await screen.findAllByText('15.000 kg')).length).toBeGreaterThan(0);
     expect(screen.getByText('1 / 2 muestras OK')).toBeInTheDocument();
   });
 
@@ -312,6 +352,37 @@ describe('TabletWorkspace', () => {
     });
   });
 
+  it('muestra el PasadaBlock (numero de pasada + hora de inicio) en el panel de muestras', async () => {
+    server.use(
+      http.get(`${BASE}/pasadas/101`, () => {
+        return HttpResponse.json({
+          success: true,
+          data: {
+            id: 101,
+            lineaProduccionId: 1,
+            usuarioId: 3,
+            estado: 'en_curso',
+            articuloId: 1,
+            numero: 7,
+            horaInicio: '2026-06-23T18:44:38Z',
+            createdAt: '2026-06-23T18:44:38Z',
+            updatedAt: '2026-06-23T18:44:38Z',
+            muestras: [],
+          },
+        });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect((await screen.findAllByText('Pasada #7'))[0]).toBeInTheDocument();
+    expect(screen.getByText(/Inicio \d{2}:\d{2}/)).toBeInTheDocument();
+  });
+
   it('renders StageProgressPanel with stages in order', async () => {
     renderWithAuth(<TabletWorkspace />, {
       user: operarioUser,
@@ -361,11 +432,11 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    // Wait for the sample row to render
-    expect(await screen.findByText('15.000 kg')).toBeInTheDocument();
-
-    // Click the row (the <li> is the clickable element)
-    const row = screen.getByText('15.000 kg').closest('li')!;
+    // Wait for the sample row to render.
+    // Note: '15.000 kg' can also match the tolerance params row (IDEAL=15 for Amasado),
+    // so scope the query to the element with a <li> ancestor (the sample row itself).
+    await screen.findAllByText('15.000 kg');
+    const row = screen.getAllByText('15.000 kg').map((el) => el.closest('li')).find(Boolean)!;
     await userEvent.click(row);
 
     // Popup should now be open showing the sample number
@@ -402,7 +473,8 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    expect(await screen.findByText('15.000 kg')).toBeInTheDocument();
+    // '15.000 kg' also matches the tolerance params row (IDEAL=15 for Amasado) — use findAllByText.
+    expect((await screen.findAllByText('15.000 kg')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /descartar muestra/i })).not.toBeInTheDocument();
   });
 });
