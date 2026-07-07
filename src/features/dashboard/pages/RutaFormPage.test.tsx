@@ -62,7 +62,7 @@ describe('RutaFormPage Validation Schemas', () => {
       const result = etapaSchema.safeParse(invalidEtapa);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Mínimo 0');
+        expect(result.error.issues[0].message).toBe('Debe ser mayor a 0');
       }
     });
 
