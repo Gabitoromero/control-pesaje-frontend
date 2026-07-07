@@ -1,4 +1,5 @@
 // MIRRORED by inline <script> in index.html — keep in sync.
+// See src/features/theme/resolveTheme.ts <-> index.html's <head> script.
 
 export const THEME = {
   LIGHT: 'light',
