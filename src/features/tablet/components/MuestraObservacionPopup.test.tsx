@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MuestraObservacionPopup } from './MuestraObservacionPopup';
 import type { Muestra } from '../../../shared/types/domain';
+import { renderWithProviders } from '../../../test/render';
 
 const makeMuestra = (overrides: Partial<Muestra> = {}): Muestra => ({
   id: 7,
@@ -30,7 +31,7 @@ describe('MuestraObservacionPopup', () => {
   // ── Display (spec: Popup Display) ──────────────────────────────────────────
 
   it('renders nothing when isOpen is false', () => {
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra()}
         index={0}
@@ -45,7 +46,7 @@ describe('MuestraObservacionPopup', () => {
   });
 
   it('renders sample number, weight (3 decimals), validation badge and textarea when open', () => {
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ pesoNeto: 12.5, estadoValidacion: 'ok' })}
         index={2}
@@ -66,7 +67,7 @@ describe('MuestraObservacionPopup', () => {
   });
 
   it('formats weight to exactly 3 decimal places', () => {
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ pesoNeto: 5 })}
         index={0}
@@ -80,7 +81,7 @@ describe('MuestraObservacionPopup', () => {
   });
 
   it('shows fuera_de_rango validation badge when status is fuera_de_rango', () => {
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ estadoValidacion: 'fuera_de_rango' })}
         index={0}
@@ -97,7 +98,7 @@ describe('MuestraObservacionPopup', () => {
 
   it('calls onSave with index and edited observation text on Confirm', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ observacion: 'original note' })}
         index={4}
@@ -119,7 +120,7 @@ describe('MuestraObservacionPopup', () => {
 
   it('calls onSave with empty string when textarea is cleared and Confirm clicked', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ observacion: 'original note' })}
         index={1}
@@ -140,7 +141,7 @@ describe('MuestraObservacionPopup', () => {
 
   it('calls onClose without saving when Cancel is clicked', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ observacion: 'original note' })}
         index={0}
@@ -160,11 +161,11 @@ describe('MuestraObservacionPopup', () => {
 
   // ── Delete (spec: Delete Inside Popup) ──────────────────────────────────────
 
-  it('calls onDelete with index when Delete is clicked and confirm is accepted', async () => {
+  it('calls onDelete with index when Delete is clicked and the confirm dialog is accepted', async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, 'confirm');
 
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra()}
         index={3}
@@ -177,15 +178,19 @@ describe('MuestraObservacionPopup', () => {
 
     await user.click(screen.getByRole('button', { name: /eliminar/i }));
 
-    expect(window.confirm).toHaveBeenCalled();
+    const dialog = await screen.findByRole('alertdialog');
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: /eliminar/i }));
+
     expect(onDelete).toHaveBeenCalledWith(3);
   });
 
-  it('does NOT call onDelete when confirm is dismissed and popup stays open', async () => {
+  it('does NOT call onDelete when the confirm dialog is cancelled and popup stays open', async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, 'confirm');
 
-    render(
+    renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra()}
         index={3}
@@ -198,7 +203,11 @@ describe('MuestraObservacionPopup', () => {
 
     await user.click(screen.getByRole('button', { name: /eliminar/i }));
 
-    expect(window.confirm).toHaveBeenCalled();
+    const dialog = await screen.findByRole('alertdialog');
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: /cancelar/i }));
+
     expect(onDelete).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
