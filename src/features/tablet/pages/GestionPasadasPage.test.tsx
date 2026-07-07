@@ -7,12 +7,8 @@ import { vi } from 'vitest';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { getLinea } from '../../../api/lineas';
-import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import type { Pasada } from '../../../shared/types/domain';
 
-vi.mock('../context/MuestrasLibresContext', () => ({
-  useMuestrasLibresContext: vi.fn(),
-}));
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -89,19 +85,6 @@ describe('GestionPasadasPage', () => {
     vi.mocked(getPasadas).mockResolvedValue(mockPasadas as Pasada[]);
     vi.mocked(getArticulosPorRuta).mockResolvedValue(mockArticulos);
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
-
-    // Default context mock: no samples
-    vi.mocked(useMuestrasLibresContext).mockReturnValue({
-      muestras: [],
-      etapas: [],
-      addSample: vi.fn().mockResolvedValue(undefined),
-      removeSample: vi.fn().mockResolvedValue(undefined),
-      updateSample: vi.fn().mockResolvedValue(undefined),
-      clearSession: vi.fn(),
-      isRegistering: false,
-      selectedEtapaId: null,
-      setSelectedEtapaId: vi.fn(),
-    });
   });
 
   it('llama a closeLineSession y logout al hacer click en Cerrar sesión', async () => {
