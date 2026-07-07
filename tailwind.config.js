@@ -37,6 +37,19 @@ export default {
           DEFAULT: '#f59e0b',
           muted: 'rgb(245 158 11 / 0.1)',
         },
+        // Raw text-on-surface colors from the OpenPencil design variables,
+        // for the rare non-theme-aware surface (e.g. Monitoreo's standalone
+        // full-dark chrome) that references a hardcoded ink tone directly
+        // instead of the semantic (theme-switching) shadcn tokens above.
+        // Named `ink` (not `text`) to avoid colliding with Tailwind's
+        // `text-` utility prefix.
+        ink: {
+          'dark-primary': '#f4f4f5',    // zinc-100
+          'dark-secondary': '#a1a1aa',  // zinc-400
+          'dark-muted': '#71717a',      // zinc-500
+          'light-primary': '#18181b',   // zinc-900
+          'light-secondary': '#71717a', // zinc-500
+        },
         // shadcn/ui tokens — CSS-variable driven so a future palette swap
         // only requires editing the vars in src/index.css, no component edits.
         background: 'hsl(var(--background))',

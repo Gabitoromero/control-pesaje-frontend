@@ -4,69 +4,74 @@
 
 @layer base {
   :root {
-    /* shadcn/ui tokens, seeded from the existing brand/success/danger/warning
-       palette (tailwind.config.js). Changing a value here re-themes every
-       shadcn-sourced component with zero component code changes. */
-    --background: 0 0% 100%; /* surface.light-secondary (#ffffff) */
-    --foreground: 240 10% 3.9%; /* surface.dark-primary (#09090b) */
+    /* shadcn/ui tokens, sourced from the OpenPencil design variables
+       (PrimeraVersionPages.op). Surfaces follow a 3-tier depth hierarchy:
+       primary = page background, secondary = cards/panels floating on top,
+       tertiary = recessed elements (inputs, muted/accent fills) inside cards.
+       Changing a value here re-themes every shadcn-sourced component with
+       zero component code changes. */
+    --background: 0 0% 98%; /* surface-light-primary (#fafafa) */
+    --foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; /* surface-light-secondary (#ffffff) */
+    --card-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%; /* surface-light-secondary (#ffffff) */
+    --popover-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --primary: 189 94% 43%; /* brand.DEFAULT (#06b6d4) */
+    --primary: 189 94% 43%; /* brand-primary (#06b6d4) */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4.8% 95.9%; /* surface.light-tertiary (#f4f4f5) */
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 240 4.8% 95.9%; /* surface-light-tertiary (#f4f4f5) */
+    --secondary-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 240 4.8% 95.9%; /* surface-light-tertiary (#f4f4f5) */
+    --muted-foreground: 240 3.8% 46.1%; /* text-light-secondary (#71717a) */
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 240 4.8% 95.9%; /* surface-light-tertiary (#f4f4f5) */
+    --accent-foreground: 240 5.9% 10%; /* text-light-primary (#18181b) */
 
-    --destructive: 0 84% 60%; /* danger.DEFAULT (#ef4444) */
+    --destructive: 0 84% 60%; /* danger (#ef4444) */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5.9% 90%;
+    --border: 240 5.9% 90%; /* #e4e4e7, used directly across the OpenPencil pages */
     --input: 240 5.9% 90%;
-    --ring: 189 94% 43%; /* brand.DEFAULT (#06b6d4) */
+    --ring: 189 94% 43%; /* brand-primary (#06b6d4) */
 
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Placeholder dark palette — minimal values to make `.dark` toggling
-       observable/testable. NOT the final polished dark theme (future work). */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Same 3-tier surface hierarchy as :root, using the dark side of the
+       OpenPencil palette. success/danger/warning are single flat values in
+       the design (not split per mode), so --destructive stays identical to
+       the light theme's. */
+    --background: 240 10% 3.9%; /* surface-dark-primary (#09090b) */
+    --foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 240 5.9% 10%; /* surface-dark-secondary (#18181b) */
+    --card-foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 5.9% 10%; /* surface-dark-secondary (#18181b) */
+    --popover-foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
 
-    --primary: 189 94% 43%;
+    --primary: 189 94% 43%; /* brand-primary (#06b6d4) */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%; /* surface-dark-tertiary (#27272a) */
+    --secondary-foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 3.7% 15.9%; /* surface-dark-tertiary (#27272a) */
+    --muted-foreground: 240 5% 64.9%; /* text-dark-secondary (#a1a1aa) */
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 3.7% 15.9%; /* surface-dark-tertiary (#27272a) */
+    --accent-foreground: 240 5% 95.9%; /* text-dark-primary (#f4f4f5) */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%; /* danger (#ef4444), same as light */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 3.7% 15.9%;
+    --border: 240 3.7% 15.9%; /* surface-dark-tertiary (#27272a), no separate dark-border variable defined */
     --input: 240 3.7% 15.9%;
-    --ring: 189 94% 43%;
+    --ring: 189 94% 43%; /* brand-primary (#06b6d4) */
   }
 }
