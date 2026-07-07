@@ -242,69 +242,34 @@ describe('GestionPasadasPage', () => {
 
       await screen.findByTestId('muestras-libres-section');
 
-      const btnRegistrar = screen.getByRole('button', { name: /registrar muestras libres/i });
+      const btnRegistrar = screen.getByRole('button', { name: /tomar muestras libres/i });
       await userEvent.click(btnRegistrar);
       expect(navigateMock).toHaveBeenCalledWith('/tablet/muestras-libres/seleccion');
     });
+  });
 
-    it('muestra las muestras acumuladas en la sección', async () => {
-      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
-      vi.mocked(useMuestrasLibresContext).mockReturnValue({
-        muestras: [
-          {
-            id: 1,
-            pesoNeto: 12.5,
-            estadoValidacion: 'ok',
-            usuarioId: 5,
-            etapaId: 10,
-            lineaProduccionId: 1,
-            timestamp: new Date(),
-          },
-        ],
-        etapas: [],
-        addSample: vi.fn().mockResolvedValue(undefined),
-        removeSample: vi.fn().mockResolvedValue(undefined),
-        updateSample: vi.fn().mockResolvedValue(undefined),
-        clearSession: vi.fn(),
-        isRegistering: false,
-        selectedEtapaId: 10,
-        setSelectedEtapaId: vi.fn(),
-      });
+  describe('progreso de etapas por pasada (StagePillRow)', () => {
+    it('muestra el texto de avance de etapas para cada pasada', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
-      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
-
-      await screen.findByTestId('muestras-libres-section');
-      expect(screen.getByText('12.500 kg')).toBeInTheDocument();
+      expect(await screen.findByText('Pasada #101')).toBeInTheDocument();
+      const avanceTexts = screen.getAllByText(/Avance: Etapa/i);
+      expect(avanceTexts.length).toBe(mockPasadas.length);
     });
+  });
 
-    it('muestra botón limpiar sesión cuando hay muestras', async () => {
-      vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
-      vi.mocked(useMuestrasLibresContext).mockReturnValue({
-        muestras: [
-          {
-            id: 2,
-            pesoNeto: 5.0,
-            estadoValidacion: 'ok',
-            usuarioId: 5,
-            etapaId: 10,
-            lineaProduccionId: 1,
-            timestamp: new Date(),
-          },
-        ],
-        etapas: [],
-        addSample: vi.fn().mockResolvedValue(undefined),
-        removeSample: vi.fn().mockResolvedValue(undefined),
-        updateSample: vi.fn().mockResolvedValue(undefined),
-        clearSession: vi.fn(),
-        isRegistering: false,
-        selectedEtapaId: 10,
-        setSelectedEtapaId: vi.fn(),
+  describe('layout responsivo de dos columnas', () => {
+    it('aplica el breakpoint personalizado min-[780px] para el grid de dos columnas', async () => {
+      const { container } = renderWithAuth(<GestionPasadasPage />, {
+        user: operarioUser,
+        activeLineaId: 1,
       });
 
-      renderWithAuth(<GestionPasadasPage />, { user: calidadUser, activeLineaId: 1 });
+      await screen.findByText('Pasada #101');
 
-      await screen.findByTestId('muestras-libres-section');
-      expect(screen.getByRole('button', { name: /limpiar sesión/i })).toBeInTheDocument();
+      const grid = container.querySelector('.grid.grid-cols-1');
+      expect(grid).not.toBeNull();
+      expect(grid?.className).toContain('min-[780px]:grid-cols-[1fr_416px]');
     });
   });
 });
