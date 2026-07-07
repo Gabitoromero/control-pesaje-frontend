@@ -10,9 +10,10 @@ import { StageProgressPanel } from '../components/StageProgressPanel';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
+import { getArticulo } from '../../../api/articulos';
 import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
-import { Scale, CheckCircle2, Loader2 } from 'lucide-react';
+import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import { getToleranceLayout } from '../utils/toleranceRange';
 import { isWithinTolerance } from '../utils/toleranceStatus';
@@ -58,6 +59,23 @@ export const TabletWorkspace: React.FC = () => {
   });
 
   const etapas: RutaPasadaEtapa[] = linea?.rutaPasadaActiva?.etapas ?? [];
+
+  // The backend's GET /pasadas/:id doesn't eager-load the articulo relation
+  // (unlike GET /pasadas, which does) — MikroORM then serializes it as the
+  // raw FK number under the SAME `articulo` key, not a separate `articuloId`
+  // field (which doesn't exist in the real API response). Handle both shapes:
+  // a plain number (unpopulated) or an already-populated object.
+  const articuloRelation = pasada?.articulo as unknown as number | { id?: number; nombre?: string } | undefined;
+  const articuloFromPasada = typeof articuloRelation === 'object' ? articuloRelation : undefined;
+  const articuloIdToFetch = typeof articuloRelation === 'number' ? articuloRelation : articuloRelation?.id;
+
+  const { data: articuloFetched } = useQuery({
+    queryKey: ['articulo', articuloIdToFetch],
+    queryFn: () => getArticulo(articuloIdToFetch!),
+    enabled: !!articuloIdToFetch && !articuloFromPasada,
+  });
+
+  const articulo = articuloFromPasada ?? articuloFetched;
 
   // Load muestras explicitly from API since Pasada payload might not include them
   const { data: muestrasList = [], isLoading: loadingMuestras } = useQuery({
@@ -183,76 +201,78 @@ export const TabletWorkspace: React.FC = () => {
     : '--:--';
 
   return (
-    <div className="h-full flex flex-col p-6 bg-background gap-6 relative">
+    <div className="min-h-screen lg:h-screen flex flex-col p-4 bg-background gap-4 relative overflow-y-auto lg:overflow-hidden">
 
       {/* Topbar */}
-      <div className="flex justify-between items-center bg-card p-4 rounded-xl shadow-sm border border-border">
+      <div className="flex flex-wrap flex-shrink-0 justify-between items-center gap-3 bg-card p-3 rounded-xl shadow-sm border border-border">
         <div className="flex items-center gap-4">
           <span className="px-2 py-0.5 rounded-md border border-primary bg-primary/10 text-primary text-xs font-bold tracking-wide">
             {linea?.nombre ?? `Línea ${lineaId}`}
           </span>
           <div className="flex flex-col">
             <span className="text-lg font-bold text-foreground">
-              {pasada?.articulo?.nombre ?? '—'}
+              {articulo?.nombre ?? '—'}
             </span>
             <span className="text-sm text-muted-foreground">
-              Ruta: {linea?.rutaPasadaActiva?.nombre ?? '—'} · Pasada #{pasada?.numero ?? '—'}
+              Ruta: {linea?.rutaPasadaActiva?.nombre ?? '—'}
+              <span className="hidden min-[570px]:inline"> · Pasada #{pasada?.numero ?? '—'}</span>
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {pasada?.estado === 'en_curso' && (
-            <span className="px-3 py-1 rounded-full bg-success-muted text-success text-xs font-semibold">
-              En curso
-            </span>
-          )}
-          <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
-            {getAvatarInitials(user?.nombreUsuario)}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground">{user?.nombreUsuario}</span>
-            <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="hidden min-[680px]:flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full border border-primary bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+              {getAvatarInitials(user?.nombreUsuario)}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-foreground">{user?.nombreUsuario}</span>
+              <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
+            </div>
           </div>
           <button
             onClick={() => navigate('/tablet/pasadas')}
-            className="px-4 py-2 bg-secondary text-secondary-foreground hover:bg-accent rounded-lg font-bold transition-colors"
+            aria-label="Volver"
+            className="flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold transition-colors
+              p-3 rounded-full min-[490px]:px-4 min-[490px]:py-2 min-[490px]:rounded-lg"
           >
-            Volver
+            <ArrowLeft className="w-5 h-5 min-[490px]:hidden" />
+            <span className="hidden min-[490px]:inline">Volver</span>
           </button>
         </div>
       </div>
 
-      <StageProgressPanel etapasConEstado={etapasConEstado} />
+      <div className="flex-shrink-0">
+        <StageProgressPanel etapasConEstado={etapasConEstado} />
+      </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Balanza Panel */}
-        <div className="bg-card rounded-xl shadow-sm border border-border p-8 flex flex-col items-center justify-center">
-          <Scale className={`w-24 h-24 mb-6 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
+      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-          <div className="text-center mb-4">
-            <span className="text-8xl font-black text-foreground tabular-nums">
-              {pesoNeto.toFixed(3)}
-            </span>
-            <span className="text-3xl text-muted-foreground ml-2">kg</span>
+        {/* Balanza Panel */}
+        <div className="bg-card rounded-xl shadow-sm border border-border p-5 flex flex-col items-center justify-center min-h-0 overflow-y-auto gap-3">
+          <div className="flex items-center justify-center gap-4">
+            <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
+            <div className="text-center">
+              <span className="text-6xl font-black text-foreground tabular-nums">
+                {pesoNeto.toFixed(3)}
+              </span>
+              <span className="text-2xl text-muted-foreground ml-2">kg</span>
+            </div>
           </div>
 
           {etapaActiva && pesoNeto > 0 && (
-            <div className="flex justify-center mb-4">
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  isInRange ? 'bg-success-muted text-success' : 'bg-danger-muted text-danger'
-                }`}
-              >
-                {isInRange ? 'OK' : 'Fuera de Rango'}
-              </span>
-            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                isInRange ? 'bg-success-muted text-success' : 'bg-danger-muted text-danger'
+              }`}
+            >
+              {isInRange ? 'OK' : 'Fuera de Rango'}
+            </span>
           )}
 
           {etapaActiva && toleranceLayout && hasTolerancia ? (
-            <div className="w-full mb-8">
-              <div className="relative w-full h-2 rounded-full bg-muted mb-4">
+            <div className="w-full">
+              <div className="relative w-full h-2 rounded-full bg-muted mb-3">
                 <div
                   className="absolute h-full rounded-full bg-primary/20"
                   style={{ left: `${toleranceLayout.left}%`, width: `${toleranceLayout.width}%` }}
@@ -264,12 +284,12 @@ export const TabletWorkspace: React.FC = () => {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-card border border-border rounded-lg p-2 text-center">
-                  <div className="text-xs text-muted-foreground">IDEAL</div>
-                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal!.toFixed(3)} kg</div>
-                </div>
-                <div className="bg-card border border-border rounded-lg p-2 text-center">
                   <div className="text-xs text-muted-foreground">MINIMO</div>
                   <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo!.toFixed(3)} kg</div>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-2 text-center">
+                  <div className="text-xs text-muted-foreground">IDEAL</div>
+                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal!.toFixed(3)} kg</div>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-2 text-center">
                   <div className="text-xs text-muted-foreground">MAXIMO</div>
@@ -278,15 +298,15 @@ export const TabletWorkspace: React.FC = () => {
               </div>
             </div>
           ) : etapaActiva === null ? (
-            <div className="w-full mb-8 flex items-center justify-center gap-2 text-success font-semibold">
+            <div className="w-full flex items-center justify-center gap-2 text-success font-semibold">
               <CheckCircle2 className="w-6 h-6" />
               Listo para finalizar
             </div>
           ) : null}
 
-          <div className="flex items-center gap-3 mb-10">
-            <div className={`w-4 h-4 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
-            <span className="text-xl font-medium text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
+            <span className="text-base font-medium text-muted-foreground">
               {isConnected ? 'Conectado' : 'Sin señal'}
             </span>
           </div>
@@ -294,7 +314,7 @@ export const TabletWorkspace: React.FC = () => {
           <button
             onClick={handleRegistrarMuestra}
             disabled={!isConnected || etapaActiva === null}
-            className={`w-full py-6 rounded-2xl text-2xl font-bold transition-all shadow-lg
+            className={`w-full py-4 rounded-2xl text-xl font-bold transition-all shadow-lg
               ${isConnected && etapaActiva !== null
                 ? 'bg-success hover:bg-success/90 text-white active:scale-95'
                 : 'bg-muted text-muted-foreground cursor-not-allowed'
@@ -305,8 +325,8 @@ export const TabletWorkspace: React.FC = () => {
         </div>
 
         {/* Muestras List */}
-        <div className="bg-card rounded-xl shadow-sm border border-border flex flex-col">
-          <div className="p-4 border-b border-border flex justify-between items-center bg-muted rounded-t-xl">
+        <div className="bg-card rounded-xl shadow-sm border border-border flex flex-col min-h-0 max-h-[70vh] lg:max-h-none">
+          <div className="p-3 border-b border-border flex justify-between items-center bg-muted rounded-t-xl flex-shrink-0">
             <h3 className="text-lg font-bold text-foreground">Muestras Registradas</h3>
             <div className="flex flex-col items-end">
               <span className="text-sm font-semibold text-foreground">Pasada #{pasada?.numero ?? '—'}</span>
@@ -314,7 +334,7 @@ export const TabletWorkspace: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {muestrasDeEtapaActiva.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                 <p>No hay muestras en esta etapa.</p>
@@ -331,18 +351,14 @@ export const TabletWorkspace: React.FC = () => {
                       <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-secondary-foreground text-sm">
                         {displayIndex + 1}
                       </span>
-                      <div>
-                        <span className="text-xl font-bold tabular-nums text-foreground">
-                          {muestra.pesoNeto.toFixed(3)} kg
-                        </span>
-                        <div className="text-sm mt-1 flex items-center gap-2">
-                          {muestra.estadoValidacion === 'ok'
-                            ? <span className="text-success font-medium">En Rango</span>
-                            : <span className="text-danger font-medium">Fuera de Rango</span>
-                          }
-                        </div>
-                      </div>
+                      <span className="text-xl font-bold tabular-nums text-foreground">
+                        {muestra.pesoNeto.toFixed(3)} kg
+                      </span>
                     </div>
+                    {muestra.estadoValidacion === 'ok'
+                      ? <span className="text-success font-medium">En Rango</span>
+                      : <span className="text-danger font-medium">Fuera de Rango</span>
+                    }
                   </li>
                 ))}
               </ul>
@@ -350,7 +366,7 @@ export const TabletWorkspace: React.FC = () => {
           </div>
 
           {/* Task 3.6: Manual Stage / Pasada progression button */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border flex-shrink-0">
             {etapaActiva !== null ? (() => {
               const isActiveStageComplete = samplesForActiveStage.length >= activeStageRequired;
               const isLastStage = etapasConEstado.length > 0 &&
