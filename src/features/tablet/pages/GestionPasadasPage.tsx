@@ -1,33 +1,29 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Play, Plus, Loader2, X, AlertTriangle, FlaskConical, Trash2 } from 'lucide-react';
+import { LogOut, Plus, Loader2, X, AlertTriangle, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
-import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
-import { MuestrasListPanel } from '../components/MuestrasListPanel';
-import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
+import { PasadaCard } from '../components/PasadaCard';
 
 export const GestionPasadasPage: React.FC = () => {
   const { user, closeLineSession, activeLineaId, logout } = useAuth();
-  const { muestras, etapas, removeSample, updateSample, clearSession } = useMuestrasLibresContext();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedArticuloId, setSelectedArticuloId] = React.useState<number | null>(null);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
-  const [selectedSampleIndex, setSelectedSampleIndex] = React.useState<number | null>(null);
 
   // Task 2.1: Query live active runs using React Query
-  const { 
-    data: pasadas = [], 
-    isLoading: loadingPasadas, 
+  const {
+    data: pasadas = [],
+    isLoading: loadingPasadas,
     error: errorPasadas,
-    refetch: refetchPasadas 
+    refetch: refetchPasadas
   } = useQuery<Pasada[]>({
     queryKey: ['pasadas-activas', activeLineaId],
     queryFn: () => getPasadas({ lineaProduccionId: activeLineaId ?? undefined, estado: 'en_curso' }),
@@ -42,11 +38,12 @@ export const GestionPasadasPage: React.FC = () => {
   });
 
   const sinRutaAsignada = linea !== undefined && !linea.rutaPasadaActiva;
+  const etapasRuta = linea?.rutaPasadaActiva?.etapas ?? [];
 
   // Query articles for the "Nueva Pasada" modal
   const rutaPasadaId = linea?.rutaPasadaActiva?.id;
-  const { 
-    data: articulos = [], 
+  const {
+    data: articulos = [],
     isLoading: loadingArticulos,
     error: errorArticulos
   } = useQuery<Articulo[]>({
@@ -79,11 +76,6 @@ export const GestionPasadasPage: React.FC = () => {
     }
   };
 
-  // Task 2.4: Redirect on selecting / continuing an active run
-  const handleContinuarPasada = (pasadaId: number) => {
-    navigate(`/tablet?pasadaId=${pasadaId}`);
-  };
-
   // Task 2.3: Iniciar nueva pasada
   const handleIniciarPasada = async () => {
     if (!activeLineaId || !selectedArticuloId) return;
@@ -106,36 +98,18 @@ export const GestionPasadasPage: React.FC = () => {
     }
   };
 
-  // Helper to resolve article display name from nested articulo object or articuloId
-  const getArticuloNombre = (pasada: Pasada): string => {
-    if (pasada.articulo) {
-      const brand = pasada.articulo.marca ? `${pasada.articulo.marca} - ` : '';
-      return `${brand}${pasada.articulo.nombre}`;
-    }
-    const artId = pasada.articuloId;
-    if (artId !== undefined) {
-      const found = articulos.find(a => a.id === artId);
-      if (found) {
-        const brand = found.marca ? `${found.marca} - ` : '';
-        return `${brand}${found.nombre}`;
-      }
-      return `Artículo #${artId}`;
-    }
-    return 'Artículo desconocido';
-  };
-
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-white relative">
-      <header className="bg-slate-800 border-b border-slate-700 p-4 md:px-8 flex items-center justify-between">
+    <div className="min-h-screen bg-background flex flex-col font-sans text-foreground relative">
+      <header className="bg-card border-b border-border p-4 md:px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">Gestión de Pasadas</h1>
-            <p className="text-slate-400 text-sm">Línea {activeLineaId} - {user?.nombreUsuario}</p>
+            <p className="text-muted-foreground text-sm">Línea {activeLineaId} - {user?.nombreUsuario}</p>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium bg-slate-700/50 hover:bg-slate-700 px-4 py-2 rounded-lg"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium bg-muted/50 hover:bg-muted px-4 py-2 rounded-lg"
           title="Cerrar sesión"
         >
           <LogOut size={16} />
@@ -144,29 +118,13 @@ export const GestionPasadasPage: React.FC = () => {
       </header>
 
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Pasadas Activas</h2>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            disabled={sinRutaAsignada}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-lg ${
-              sinRutaAsignada
-                ? 'bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
-                : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-[1.02] active:scale-[0.98] shadow-blue-900/25'
-            }`}
-          >
-            <Plus size={20} />
-            Nueva Pasada
-          </button>
-        </div>
-
         {/* Warning: line has no route assigned */}
         {sinRutaAsignada && (
-          <div className="flex items-start gap-3 bg-amber-900/30 border border-amber-700/50 rounded-2xl p-5 mb-6">
-            <AlertTriangle size={20} className="text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-3 bg-warning/10 border border-warning/50 rounded-2xl p-5 mb-6">
+            <AlertTriangle size={20} className="text-warning mt-0.5 shrink-0" />
             <div>
-              <p className="font-semibold text-amber-300 text-sm">Sin ruta de pesaje asignada</p>
-              <p className="text-amber-400/80 text-sm mt-1">
+              <p className="font-semibold text-warning text-sm">Sin ruta de pesaje asignada</p>
+              <p className="text-warning/80 text-sm mt-1">
                 Esta línea de producción no tiene una ruta activa configurada.
                 No es posible iniciar nuevas pasadas hasta que un administrador asigne una ruta.
               </p>
@@ -174,121 +132,91 @@ export const GestionPasadasPage: React.FC = () => {
           </div>
         )}
 
-        {loadingPasadas ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-            <Loader2 className="animate-spin text-blue-500" size={36} />
-            <p className="text-sm font-medium">Cargando pasadas activas...</p>
-          </div>
-        ) : errorPasadas ? (
-          <div className="bg-red-900/30 border border-red-700/50 rounded-2xl p-6 text-center max-w-xl mx-auto">
-            <p className="font-semibold text-red-300 mb-2">Error al cargar las pasadas</p>
-            <button 
-              onClick={() => refetchPasadas()}
-              className="px-4 py-2 bg-red-700 hover:bg-red-655 rounded-lg text-xs font-semibold text-white transition-colors"
-            >
-              Reintentar
-            </button>
-          </div>
-        ) : filteredPasadas.length === 0 ? (
-          <div className="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-12 text-center text-slate-400">
-            <p className="text-lg font-medium mb-1">No hay pasadas en curso para tu usuario</p>
-            <p className="text-sm text-slate-500 mb-6">Inicia una nueva pasada utilizando el botón superior.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPasadas.map((pasada) => (
-              <div key={pasada.id} className="bg-slate-800 border border-slate-700 rounded-xl p-6 flex flex-col hover:border-slate-600 transition-all hover:shadow-lg shadow-black/10">
-                <h3 className="text-lg font-bold text-slate-200">Pasada #{pasada.id}</h3>
-                <p className="text-slate-400 mb-6">{getArticuloNombre(pasada)}</p>
-                <div className="mt-auto flex justify-between items-center">
-                  <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-green-950/70 border border-green-800/50 text-green-400">
-                    En Progreso
-                  </span>
-                  <button
-                    onClick={() => handleContinuarPasada(pasada.id)}
-                    className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 active:scale-95 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
-                  >
-                    <Play size={16} />
-                    Continuar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
+        <div className="grid grid-cols-1 min-[780px]:grid-cols-[1fr_416px] gap-6 items-start">
+          <section>
+            <h2 className="text-xl font-semibold mb-6">Pasadas Activas</h2>
 
-      {/* Free quality samples section — visible only for authorized users with an active route */}
-      {user?.puedeTomarMuestrasLibres && !sinRutaAsignada && linea?.rutaPasadaActiva && (
-        <section
-          data-testid="muestras-libres-section"
-          className="w-full max-w-7xl mx-auto px-4 md:px-8 pb-8"
-        >
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <FlaskConical size={20} className="text-purple-400" />
-                <h2 className="text-lg font-semibold text-white">Muestras de Calidad Libre</h2>
+            {loadingPasadas ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                <Loader2 className="animate-spin text-primary" size={36} />
+                <p className="text-sm font-medium">Cargando pasadas activas...</p>
               </div>
-              {muestras.length > 0 && (
+            ) : errorPasadas ? (
+              <div className="bg-destructive/10 border border-destructive/50 rounded-2xl p-6 text-center max-w-xl mx-auto">
+                <p className="font-semibold text-destructive mb-2">Error al cargar las pasadas</p>
                 <button
-                  onClick={clearSession}
-                  className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                  onClick={() => refetchPasadas()}
+                  className="px-4 py-2 bg-destructive hover:opacity-90 rounded-lg text-xs font-semibold text-destructive-foreground transition-colors"
                 >
-                  <Trash2 size={14} />
-                  Limpiar sesión
+                  Reintentar
                 </button>
-              )}
-            </div>
+              </div>
+            ) : filteredPasadas.length === 0 ? (
+              <div className="bg-card/40 border border-border/40 rounded-2xl p-12 text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-1">No hay pasadas en curso para tu usuario</p>
+                <p className="text-sm text-muted-foreground mb-6">Inicia una nueva pasada utilizando el botón.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredPasadas.map((pasada) => (
+                  <PasadaCard key={pasada.id} pasada={pasada} etapas={etapasRuta} />
+                ))}
+              </div>
+            )}
+          </section>
 
-            <MuestrasListPanel
-              muestras={muestras}
-              onSampleClick={setSelectedSampleIndex}
-              etapas={etapas}
-            />
+          <aside className="flex flex-col gap-6">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              disabled={sinRutaAsignada}
+              className={`flex items-center justify-center gap-2 h-16 rounded-2xl text-lg font-bold transition-all shadow-lg ${
+                sinRutaAsignada
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                  : 'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98]'
+              }`}
+            >
+              <Plus size={22} />
+              Nueva Pasada
+            </button>
 
-            <div className="mt-4">
-              <button
-                onClick={() => navigate('/tablet/muestras-libres/seleccion')}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all"
+            {/* Free quality samples CTA — visible only for authorized users with an active route */}
+            {user?.puedeTomarMuestrasLibres && !sinRutaAsignada && linea?.rutaPasadaActiva && (
+              <section
+                data-testid="muestras-libres-section"
+                className="bg-card border border-border rounded-2xl p-6"
               >
-                Registrar muestras libres
-              </button>
-            </div>
-          </div>
-
-          {selectedSampleIndex !== null && (
-            <MuestraObservacionPopup
-              muestra={muestras[selectedSampleIndex]}
-              index={selectedSampleIndex}
-              isOpen={true}
-              onSave={async (i, observacion) => {
-                await updateSample(i, { observacion });
-                setSelectedSampleIndex(null);
-              }}
-              onDelete={async (i) => {
-                await removeSample(i);
-                setSelectedSampleIndex(null);
-              }}
-              onClose={() => setSelectedSampleIndex(null)}
-            />
-          )}
-        </section>
-      )}
+                <div className="flex items-center gap-2 mb-3">
+                  <FlaskConical size={20} className="text-warning" />
+                  <h2 className="text-lg font-semibold text-foreground">Muestras de Calidad Libre</h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Control de calidad sin asociar a una pasada
+                </p>
+                <button
+                  onClick={() => navigate('/tablet/muestras-libres/seleccion')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-warning/10 border border-warning text-warning rounded-lg text-sm font-medium transition-all hover:bg-warning/20"
+                >
+                  Tomar Muestras Libres
+                </button>
+              </section>
+            )}
+          </aside>
+        </div>
+      </main>
 
       {/* Modern Glassmorphic Article Selection Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
-            <div className="flex justify-between items-center p-5 border-b border-slate-700">
-              <h3 className="text-lg font-bold text-white">Iniciar Nueva Pasada</h3>
-              <button 
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card border border-border rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
+            <div className="flex justify-between items-center p-5 border-b border-border">
+              <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
+              <button
                 onClick={() => {
                   setIsModalOpen(false);
                   setSelectedArticuloId(null);
                   setErrorIniciar(null);
                 }}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X size={20} />
               </button>
@@ -296,22 +224,22 @@ export const GestionPasadasPage: React.FC = () => {
 
             <div className="p-6">
               {errorIniciar && (
-                <div className="mb-4 bg-red-900/30 border border-red-700/50 rounded-xl p-3.5 text-sm text-red-300">
+                <div className="mb-4 bg-destructive/10 border border-destructive/50 rounded-xl p-3.5 text-sm text-destructive">
                   {errorIniciar}
                 </div>
               )}
 
-              <p className="text-slate-400 text-sm mb-4">Seleccione el artículo a pesar en esta pasada:</p>
+              <p className="text-muted-foreground text-sm mb-4">Seleccione el artículo a pesar en esta pasada:</p>
 
               {loadingArticulos ? (
-                <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400">
-                  <Loader2 className="animate-spin text-blue-500" size={28} />
+                <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
+                  <Loader2 className="animate-spin text-primary" size={28} />
                   <p className="text-xs">Cargando artículos...</p>
                 </div>
               ) : errorArticulos ? (
-                <p className="text-sm text-red-400 text-center py-4">Error al cargar los artículos.</p>
+                <p className="text-sm text-destructive text-center py-4">Error al cargar los artículos.</p>
               ) : articulos.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">No hay artículos asignados a esta ruta</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No hay artículos asignados a esta ruta</p>
               ) : (
                 <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
                   {articulos.map((articulo) => {
@@ -321,9 +249,9 @@ export const GestionPasadasPage: React.FC = () => {
                         key={articulo.id}
                         onClick={() => setSelectedArticuloId(articulo.id ?? null)}
                         className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
-                          ${isSelected 
-                            ? 'bg-blue-600/25 border-blue-500 text-blue-100 shadow-md shadow-blue-500/5' 
-                            : 'bg-slate-700 border-slate-650 hover:bg-slate-650 hover:border-slate-600 text-slate-300'
+                          ${isSelected
+                            ? 'bg-primary/25 border-primary text-primary-foreground shadow-md shadow-primary/5'
+                            : 'bg-muted border-border hover:bg-muted/70 text-foreground'
                           }`}
                       >
                         <div>
@@ -331,11 +259,11 @@ export const GestionPasadasPage: React.FC = () => {
                             {articulo.nombre}
                           </p>
                           {articulo.marca && (
-                            <p className="text-xs text-slate-400 mt-0.5">{articulo.marca}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{articulo.marca}</p>
                           )}
                         </div>
                         {isSelected && (
-                          <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-primary" />
                         )}
                       </button>
                     );
@@ -344,7 +272,7 @@ export const GestionPasadasPage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 p-5 border-t border-slate-700 bg-slate-850">
+            <div className="flex justify-end gap-3 p-5 border-t border-border">
               <button
                 type="button"
                 onClick={() => {
@@ -352,7 +280,7 @@ export const GestionPasadasPage: React.FC = () => {
                   setSelectedArticuloId(null);
                   setErrorIniciar(null);
                 }}
-                className="px-4.5 py-2.5 bg-slate-700 hover:bg-slate-650 text-slate-300 rounded-xl text-sm font-semibold transition-colors"
+                className="px-4.5 py-2.5 bg-muted hover:bg-muted/70 text-foreground rounded-xl text-sm font-semibold transition-colors"
                 disabled={iniciando}
               >
                 Cancelar
@@ -361,7 +289,7 @@ export const GestionPasadasPage: React.FC = () => {
                 type="button"
                 onClick={handleIniciarPasada}
                 disabled={!selectedArticuloId || iniciando}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-40 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
               >
                 {iniciando && <Loader2 size={16} className="animate-spin" />}
                 Iniciar Pasada
