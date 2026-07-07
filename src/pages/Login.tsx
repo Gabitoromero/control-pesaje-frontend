@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { User, Lock, Factory } from 'lucide-react';
+import { User, Lock, Sun, Moon } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import { loginApi } from '../api/auth';
 import { useAuth } from '../features/auth/context/AuthContext';
+import { useTheme } from '../features/theme/ThemeContext';
 
 type Step = 'legajo' | 'pin';
 
@@ -18,6 +19,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const isLegajoStep = step === 'legajo';
 
@@ -101,7 +103,15 @@ const Login: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans text-foreground">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans text-foreground relative">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label="Cambiar tema"
+        className="absolute top-4 right-4 z-20 flex items-center justify-center w-10 h-10 rounded-full border border-border bg-card/80 backdrop-blur text-foreground shadow-sm hover:bg-secondary transition-colors"
+      >
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
       {/* Branding Side — theme-aware like the rest of the page. Hidden on mobile. */}
       <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-card flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Decorative background elements */}
@@ -125,7 +135,7 @@ const Login: React.FC = () => {
               animate={{ rotate: 0 }}
               transition={{ type: 'spring', stiffness: 90, damping: 7, delay: 0.5 }}
             >
-              <Factory size={48} className="text-white" />
+              <img src="/android-chrome-192x192.png" alt="Controlador de Pesaje" className="w-12 h-12 object-contain rounded-xl" />
             </motion.div>
             <svg viewBox="0 0 160 50" className="w-32 h-10 mx-auto mt-2" aria-hidden="true">
               <motion.rect
@@ -180,7 +190,7 @@ const Login: React.FC = () => {
           {/* Header UI - Only visible on mobile since branding side handles desktop */}
           <div className="text-center mb-8 md:hidden">
             <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand/20">
-              <Lock size={32} className="text-white" />
+              <img src="/android-chrome-192x192.png" alt="Controlador de Pesaje" className="w-10 h-10 object-contain rounded-lg" />
             </div>
             <h1 className="text-2xl font-bold mb-1">Controlador de Pesaje</h1>
             <p className="text-muted-foreground">Ingreso al sistema</p>
