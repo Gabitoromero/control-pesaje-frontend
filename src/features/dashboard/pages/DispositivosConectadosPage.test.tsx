@@ -35,6 +35,23 @@ describe('DispositivosConectadosPage', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    const mockDevices = [
+      { socketId: 'sock-123', lineaId: 1, timestamp: new Date().toISOString() }
+    ];
+    vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
+
+    render(<DispositivosConectadosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('sock-123')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   it('renders empty state if no devices', async () => {
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue([]);
 
