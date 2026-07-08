@@ -8,6 +8,7 @@ import { usePasadaState} from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { StageProgressPanel } from '../components/StageProgressPanel';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
+import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulo } from '../../../api/articulos';
@@ -15,8 +16,6 @@ import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
-import { getToleranceLayout } from '../utils/toleranceRange';
-import { isWithinTolerance } from '../utils/toleranceStatus';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
@@ -190,8 +189,6 @@ export const TabletWorkspace: React.FC = () => {
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
-  const toleranceLayout = hasTolerancia ? getToleranceLayout(pesoMinimo, pesoIdeal, pesoMaximo) : null;
-  const isInRange = hasTolerancia ? isWithinTolerance(pesoNeto, pesoMinimo, pesoMaximo) : false;
 
   // Phase 4: PasadaBlock start-time formatting (native Intl, no date library)
   const inicioLabel = pasada?.horaInicio
@@ -260,43 +257,14 @@ export const TabletWorkspace: React.FC = () => {
             </div>
           </div>
 
-          {etapaActiva && pesoNeto > 0 && (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                isInRange ? 'bg-success-muted text-success' : 'bg-danger-muted text-danger'
-              }`}
-            >
-              {isInRange ? 'OK' : 'Fuera de Rango'}
-            </span>
-          )}
-
-          {etapaActiva && toleranceLayout && hasTolerancia ? (
-            <div className="w-full">
-              <div className="relative w-full h-2 rounded-full bg-muted mb-3">
-                <div
-                  className="absolute h-full rounded-full bg-primary/20"
-                  style={{ left: `${toleranceLayout.left}%`, width: `${toleranceLayout.width}%` }}
-                />
-                <div
-                  className="absolute top-[-2px] w-[2px] h-3 bg-primary"
-                  style={{ left: `${toleranceLayout.idealLeft}%` }}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-card border border-border rounded-lg p-2 text-center">
-                  <div className="text-xs text-muted-foreground">MINIMO</div>
-                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo!.toFixed(3)} kg</div>
-                </div>
-                <div className="bg-card border border-border rounded-lg p-2 text-center">
-                  <div className="text-xs text-muted-foreground">IDEAL</div>
-                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal!.toFixed(3)} kg</div>
-                </div>
-                <div className="bg-card border border-border rounded-lg p-2 text-center">
-                  <div className="text-xs text-muted-foreground">MAXIMO</div>
-                  <div className="text-sm font-bold text-foreground tabular-nums">{pesoMaximo!.toFixed(3)} kg</div>
-                </div>
-              </div>
-            </div>
+          {etapaActiva && hasTolerancia ? (
+            <ToleranceDisplay
+              pesoNeto={pesoNeto}
+              pesoMinimo={pesoMinimo!}
+              pesoIdeal={pesoIdeal!}
+              pesoMaximo={pesoMaximo!}
+              variant="primary"
+            />
           ) : etapaActiva === null ? (
             <div className="w-full flex items-center justify-center gap-2 text-success font-semibold">
               <CheckCircle2 className="w-6 h-6" />
