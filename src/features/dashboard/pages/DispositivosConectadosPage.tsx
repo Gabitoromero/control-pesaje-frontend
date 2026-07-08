@@ -28,47 +28,53 @@ export const DispositivosConectadosPage: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <div className="p-6 text-gray-500">Cargando dispositivos...</div>;
+    return <div className="p-6 text-foreground">Cargando dispositivos...</div>;
   }
 
   if (error) {
-    return <div className="p-6 text-red-500">{error}</div>;
+    return <div className="p-6 text-destructive">{error}</div>;
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Dispositivos Conectados (Raspberry Pi)</h2>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-foreground">Dispositivos Conectados (Raspberry Pi)</h2>
       {devices.length === 0 ? (
-        <p className="text-gray-500">No hay dispositivos conectados.</p>
+        <p className="text-muted-foreground">No hay dispositivos conectados.</p>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Línea de Producción
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Socket ID
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Conectado Desde
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Estado
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {devices.map((device) => (
-                <tr key={device.socketId}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{device.lineaId}</div>
+                <tr key={device.socketId} className="hover:bg-accent even:bg-muted/40">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                    {device.lineaId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{device.socketId}</div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    {device.socketId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {new Date(device.timestamp).toLocaleString()}
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {new Date(device.timestamp).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-success-muted text-success">
+                      Conectado
+                    </span>
                   </td>
                 </tr>
               ))}
