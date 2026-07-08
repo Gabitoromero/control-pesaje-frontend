@@ -312,4 +312,41 @@ describe('useMuestrasLibres', () => {
       expect(result.current.muestras[0].observacion).toBe('original');
     });
   });
+
+  // ── selectedEtapa derivation ───────────────────────────────────────────────
+
+  describe('selectedEtapa', () => {
+    it('matches selectedEtapaId against etapas and exposes its tolerance fields', () => {
+      const { result } = renderHook(() => useMuestrasLibres(baseProps));
+
+      // Default selectedEtapaId is 10 (lowest orden) → selectedEtapa is "Entrada"
+      expect(result.current.selectedEtapa).not.toBeNull();
+      expect(result.current.selectedEtapa?.etapa.id).toBe(10);
+      expect(result.current.selectedEtapa?.pesoMinimo).toBe(10);
+      expect(result.current.selectedEtapa?.pesoIdeal).toBe(15);
+      expect(result.current.selectedEtapa?.pesoMaximo).toBe(20);
+    });
+
+    it('re-derives selectedEtapa when selectedEtapaId changes', () => {
+      const { result } = renderHook(() => useMuestrasLibres(baseProps));
+
+      act(() => {
+        result.current.setSelectedEtapaId(20);
+      });
+
+      expect(result.current.selectedEtapa?.etapa.id).toBe(20);
+      expect(result.current.selectedEtapa?.pesoMinimo).toBe(30);
+      expect(result.current.selectedEtapa?.pesoIdeal).toBe(35);
+      expect(result.current.selectedEtapa?.pesoMaximo).toBe(40);
+    });
+
+    it('returns null when there is no matching etapa (empty etapas)', () => {
+      const { result } = renderHook(() =>
+        useMuestrasLibres({ ...baseProps, etapas: [] })
+      );
+
+      expect(result.current.selectedEtapaId).toBeNull();
+      expect(result.current.selectedEtapa).toBeNull();
+    });
+  });
 });

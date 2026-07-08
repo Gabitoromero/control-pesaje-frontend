@@ -16,6 +16,7 @@ export interface UseMuestrasLibresResult {
   muestras: Muestra[];
   etapas: RutaPasadaEtapa[];
   selectedEtapaId: number | null;
+  selectedEtapa: RutaPasadaEtapa | null;
   setSelectedEtapaId: (id: number) => void;
   addSample: (pesoNeto: number) => Promise<Muestra | undefined>;
   updateSample: (index: number, data: { observacion: string | null }) => Promise<void>;
@@ -50,6 +51,15 @@ export function useMuestrasLibres({
   }, [etapas]);
 
   const [selectedEtapaId, setSelectedEtapaId] = useState<number | null>(defaultEtapaId);
+
+  // Derived etapa matching selectedEtapaId against etapas — mirrors the
+  // etapaActiva pattern used by usePasadaState/TabletWorkspace, so the page
+  // can read pesoMinimo/pesoIdeal/pesoMaximo for the currently selected etapa
+  // without duplicating the lookup.
+  const selectedEtapa = useMemo<RutaPasadaEtapa | null>(() => {
+    if (selectedEtapaId === null) return null;
+    return etapas.find((e) => e.etapa.id === selectedEtapaId) ?? null;
+  }, [etapas, selectedEtapaId]);
 
   const addSample = useCallback(
     async (pesoNeto: number): Promise<Muestra | undefined> => {
@@ -118,6 +128,7 @@ export function useMuestrasLibres({
     muestras,
     etapas,
     selectedEtapaId,
+    selectedEtapa,
     setSelectedEtapaId,
     addSample,
     updateSample,
