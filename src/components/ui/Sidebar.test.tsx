@@ -31,21 +31,44 @@ describe('Sidebar', () => {
     expect(handleNavClick).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onNavClick when a nested navigation link is clicked (e.g. gestion)', async () => {
+  it('calls onNavClick when a nested navigation link is clicked (e.g. catalogo)', async () => {
     const userEventSetup = userEvent.setup();
     const handleNavClick = vi.fn();
-    
-    renderWithAuth(<Sidebar onNavClick={handleNavClick} />, { 
-      user: jefe, 
-      initialEntries: ['/dashboard'] 
+
+    renderWithAuth(<Sidebar onNavClick={handleNavClick} />, {
+      user: jefe,
+      initialEntries: ['/dashboard']
     });
-    
-    const gestionToggle = screen.getByRole('button', { name: /gestión/i });
-    await userEventSetup.click(gestionToggle);
-    
+
+    const catalogoToggle = screen.getByRole('button', { name: /catálogo/i });
+    await userEventSetup.click(catalogoToggle);
+
     const articulosLink = screen.getByRole('link', { name: /artículos/i });
     await userEventSetup.click(articulosLink);
-    
+
     expect(handleNavClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('splits Gestión into separate Catálogo (jefe) and Administración (admin-only) groups', async () => {
+    const userEventSetup = userEvent.setup();
+
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
+
+    expect(screen.queryByRole('button', { name: /gestión/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+
+    const administracionToggle = screen.getByRole('button', { name: /administración/i });
+    await userEventSetup.click(administracionToggle);
+
+    expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sesiones activas/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
+  });
+
+  it('hides the Administración group for jefe (non-admin) users', () => {
+    renderWithAuth(<Sidebar />, { user: jefe, initialEntries: ['/dashboard'] });
+
+    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /administración/i })).not.toBeInTheDocument();
   });
 });

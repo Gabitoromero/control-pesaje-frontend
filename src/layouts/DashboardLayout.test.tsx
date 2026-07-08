@@ -26,48 +26,60 @@ describe('DashboardLayout — visibilidad del menú por rol', () => {
     renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
     expect(screen.getByRole('link', { name: /monitoreo/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /planta/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /gestión/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /administración/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /reportes/i })).toBeInTheDocument();
   });
 
-  it('jefe ve los principales y gestión, pero sus enlaces internos de gestión dependen del toggle', async () => {
+  it('jefe ve los principales y catálogo, pero no administración; los enlaces de catálogo dependen del toggle', async () => {
     const userEventSetup = userEvent.setup();
     renderWithAuth(<DashboardLayout />, { user: jefe, initialEntries: ['/dashboard'] });
     expect(screen.getByRole('link', { name: /monitoreo/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /planta/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /reportes/i })).toBeInTheDocument();
 
-    const gestionToggle = screen.getByRole('button', { name: /gestión/i });
-    
+    // Jefe (non-admin) never sees the Administración group at all
+    expect(screen.queryByRole('button', { name: /administración/i })).not.toBeInTheDocument();
+
+    const catalogoToggle = screen.getByRole('button', { name: /catálogo/i });
+
     // Hidden by default on /dashboard
     expect(screen.queryByRole('link', { name: /artículos/i })).not.toBeInTheDocument();
-    
+
     // Show on click
-    await userEventSetup.click(gestionToggle);
+    await userEventSetup.click(catalogoToggle);
     expect(screen.getByRole('link', { name: /artículos/i })).toBeInTheDocument();
-    
-    // Check Jefe doesn't see Usuarios
+
+    // Check Jefe doesn't see Usuarios (Administración, admin-only)
     expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
-    
+
     // Hide on click again
-    await userEventSetup.click(gestionToggle);
+    await userEventSetup.click(catalogoToggle);
     await waitFor(() => {
       expect(screen.queryByRole('link', { name: /artículos/i })).not.toBeInTheDocument();
     });
   });
 
-  it('Gestión se auto-expande si la ruta coincide con un sub-item', () => {
+  it('Catálogo se auto-expande si la ruta coincide con un sub-item, sin afectar a Administración', () => {
     renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard/articulos'] });
-    // Should be visible right away without clicking
+    // Catálogo visible right away without clicking
     expect(screen.getByRole('link', { name: /artículos/i })).toBeInTheDocument();
+    // Administración stays collapsed — the route doesn't match any of its sub-items
+    expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
+  });
+
+  it('Administración se auto-expande si la ruta coincide con un sub-item, sin afectar a Catálogo', () => {
+    renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard/usuarios'] });
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /artículos/i })).not.toBeInTheDocument();
   });
 
   it('visualizacion solo ve Monitoreo', () => {
     renderWithAuth(<DashboardLayout />, { user: visual, initialEntries: ['/dashboard'] });
     expect(screen.getByRole('link', { name: /monitoreo/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /planta/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /gestión/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /catálogo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /administración/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /reportes/i })).not.toBeInTheDocument();
   });
 

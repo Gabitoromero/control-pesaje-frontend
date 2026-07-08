@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
-import { 
-  LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory, 
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu 
+import {
+  LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory,
+  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen
 } from 'lucide-react';
 import { UsuarioRol } from '../../shared/types';
 
@@ -16,8 +16,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [isGestionOpen, setIsGestionOpen] = useState(() => {
-    return ['/articulos', '/etapas', '/lineas', '/rutas', '/usuarios', '/sesiones-activas', '/dispositivos-conectados']
+  const [isCatalogoOpen, setIsCatalogoOpen] = useState(() => {
+    return ['/articulos', '/etapas', '/lineas', '/rutas']
+      .some(path => location.pathname.includes(path));
+  });
+
+  const [isAdministracionOpen, setIsAdministracionOpen] = useState(() => {
+    return ['/usuarios', '/sesiones-activas', '/dispositivos-conectados']
       .some(path => location.pathname.includes(path));
   });
 
@@ -66,17 +71,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
         {isJefe && (
           <div>
             <button
-              onClick={() => setIsGestionOpen(!isGestionOpen)}
+              onClick={() => setIsCatalogoOpen(!isCatalogoOpen)}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors text-muted-foreground hover:bg-accent hover:text-foreground`}
             >
               <div className="flex items-center">
-                <Settings className="w-5 h-5 mr-3" />
-                Gestión
+                <BookOpen className="w-5 h-5 mr-3" />
+                Catálogo
               </div>
-              {isGestionOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              {isCatalogoOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
-            
-            {isGestionOpen && (
+
+            {isCatalogoOpen && (
               <div className="mt-1 ml-6 space-y-1">
                 <NavLink to="/dashboard/articulos" className={navClass} onClick={handleLinkClick}>
                   <Package className="w-5 h-5 mr-3" />
@@ -94,22 +99,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                   <RouteIcon className="w-5 h-5 mr-3" />
                   Rutas
                 </NavLink>
-                {isAdmin && (
-                  <>
-                    <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
-                      <Users className="w-5 h-5 mr-3" />
-                      Usuarios
-                    </NavLink>
-                    <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
-                      <Activity className="w-5 h-5 mr-3" />
-                      Sesiones Activas
-                    </NavLink>
-                    <NavLink to="/dashboard/dispositivos-conectados" className={navClass} onClick={handleLinkClick}>
-                      <Cpu className="w-5 h-5 mr-3" />
-                      Dispositivos
-                    </NavLink>
-                  </>
-                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {isAdmin && (
+          <div>
+            <button
+              onClick={() => setIsAdministracionOpen(!isAdministracionOpen)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors text-muted-foreground hover:bg-accent hover:text-foreground`}
+            >
+              <div className="flex items-center">
+                <Settings className="w-5 h-5 mr-3" />
+                Administración
+              </div>
+              {isAdministracionOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+
+            {isAdministracionOpen && (
+              <div className="mt-1 ml-6 space-y-1">
+                <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
+                  <Users className="w-5 h-5 mr-3" />
+                  Usuarios
+                </NavLink>
+                <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
+                  <Activity className="w-5 h-5 mr-3" />
+                  Sesiones Activas
+                </NavLink>
+                <NavLink to="/dashboard/dispositivos-conectados" className={navClass} onClick={handleLinkClick}>
+                  <Cpu className="w-5 h-5 mr-3" />
+                  Dispositivos
+                </NavLink>
               </div>
             )}
           </div>
