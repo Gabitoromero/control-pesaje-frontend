@@ -10,10 +10,17 @@ import {
   type LineaCreate,
 } from '../../../api/lineas';
 import { getRutas } from '../../../api/rutas';
-import { Plus, Edit, Trash, X } from 'lucide-react';
+import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const EMPTY_FORM = { nombre: '', numeroBalanza: 1, rutaPasadaActiva: '' };
 
@@ -26,10 +33,6 @@ export const LineasPage = () => {
   const queryClient = useQueryClient();
   const { alertSuccess, alertWarning, alertError, confirm } = useDialog();
 
-  // Conservative, minimal integration: surfaces the outcome of a create/update
-  // that already succeeds silently today. Uses the existing optional
-  // `rutaPasadaActiva` field to decide success vs warning — does not add any
-  // new business rule, only a presentation choice on top of existing state.
   const notifyOutcome = (accion: 'creada' | 'actualizada' | 'activada', rutaPasadaActiva: number | null | undefined) => {
     if (rutaPasadaActiva) {
       alertSuccess({ title: `Línea ${accion} exitosamente` });
@@ -204,16 +207,16 @@ export const LineasPage = () => {
 
   const isBusy = createMutation.isPending || updateMutation.isPending;
 
-  if (isLoading) return <div className="p-6">Cargando líneas...</div>;
-  if (error) return <div className="p-6 text-red-500">Error al cargar líneas</div>;
+  if (isLoading) return <div className="p-6 text-foreground">Cargando líneas...</div>;
+  if (error) return <div className="p-6 text-destructive">Error al cargar líneas</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Gestión de Líneas</h1>
+        <h1 className="text-2xl font-bold text-foreground">Gestión de Líneas</h1>
         <button
           onClick={() => openModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
         >
           <Plus size={18} /> Nueva Línea
         </button>
@@ -229,30 +232,30 @@ export const LineasPage = () => {
         onQueryChange={setQuery}
       />
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Balanza</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ruta Activa</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">N° Balanza</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Ruta Activa</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {lineasFiltradas.map((linea) => (
-              <tr key={linea.id} className={`hover:bg-gray-50 ${linea.activo === false ? 'opacity-60' : ''}`}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{linea.nombre}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{linea.numeroBalanza}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{linea.rutaPasadaActiva?.nombre ?? '-'}</td>
+              <tr key={linea.id} className={`hover:bg-accent even:bg-muted/40 ${linea.activo === false ? 'opacity-60' : ''}`}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{linea.nombre}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{linea.numeroBalanza}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{linea.rutaPasadaActiva?.nombre ?? '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${linea.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${linea.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                     {linea.activo !== false ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(linea)} className="text-indigo-600 hover:text-indigo-900" title="Editar">
+                  <button onClick={() => openModal(linea)} className="text-muted-foreground hover:text-foreground" title="Editar">
                     <Edit size={18} />
                   </button>
                 </td>
@@ -260,86 +263,83 @@ export const LineasPage = () => {
             ))}
             {lineasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No hay líneas de producción {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">No hay líneas de producción {status === 'activo' ? 'activas' : 'inactivas'}.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold">{editingLinea ? 'Editar Línea' : 'Nueva Línea'}</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
-            </div>
+      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingLinea ? 'Editar Línea' : 'Nueva Línea'}</DialogTitle>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="linea-nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input
-                    id="linea-nombre"
-                    type="text"
-                    required
-                    placeholder="Ej: Línea 1 — Envasado A"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="linea-balanza" className="block text-sm font-medium text-gray-700">Número de Balanza</label>
-                  <input
-                    id="linea-balanza"
-                    type="number"
-                    required
-                    min="1"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={formData.numeroBalanza}
-                    onChange={(e) => setFormData({ ...formData, numeroBalanza: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="linea-ruta" className="block text-sm font-medium text-gray-700">Ruta Activa <span className="text-gray-400 font-normal">(opcional)</span></label>
-                  <select
-                    id="linea-ruta"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={formData.rutaPasadaActiva}
-                    onChange={(e) => setFormData({ ...formData, rutaPasadaActiva: e.target.value })}
-                  >
-                    <option value="">-- Sin ruta --</option>
-                    {rutas.map((ruta) => (
-                      <option key={ruta.id} value={ruta.id}>{ruta.nombre}</option>
-                    ))}
-                  </select>
-                </div>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="linea-nombre" className="block text-sm font-medium text-foreground">Nombre</label>
+                <input
+                  id="linea-nombre"
+                  type="text"
+                  required
+                  placeholder="Ej: Línea 1 — Envasado A"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                />
               </div>
-              <div className="mt-6 flex justify-end gap-3">
-                {editingLinea?.activo === false && (
-                  <button type="button" disabled={isBusy} onClick={handleActivar}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto">
-                    Activar Línea
-                  </button>
-                )}
-                {editingLinea?.id && editingLinea?.activo !== false && (
-                  <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 mr-auto flex items-center gap-2">
-                    <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Línea'}
-                  </button>
-                )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isBusy} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
-                  {isBusy ? 'Guardando...' : 'Guardar'}
-                </button>
+              <div>
+                <label htmlFor="linea-balanza" className="block text-sm font-medium text-foreground">Número de Balanza</label>
+                <input
+                  id="linea-balanza"
+                  type="number"
+                  required
+                  min="1"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={formData.numeroBalanza}
+                  onChange={(e) => setFormData({ ...formData, numeroBalanza: Number(e.target.value) })}
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <div className="sm:col-span-2">
+                <label htmlFor="linea-ruta" className="block text-sm font-medium text-foreground">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <select
+                  id="linea-ruta"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={formData.rutaPasadaActiva}
+                  onChange={(e) => setFormData({ ...formData, rutaPasadaActiva: e.target.value })}
+                >
+                  <option value="">-- Sin ruta --</option>
+                  {rutas.map((ruta) => (
+                    <option key={ruta.id} value={ruta.id}>{ruta.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <DialogFooter className="mt-6 flex justify-end gap-3">
+              {editingLinea?.activo === false && (
+                <button type="button" disabled={isBusy} onClick={handleActivar}
+                  className="px-4 py-2 bg-success text-white rounded-md hover:bg-success/90 disabled:opacity-50 mr-auto">
+                  Activar Línea
+                </button>
+              )}
+              {editingLinea?.id && editingLinea?.activo !== false && (
+                <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
+                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50 mr-auto flex items-center gap-2">
+                  <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Línea'}
+                </button>
+              )}
+              <button type="button" onClick={closeModal} className="px-4 py-2 border border-border rounded-md text-foreground hover:bg-accent">
+                Cancelar
+              </button>
+              <button type="submit" disabled={isBusy} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
+                {isBusy ? 'Guardando...' : 'Guardar'}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
