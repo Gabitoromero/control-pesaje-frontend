@@ -55,70 +55,74 @@ export const SesionesActivasPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-6 text-gray-500">Cargando sesiones...</div>;
+    return <div className="p-6 text-foreground">Cargando sesiones...</div>;
   }
 
   if (error) {
-    return <div className="p-6 text-red-500">Error al cargar las sesiones activas</div>;
+    return <div className="p-6 text-destructive">Error al cargar las sesiones activas</div>;
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Sesiones Activas</h2>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-foreground">Sesiones Activas</h2>
       {sessions.length === 0 ? (
-        <p className="text-gray-500">No hay sesiones activas en la planta.</p>
+        <p className="text-muted-foreground">No hay sesiones activas en la planta.</p>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Línea de Producción
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Usuario
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Legajo
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Inicio de Sesión
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Expiración (aprox)
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Estado
+                </th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {sessions.map((session) => (
-                <tr key={`${session.lineaId}-${session.usuarioId}`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{session.lineaNombre}</div>
+                <tr key={`${session.lineaId}-${session.usuarioId}`} className="hover:bg-accent even:bg-muted/40">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                    {session.lineaNombre}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{session.usuarioNombre}</div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    {session.usuarioNombre}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{session.legajo}</div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    {session.legajo}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {new Date(session.fechaInicio).toLocaleString()}
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {new Date(session.fechaInicio).toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {session.expiraEn ? new Date(session.expiraEn).toLocaleString() : 'N/A'}
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {session.expiraEn ? new Date(session.expiraEn).toLocaleString() : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                      En curso
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleCloseSession(session)}
                       disabled={closeSessionMutation.isPending}
-                      className="text-red-600 hover:text-red-900 focus:outline-none disabled:opacity-50 flex items-center justify-end w-full"
+                      className="text-destructive hover:text-destructive/80 focus:outline-none disabled:opacity-50 flex items-center justify-end w-full"
                       title="Cerrar sesión"
                     >
                       <Trash2 className="w-5 h-5" />
