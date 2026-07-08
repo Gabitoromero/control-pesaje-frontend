@@ -33,6 +33,17 @@ describe('RutasPage', () => {
     expect(screen.queryByText('Ruta Delta')).not.toBeInTheDocument();
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    renderWithProviders(<RutasPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Ruta Alpha')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   it('switching to inactivos shows only inactivos', async () => {
     renderWithProviders(<RutasPage />);
     await waitFor(() => {
