@@ -38,6 +38,18 @@ describe('ArticulosPage', () => {
     expect(headerTexts.some((t) => t.includes('código'))).toBe(false);
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    renderWithProviders(<ArticulosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   it('switching status dropdown to "Inactivos" shows only inactivos', async () => {
     renderWithProviders(<ArticulosPage />);
 

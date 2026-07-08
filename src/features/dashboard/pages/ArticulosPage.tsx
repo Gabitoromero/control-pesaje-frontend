@@ -198,41 +198,43 @@ export const ArticulosPage = () => {
       />
 
       <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Marca</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="bg-card divide-y divide-border">
-            {articulosFiltrados.map((articulo) => (
-              <tr key={articulo.id} className={`hover:bg-accent even:bg-muted/40 ${articulo.activo === false ? 'opacity-60' : ''}`}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{articulo.nombre}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{articulo.marca || '-'}</td>
-                <td className="px-6 py-4 text-sm text-muted-foreground">{articulo.descripcion || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${articulo.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
-                    {articulo.activo !== false ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(articulo)} className="text-muted-foreground hover:text-foreground" title="Editar">
-                    <Edit size={18} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {articulosFiltrados.length === 0 && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">No hay artículos {status === 'activo' ? 'activos' : 'inactivos'}.</td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Marca</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-card divide-y divide-border">
+              {articulosFiltrados.map((articulo) => (
+                <tr key={articulo.id} className={`hover:bg-accent even:bg-muted/40 ${articulo.activo === false ? 'opacity-60' : ''}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{articulo.nombre}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{articulo.marca || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-muted-foreground">{articulo.descripcion || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${articulo.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
+                      {articulo.activo !== false ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => openModal(articulo)} className="text-muted-foreground hover:text-foreground" title="Editar">
+                      <Edit size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {articulosFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">No hay artículos {status === 'activo' ? 'activos' : 'inactivos'}.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
