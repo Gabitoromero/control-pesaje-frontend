@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Scale } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scale } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
@@ -17,8 +17,9 @@ import { getAvatarInitials } from '../utils/avatarInitials';
  * warning/amber — see design D6, not extracted to keep TabletWorkspace's
  * scope untouched), a flat etapa pill selector (no locking/progression), a
  * weighing zone reusing <ToleranceDisplay variant="warning">, a samples
- * panel filtered to the selected etapa, and an always-visible Finalizar
- * button with no confirmation.
+ * panel filtered to the selected etapa, and an always-visible top-right
+ * Finalizar button (muted/secondary styling, away from Registrar) with no
+ * confirmation — clears the session before navigating away.
  */
 export function MuestrasLibresPage() {
   const { user, activeLineaId } = useAuth();
@@ -35,6 +36,7 @@ export function MuestrasLibresPage() {
     addSample,
     updateSample,
     removeSample,
+    clearSession,
     isRegistering,
   } = useMuestrasLibresContext();
 
@@ -76,6 +78,7 @@ export function MuestrasLibresPage() {
   };
 
   const handleFinalizar = () => {
+    clearSession();
     navigate('/tablet/pasadas');
   };
 
@@ -114,7 +117,7 @@ export function MuestrasLibresPage() {
             MUESTRAS LIBRES
           </span>
           <div className="hidden min-[700px]:flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full border border-warning bg-warning/10 text-warning flex items-center justify-center font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
             <div className="flex flex-col">
@@ -122,6 +125,15 @@ export function MuestrasLibresPage() {
               <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
             </div>
           </div>
+          <button
+            onClick={handleFinalizar}
+            aria-label="Finalizar muestras aleatorias"
+            className="flex items-center justify-center gap-2 bg-secondary text-secondary-foreground hover:bg-accent font-bold transition-colors
+              p-3 rounded-full min-[490px]:px-4 min-[490px]:py-2 min-[490px]:rounded-lg"
+          >
+            <CheckCircle2 className="w-5 h-5 min-[490px]:hidden" />
+            <span className="hidden min-[490px]:inline">Finalizar Muestras</span>
+          </button>
         </div>
       </div>
 
@@ -206,14 +218,6 @@ export function MuestrasLibresPage() {
           </div>
         </div>
       </div>
-
-      {/* Bottom: always-visible Finalizar button, no progress bar, no Volver, no confirm */}
-      <button
-        onClick={handleFinalizar}
-        className="w-full py-4 bg-warning hover:bg-warning/90 text-warning-foreground rounded-xl text-xl font-bold transition-all active:scale-95 shadow-lg flex-shrink-0"
-      >
-        FINALIZAR MUESTRAS ALEATORIAS
-      </button>
 
       {selectedSampleIndex !== null && muestras[selectedSampleIndex] && (
         <MuestraObservacionPopup

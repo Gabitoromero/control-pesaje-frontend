@@ -196,11 +196,14 @@ describe('MuestrasLibresPage', () => {
     expect(removeSampleMock).toHaveBeenCalledWith(2);
   });
 
-  it('the "FINALIZAR MUESTRAS ALEATORIAS" button is always visible and navigates without confirmation', async () => {
+  it('the Finalizar button is always visible, clears the session and navigates without confirmation', async () => {
+    const clearSessionMock = vi.fn();
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({ ...baseContextValue, clearSession: clearSessionMock });
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
     const btn = screen.getByRole('button', { name: /finalizar muestras aleatorias/i });
     expect(btn).toBeInTheDocument();
     await userEvent.click(btn);
+    expect(clearSessionMock).toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas');
     // No confirmation dialog should appear.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
