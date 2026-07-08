@@ -778,3 +778,120 @@ describe('RutaFormPage — Auto-Expand on Validation Errors', () => {
   });
 });
 
+describe('RutaFormPage — success toasts on mutation success', () => {
+  const findLiveRegion = () => document.querySelector('[aria-live]');
+
+  it('20. create success shows a "Ruta creada exitosamente" toast announced via an aria-live region', async () => {
+    server.use(
+      http.post('http://localhost:3000/api/rutas-pasadas', () =>
+        HttpResponse.json({ success: true, data: { id: 99, nombre: 'Nueva Ruta Prueba' } }, { status: 201 })
+      )
+    );
+
+    renderWithProviders(<RutaFormPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+
+    const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
+    await userEvent.type(nombreInput, 'Nueva Ruta Prueba');
+
+    const selects = screen.getAllByRole('combobox');
+    await userEvent.selectOptions(selects[0], '1');
+
+    const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
+    const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
+    const pesosIdeal = document.querySelectorAll('input[name$=".pesoIdeal"]')[0] as HTMLInputElement;
+    await userEvent.clear(pesosMin);
+    await userEvent.type(pesosMin, '10');
+    await userEvent.clear(pesosMax);
+    await userEvent.type(pesosMax, '20');
+    await userEvent.clear(pesosIdeal);
+    await userEvent.type(pesosIdeal, '15');
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => {
+      const liveRegion = findLiveRegion();
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Ruta creada exitosamente')).toBeInTheDocument();
+    });
+  });
+
+  it('21. update success shows a "Ruta actualizada exitosamente" toast announced via an aria-live region', async () => {
+    paramsMock = { id: '1' };
+    server.use(
+      http.put('http://localhost:3000/api/rutas-pasadas/:id', () =>
+        HttpResponse.json({ success: true, data: { id: 1, nombre: 'Ruta Alpha' } })
+      )
+    );
+
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => {
+      const liveRegion = findLiveRegion();
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Ruta actualizada exitosamente')).toBeInTheDocument();
+    });
+  });
+
+  it('22. delete success shows a "Ruta eliminada exitosamente" toast announced via an aria-live region', async () => {
+    paramsMock = { id: '1' };
+    server.use(
+      http.delete('http://localhost:3000/api/rutas-pasadas/:id', () =>
+        new HttpResponse(null, { status: 204 })
+      )
+    );
+
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Alpha')).toBeInTheDocument();
+    });
+
+    const deleteBtn = screen.getByText(/eliminar ruta/i).closest('button') as HTMLButtonElement;
+    await userEvent.click(deleteBtn);
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar' }));
+
+    await waitFor(() => {
+      const liveRegion = findLiveRegion();
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Ruta eliminada exitosamente')).toBeInTheDocument();
+    });
+  });
+
+  it('23. reactivar success shows a "Ruta reactivada exitosamente" toast announced via an aria-live region', async () => {
+    paramsMock = { id: '4' }; // Ruta Delta is inactive
+    server.use(
+      http.put('http://localhost:3000/api/rutas-pasadas/:id', () =>
+        HttpResponse.json({ success: true, data: { id: 4, activo: true } })
+      )
+    );
+
+    renderWithProviders(<RutaFormPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ruta Delta')).toBeInTheDocument();
+    });
+
+    const reactivarBtn = screen.getByText(/reactivar ruta/i).closest('button') as HTMLButtonElement;
+    await userEvent.click(reactivarBtn);
+
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => {
+      const liveRegion = findLiveRegion();
+      expect(liveRegion).toBeInTheDocument();
+      expect(within(liveRegion as HTMLElement).getByText('Ruta reactivada exitosamente')).toBeInTheDocument();
+    });
+  });
+});
+
