@@ -31,6 +31,18 @@ describe('UsuariosPage', () => {
     });
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    renderWithProviders(<UsuariosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   it('switching status to "inactivo" shows only inactivos; activos are NOT present', async () => {
     renderWithProviders(<UsuariosPage />);
 
