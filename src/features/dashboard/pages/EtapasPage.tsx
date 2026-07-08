@@ -9,11 +9,18 @@ import {
   type Etapa,
   type EtapaCreate,
 } from '../../../api/etapas';
-import { Plus, Edit, Trash, X } from 'lucide-react';
+import { Plus, Edit, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const EMPTY_FORM = { nombre: '', descripcion: '' };
 
@@ -49,14 +56,14 @@ export const EtapasPage = () => {
   const etapasFiltradas = useMemo(() => {
     const base = status === 'activo' ? activas : inactivas;
     const q = query.trim().toLowerCase();
-    
+
     let result = base;
     if (q) {
       result = base.filter((e) =>
         String(e[field as keyof Etapa] ?? '').toLowerCase().includes(q)
       );
     }
-    
+
     return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [activas, inactivas, status, field, query]);
 
@@ -70,7 +77,7 @@ export const EtapasPage = () => {
     },
     onError: (err: unknown) => {
       alertError({
-        title: 'No se pudo guardar la etapa',
+        title: 'No se pudo crear la etapa',
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
@@ -99,13 +106,14 @@ export const EtapasPage = () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
       queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
+      toast.success('Etapa eliminada exitosamente');
     },
     onError: (err: unknown) => {
       alertError({
         title: 'No se pudo eliminar la etapa',
         description: `${getApiErrorMessage(err, 'Ocurrió un error inesperado')}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Rutas en el sistema.`,
       });
-    }
+    },
   });
 
   const openModal = (etapa?: Etapa) => {
@@ -166,16 +174,16 @@ export const EtapasPage = () => {
 
   const isBusy = createMutation.isPending || updateMutation.isPending;
 
-  if (isLoading) return <div className="p-6">Cargando etapas...</div>;
-  if (error) return <div className="p-6 text-red-500">Error al cargar etapas</div>;
+  if (isLoading) return <div className="p-6 text-foreground">Cargando etapas...</div>;
+  if (error) return <div className="p-6 text-destructive">Error al cargar etapas</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Gestión de Etapas</h1>
+        <h1 className="text-2xl font-bold text-foreground">Gestión de Etapas</h1>
         <button
           onClick={() => openModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
         >
           <Plus size={18} /> Nueva Etapa
         </button>
@@ -191,28 +199,28 @@ export const EtapasPage = () => {
         onQueryChange={setQuery}
       />
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {etapasFiltradas.map((etapa) => (
-              <tr key={etapa.id} className={`hover:bg-gray-50 ${etapa.activo === false ? 'opacity-60' : ''}`}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{etapa.nombre}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{etapa.descripcion || '-'}</td>
+              <tr key={etapa.id} className={`hover:bg-accent even:bg-muted/40 ${etapa.activo === false ? 'opacity-60' : ''}`}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{etapa.nombre}</td>
+                <td className="px-6 py-4 text-sm text-muted-foreground">{etapa.descripcion || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${etapa.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${etapa.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                     {etapa.activo !== false ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openModal(etapa)} className="text-indigo-600 hover:text-indigo-900" title="Editar">
+                  <button onClick={() => openModal(etapa)} className="text-muted-foreground hover:text-foreground" title="Editar">
                     <Edit size={18} />
                   </button>
                 </td>
@@ -220,73 +228,69 @@ export const EtapasPage = () => {
             ))}
             {etapasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No hay etapas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">No hay etapas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold">{editingEtapa ? 'Editar Etapa' : 'Nueva Etapa'}</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
-            </div>
+      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingEtapa ? 'Editar Etapa' : 'Nueva Etapa'}</DialogTitle>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="etapa-nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input
-                    id="etapa-nombre"
-                    type="text"
-                    required
-                    placeholder="Ej: Amasado"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="etapa-descripcion" className="block text-sm font-medium text-gray-700">Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
-                  <textarea
-                    id="etapa-descripcion"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-400"
-                    rows={3}
-                    minLength={4}
-                    placeholder="Ej: Proceso de preparación inicial de la masa"
-                    value={formData.descripcion}
-                    onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  />
-                </div>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="etapa-nombre" className="block text-sm font-medium text-foreground">Nombre</label>
+                <input
+                  id="etapa-nombre"
+                  type="text"
+                  required
+                  placeholder="Ej: Amasado"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                />
               </div>
-              <div className="mt-6 flex justify-end gap-3">
-                {editingEtapa?.activo === false && (
-                  <button type="button" disabled={isBusy} onClick={handleActivar}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 mr-auto">
-                    Activar Etapa
-                  </button>
-                )}
-                {editingEtapa?.id && editingEtapa?.activo !== false && (
-                  <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 mr-auto flex items-center gap-2">
-                    <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Etapa'}
-                  </button>
-                )}
-                <button type="button" onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isBusy} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
-                  {isBusy ? 'Guardando...' : 'Guardar'}
-                </button>
+              <div>
+                <label htmlFor="etapa-descripcion" className="block text-sm font-medium text-foreground">Descripción <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <textarea
+                  id="etapa-descripcion"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  rows={3}
+                  minLength={4}
+                  placeholder="Ej: Proceso de preparación inicial de la masa"
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <DialogFooter className="mt-6 flex justify-end gap-3">
+              {editingEtapa?.activo === false && (
+                <button type="button" disabled={isBusy} onClick={handleActivar}
+                  className="px-4 py-2 bg-success text-white rounded-md hover:bg-success/90 disabled:opacity-50 mr-auto">
+                  Activar Etapa
+                </button>
+              )}
+              {editingEtapa?.id && editingEtapa?.activo !== false && (
+                <button type="button" disabled={isBusy || deleteMutation.isPending} onClick={handleDelete}
+                  className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50 mr-auto flex items-center gap-2">
+                  <Trash size={18} /> {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Etapa'}
+                </button>
+              )}
+              <button type="button" onClick={closeModal} className="px-4 py-2 border border-border rounded-md text-foreground hover:bg-accent">
+                Cancelar
+              </button>
+              <button type="submit" disabled={isBusy} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
+                {isBusy ? 'Guardando...' : 'Guardar'}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
-
