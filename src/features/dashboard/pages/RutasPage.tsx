@@ -49,16 +49,16 @@ export const RutasPage = () => {
     return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [activas, inactivas, status, field, query]);
 
-  if (isLoading) return <div className="p-6">Cargando rutas...</div>;
-  if (error) return <div className="p-6 text-red-500">Error al cargar rutas</div>;
+  if (isLoading) return <div className="p-6 text-foreground">Cargando rutas...</div>;
+  if (error) return <div className="p-6 text-destructive">Error al cargar rutas</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Gestión de Rutas</h1>
+        <h1 className="text-2xl font-bold text-foreground">Gestión de Rutas</h1>
         <button
           onClick={() => navigate('/dashboard/rutas/new')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
         >
           <Plus size={18} /> Nueva Ruta
         </button>
@@ -74,29 +74,29 @@ export const RutasPage = () => {
         onQueryChange={setQuery}
       />
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {rutasFiltradas.map((ruta) => (
-              <tr key={ruta.id} className={`hover:bg-gray-50 ${ruta.activo === false ? 'opacity-60' : ''}`}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ruta.nombre}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{ruta.descripcion || '-'}</td>
+              <tr key={ruta.id} className={`hover:bg-accent even:bg-muted/40 ${ruta.activo === false ? 'opacity-60' : ''}`}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{ruta.nombre}</td>
+                <td className="px-6 py-4 text-sm text-muted-foreground">{ruta.descripcion || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ruta.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ruta.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                     {ruta.activo !== false ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
 
-                  <button onClick={() => navigate(`/dashboard/rutas/${ruta.id}`)} className="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar">
+                  <button onClick={() => navigate(`/dashboard/rutas/${ruta.id}`)} className="text-muted-foreground hover:text-foreground mr-3" title="Editar">
                     <Edit size={18} />
                   </button>
 
@@ -105,7 +105,7 @@ export const RutasPage = () => {
             ))}
             {rutasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No hay rutas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">No hay rutas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
               </tr>
             )}
           </tbody>
