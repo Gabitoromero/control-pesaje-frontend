@@ -128,7 +128,7 @@ export function MuestrasLibresPage() {
           <button
             onClick={handleFinalizar}
             aria-label="Finalizar muestras aleatorias"
-            className="flex items-center justify-center gap-2 bg-secondary text-secondary-foreground hover:bg-accent font-bold transition-colors
+            className="flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold transition-colors
               p-3 rounded-full min-[490px]:px-4 min-[490px]:py-2 min-[490px]:rounded-lg"
           >
             <CheckCircle2 className="w-5 h-5 min-[490px]:hidden" />
