@@ -28,6 +28,18 @@ describe('SesionesActivasPage', () => {
     expect(screen.getByText('333333')).toBeInTheDocument();
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    renderWithProviders(<SesionesActivasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Pedro Operario')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   describe('close session confirm dialog (replaces window.confirm)', () => {
     it('clicking "Cerrar sesión" opens a confirm dialog instead of window.confirm', async () => {
       const confirmSpy = vi.spyOn(window, 'confirm');
