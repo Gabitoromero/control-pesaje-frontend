@@ -31,6 +31,18 @@ describe('EtapasPage', () => {
     expect(screen.queryByText('Corte')).not.toBeInTheDocument();
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    renderWithProviders(<EtapasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Amasado')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   it('switching status dropdown to "Inactivos" shows only inactivos', async () => {
     renderWithProviders(<EtapasPage />);
 
