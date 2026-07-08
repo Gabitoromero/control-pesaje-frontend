@@ -218,7 +218,7 @@ export const TabletWorkspace: React.FC = () => {
         </div>
         <div className="flex flex-nowrap items-center gap-4">
           <div className="hidden min-[700px]:flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full border border-primary bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
             <div className="flex flex-col">
