@@ -6,6 +6,7 @@ import {
   Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen
 } from 'lucide-react';
 import { UsuarioRol } from '../../shared/types';
+import { getAvatarInitials } from '../../features/tablet/utils/avatarInitials';
 
 export interface SidebarProps {
   onNavClick?: () => void;
@@ -146,9 +147,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
 
       <div className="p-4 border-t border-border">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground">{user?.nombreUsuario}</span>
-            <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
+              {getAvatarInitials(user?.nombreUsuario)}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-foreground truncate">{user?.nombreUsuario}</span>
+              <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
+            </div>
           </div>
           <button
             onClick={handleLogout}
