@@ -398,6 +398,21 @@ describe('TabletWorkspace', () => {
     expect(panel).toBeInTheDocument();
   });
 
+  it('aplica la proporción de columnas 860:340 en el grid principal (no 50/50)', async () => {
+    const { container } = renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    // Wait for the workspace to load
+    expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
+
+    const grid = container.querySelector('.grid.grid-cols-1.lg\\:grid-cols-\\[860fr_340fr\\]');
+    expect(grid).not.toBeNull();
+    expect(container.querySelector('.lg\\:grid-cols-2')).toBeNull();
+  });
+
   // ── MuestraObservacionPopup integration (task 3.2) ──────────────────────────
 
   it('clicking a sample row opens the MuestraObservacionPopup', async () => {
