@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import {
   LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory,
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen
+  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen, Ban
 } from 'lucide-react';
 import { UsuarioRol } from '../../shared/types';
 import { getAvatarInitials } from '../../features/tablet/utils/avatarInitials';
@@ -66,6 +66,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
           <NavLink to="/dashboard/planta" className={navClass} onClick={handleLinkClick}>
             <Factory className="w-5 h-5 mr-3" />
             Planta
+          </NavLink>
+        )}
+
+        {isJefe && (
+          <NavLink to="/dashboard/pasadas-activas" className={navClass} onClick={handleLinkClick}>
+            <Ban className="w-5 h-5 mr-3" />
+            Pasadas Activas
           </NavLink>
         )}
 

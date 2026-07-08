@@ -18,6 +18,7 @@ import { LineasPage } from './features/dashboard/pages/LineasPage';
 import { RutasPage } from './features/dashboard/pages/RutasPage';
 import { RutaFormPage } from './features/dashboard/pages/RutaFormPage';
 import { SesionesActivasPage } from './features/dashboard/pages/SesionesActivasPage';
+import { PasadasActivasPage } from './features/dashboard/pages/PasadasActivasPage';
 import { DispositivosConectadosPage } from './features/dashboard/pages/DispositivosConectadosPage';
 import { ReportesPage } from './features/dashboard/pages/ReportesPage';
 
@@ -59,6 +60,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<div className="bg-card border border-border p-6 rounded-lg shadow-sm text-muted-foreground">Monitoreo en vivo — en construcción</div>} />
           <Route path="planta" element={<Navigate to="/tablet/seleccion-linea" replace />} />
+          <Route path="pasadas-activas" element={isJefe ? <PasadasActivasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="articulos" element={isJefe ? <ArticulosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="etapas" element={isJefe ? <EtapasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="lineas" element={isJefe ? <LineasPage /> : <Navigate to="/dashboard" replace />} />
