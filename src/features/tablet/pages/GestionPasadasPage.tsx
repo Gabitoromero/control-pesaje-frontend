@@ -193,7 +193,7 @@ export const GestionPasadasPage: React.FC = () => {
                   Control de calidad sin asociar a una pasada
                 </p>
                 <button
-                  onClick={() => navigate('/tablet/muestras-libres/seleccion')}
+                  onClick={() => navigate('/tablet/muestras-libres')}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-warning/10 border border-warning text-warning rounded-lg text-sm font-medium transition-all hover:bg-warning/20"
                 >
                   Tomar Muestras Libres

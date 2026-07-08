@@ -227,7 +227,7 @@ describe('GestionPasadasPage', () => {
 
       const btnRegistrar = screen.getByRole('button', { name: /tomar muestras libres/i });
       await userEvent.click(btnRegistrar);
-      expect(navigateMock).toHaveBeenCalledWith('/tablet/muestras-libres/seleccion');
+      expect(navigateMock).toHaveBeenCalledWith('/tablet/muestras-libres');
     });
   });
 
