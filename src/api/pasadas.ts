@@ -32,3 +32,8 @@ export const completarPasada = async (id: number): Promise<Pasada> => {
   const response = await api.put<ApiEnvelope<Pasada>>(`/pasadas/${id}`, { action: 'completar' });
   return response.data.data;
 };
+
+export const abortarPasada = async (id: number, motivoCierre: string): Promise<Pasada> => {
+  const response = await api.put<ApiEnvelope<Pasada>>(`/pasadas/${id}`, { action: 'abortar', motivoCierre });
+  return response.data.data;
+};
