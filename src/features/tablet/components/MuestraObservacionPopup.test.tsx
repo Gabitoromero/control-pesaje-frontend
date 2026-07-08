@@ -211,4 +211,84 @@ describe('MuestraObservacionPopup', () => {
     expect(onDelete).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  // ── Layout regression: footer must never be pushed off-screen ──────────────
+  // jsdom cannot measure real viewport pixels/positions, so these assert the
+  // STRUCTURE that guarantees the footer stays visible regardless of content
+  // height: a capped outer card, a scrollable middle region wrapping only the
+  // variable-height content, and the footer living OUTSIDE that scrollable
+  // region as a flex sibling (never pushed off-screen no matter how tall the
+  // content grows).
+
+  it('caps the outer card height so it cannot exceed the viewport', () => {
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog');
+    const card = dialog.firstElementChild as HTMLElement;
+    expect(card).toBeTruthy();
+    expect(card.className).toMatch(/max-h-\[90vh\]/);
+    expect(card.className).toMatch(/flex-col/);
+    expect(card.className).toMatch(/min-h-0/);
+  });
+
+  it('wraps the variable-height content (info + textarea) in a scrollable region', () => {
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    const textarea = screen.getByRole('textbox');
+    const scrollRegion = textarea.closest(
+      '.overflow-y-auto'
+    ) as HTMLElement | null;
+
+    expect(scrollRegion).not.toBeNull();
+    expect(scrollRegion!.className).toMatch(/flex-1/);
+    expect(scrollRegion!.className).toMatch(/min-h-0/);
+    // The textarea and read-only info both live inside the scroll region.
+    expect(scrollRegion!.contains(textarea)).toBe(true);
+  });
+
+  it('keeps the Cancelar/Confirmar footer OUTSIDE the scrollable region, as a sibling', () => {
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    const textarea = screen.getByRole('textbox');
+    const scrollRegion = textarea.closest(
+      '.overflow-y-auto'
+    ) as HTMLElement | null;
+    expect(scrollRegion).not.toBeNull();
+
+    const cancelButton = screen.getByRole('button', { name: /cancelar/i });
+    const confirmButton = screen.getByRole('button', { name: /confirmar/i });
+
+    // The core proof: no matter how tall the content grows, the footer is not
+    // a descendant of the scrollable wrapper, so it can never be scrolled/
+    // pushed out of view — it stays a visible sibling at the bottom.
+    expect(scrollRegion!.contains(cancelButton)).toBe(false);
+    expect(scrollRegion!.contains(confirmButton)).toBe(false);
+  });
 });

@@ -52,7 +52,7 @@ function PopupContent({
       aria-modal="true"
       aria-label={`Detalle de muestra #${index + 1}`}
     >
-      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md flex flex-col min-h-0 max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="text-lg font-bold text-foreground">
@@ -68,44 +68,47 @@ function PopupContent({
           </button>
         </div>
 
-        {/* Read-only sample info */}
-        <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm">Peso</span>
-            <span className="text-2xl font-black tabular-nums text-foreground">
-              {muestra.pesoNeto.toFixed(3)}
-            </span>
+        {/* Scrollable content: read-only info + editable observation */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Read-only sample info */}
+          <div className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">Peso</span>
+              <span className="text-2xl font-black tabular-nums text-foreground">
+                {muestra.pesoNeto.toFixed(3)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">Validación</span>
+              <span
+                className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  isOk
+                    ? 'bg-success-muted text-success'
+                    : 'bg-danger-muted text-danger'
+                }`}
+              >
+                {muestra.estadoValidacion}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm">Validación</span>
-            <span
-              className={`text-xs px-3 py-1 rounded-full font-medium ${
-                isOk
-                  ? 'bg-success-muted text-success'
-                  : 'bg-danger-muted text-danger'
-              }`}
+          {/* Editable observation */}
+          <div className="px-4 pb-4">
+            <label
+              htmlFor="muestra-observacion"
+              className="block text-sm text-muted-foreground mb-1"
             >
-              {muestra.estadoValidacion}
-            </span>
+              Observación
+            </label>
+            <textarea
+              id="muestra-observacion"
+              className="w-full min-h-[80px] bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+              value={observacion}
+              onChange={(e) => setObservacion(e.target.value)}
+              placeholder="Sin observaciones"
+            />
           </div>
-        </div>
-
-        {/* Editable observation */}
-        <div className="px-4 pb-4">
-          <label
-            htmlFor="muestra-observacion"
-            className="block text-sm text-muted-foreground mb-1"
-          >
-            Observación
-          </label>
-          <textarea
-            id="muestra-observacion"
-            className="w-full min-h-[80px] bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-            placeholder="Sin observaciones"
-          />
         </div>
 
         {/* Actions */}
