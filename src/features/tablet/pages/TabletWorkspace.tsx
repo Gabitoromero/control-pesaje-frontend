@@ -243,7 +243,7 @@ export const TabletWorkspace: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[860fr_340fr] gap-4">
 
         {/* Balanza Panel */}
         <div className="bg-card rounded-xl shadow-sm border border-border p-5 flex flex-col items-center justify-center min-h-0 overflow-y-auto gap-3">
