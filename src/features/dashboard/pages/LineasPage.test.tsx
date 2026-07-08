@@ -29,6 +29,18 @@ describe('LineasPage', () => {
     expect(screen.queryByText('Línea 5 — Inactiva B')).not.toBeInTheDocument();
   });
 
+  it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
+    renderWithProviders(<LineasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    const table = screen.getByRole('table');
+    const scrollWrapper = table.parentElement as HTMLElement;
+    expect(scrollWrapper.className).toMatch(/overflow-x-auto/);
+  });
+
   it('switching to inactivos shows only inactivos', async () => {
     renderWithProviders(<LineasPage />);
 
