@@ -114,10 +114,10 @@ export function MuestrasLibresPage() {
           </div>
         </div>
         <div className="flex flex-nowrap items-center gap-4">
-          <span className="px-2 py-0.5 rounded-md border border-warning bg-warning/10 text-warning text-xs font-bold tracking-wide">
-            MUESTRAS LIBRES
-          </span>
           <div className="hidden min-[700px]:flex items-center gap-4">
+            <span className="px-2 py-0.5 rounded-md border border-warning bg-warning/10 text-warning text-xs font-bold tracking-wide">
+              MUESTRAS LIBRES
+            </span>
             <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
