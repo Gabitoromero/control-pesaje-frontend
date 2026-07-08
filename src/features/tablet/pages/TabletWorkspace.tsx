@@ -204,7 +204,7 @@ export const TabletWorkspace: React.FC = () => {
     <div className="min-h-screen lg:h-screen flex flex-col p-4 bg-background gap-4 relative overflow-y-auto lg:overflow-hidden">
 
       {/* Topbar */}
-      <div className="flex flex-wrap flex-shrink-0 justify-between items-center gap-3 bg-card p-3 rounded-xl shadow-sm border border-border">
+      <div className="flex flex-nowrap flex-shrink-0 justify-between items-center gap-3 bg-card p-3 rounded-xl shadow-sm border border-border">
         <div className="flex items-center gap-4">
           <span className="px-2 py-0.5 rounded-md border border-primary bg-primary/10 text-primary text-xs font-bold tracking-wide">
             {linea?.nombre ?? `Línea ${lineaId}`}
@@ -219,8 +219,8 @@ export const TabletWorkspace: React.FC = () => {
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="hidden min-[680px]:flex items-center gap-4">
+        <div className="flex flex-nowrap items-center gap-4">
+          <div className="hidden min-[700px]:flex items-center gap-4">
             <div className="w-10 h-10 rounded-full border border-primary bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
               {getAvatarInitials(user?.nombreUsuario)}
             </div>

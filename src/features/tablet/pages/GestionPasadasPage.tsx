@@ -132,7 +132,7 @@ export const GestionPasadasPage: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 min-[780px]:grid-cols-[1fr_416px] gap-6 items-start">
+        <div className="grid grid-cols-1 min-[840px]:grid-cols-[1fr_416px] gap-6 items-start">
           <section>
             <h2 className="text-xl font-semibold mb-6">Pasadas Activas</h2>
 
@@ -157,7 +157,7 @@ export const GestionPasadasPage: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-6">Inicia una nueva pasada utilizando el botón.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 min-[480px]:grid-cols-2 min-[840px]:grid-cols-1 min-[950px]:grid-cols-2 gap-4">
                 {filteredPasadas.map((pasada) => (
                   <PasadaCard key={pasada.id} pasada={pasada} etapas={etapasRuta} />
                 ))}

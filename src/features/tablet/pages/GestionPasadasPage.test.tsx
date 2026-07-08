@@ -242,7 +242,7 @@ describe('GestionPasadasPage', () => {
   });
 
   describe('layout responsivo de dos columnas', () => {
-    it('aplica el breakpoint personalizado min-[780px] para el grid de dos columnas', async () => {
+    it('aplica el breakpoint personalizado min-[840px] para el grid de dos columnas', async () => {
       const { container } = renderWithAuth(<GestionPasadasPage />, {
         user: operarioUser,
         activeLineaId: 1,
@@ -250,9 +250,22 @@ describe('GestionPasadasPage', () => {
 
       await screen.findByText('Pasada #101');
 
-      const grid = container.querySelector('.grid.grid-cols-1');
+      const grid = container.querySelector('.grid.grid-cols-1.min-\\[840px\\]\\:grid-cols-\\[1fr_416px\\]');
       expect(grid).not.toBeNull();
-      expect(grid?.className).toContain('min-[780px]:grid-cols-[1fr_416px]');
+    });
+
+    it('aplica los breakpoints no monótonos para las columnas de pasadas activas', async () => {
+      const { container } = renderWithAuth(<GestionPasadasPage />, {
+        user: operarioUser,
+        activeLineaId: 1,
+      });
+
+      await screen.findByText('Pasada #101');
+
+      const pasadasGrid = container.querySelector('.grid.grid-cols-1.min-\\[480px\\]\\:grid-cols-2');
+      expect(pasadasGrid).not.toBeNull();
+      expect(pasadasGrid?.className).toContain('min-[840px]:grid-cols-1');
+      expect(pasadasGrid?.className).toContain('min-[950px]:grid-cols-2');
     });
   });
 });
