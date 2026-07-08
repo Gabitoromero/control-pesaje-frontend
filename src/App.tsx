@@ -57,7 +57,7 @@ function App() {
 
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<div className="bg-white p-6 rounded-lg shadow-sm text-gray-500">Monitoreo en vivo — en construcción</div>} />
+          <Route index element={<div className="bg-card border border-border p-6 rounded-lg shadow-sm text-muted-foreground">Monitoreo en vivo — en construcción</div>} />
           <Route path="planta" element={<Navigate to="/tablet/seleccion-linea" replace />} />
           <Route path="articulos" element={isJefe ? <ArticulosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="etapas" element={isJefe ? <EtapasPage /> : <Navigate to="/dashboard" replace />} />
