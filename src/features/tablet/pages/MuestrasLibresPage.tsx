@@ -18,8 +18,9 @@ import { getAvatarInitials } from '../utils/avatarInitials';
  * scope untouched), a flat etapa pill selector (no locking/progression), a
  * weighing zone reusing <ToleranceDisplay variant="warning">, a samples
  * panel filtered to the selected etapa, and an always-visible top-right
- * Finalizar button (muted/secondary styling, away from Registrar) with no
- * confirmation — clears the session before navigating away.
+ * Finalizar button (destructive/red styling matching TabletWorkspace's
+ * Volver, away from Registrar) with no confirmation — clears the session
+ * before navigating away.
  */
 export function MuestrasLibresPage() {
   const { user, activeLineaId } = useAuth();
