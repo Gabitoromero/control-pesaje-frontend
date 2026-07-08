@@ -377,7 +377,7 @@ describe('EtapasPage', () => {
   });
 
   describe('error dialogs on mutation failure (replaces window.alert)', () => {
-    it('create failure shows an alertdialog titled "No se pudo guardar la etapa" (createMutation previously had no onError at all)', async () => {
+    it('create failure shows an alertdialog titled "No se pudo crear la etapa" (createMutation previously had no onError at all)', async () => {
       server.use(
         http.post('http://localhost:3000/api/etapas', () =>
           HttpResponse.json({ success: false, error: { message: 'Nombre duplicado' } }, { status: 400 })
@@ -395,7 +395,7 @@ describe('EtapasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByRole('alertdialog');
-      expect(within(dialog).getByText('No se pudo guardar la etapa')).toBeInTheDocument();
+      expect(within(dialog).getByText('No se pudo crear la etapa')).toBeInTheDocument();
       expect(within(dialog).getByText('Nombre duplicado')).toBeInTheDocument();
     });
 
