@@ -10,13 +10,13 @@ interface ReporteDefinicion {
 const REPORTES: ReporteDefinicion[] = [
   {
     id: 'rendimiento-fisico',
-    titulo: 'Rendimiento Físico',
-    descripcion: 'Precisión de pesajes y desperdicio de materia prima por receta y etapa.',
+    titulo: 'Listado de Pasadas por Ruta',
+    descripcion: 'Listado de pasadas por ruta.',
   },
   {
     id: 'trazabilidad-comercial',
-    titulo: 'Trazabilidad Comercial',
-    descripcion: 'Historial de lotes por artículo y marca para auditorías alimentarias.',
+    titulo: 'Muestras por Ruta y Fecha',
+    descripcion: 'Historial de muestras por ruta y fecha.',
   },
 ];
 

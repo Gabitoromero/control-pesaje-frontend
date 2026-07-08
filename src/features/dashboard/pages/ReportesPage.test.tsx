@@ -6,15 +6,11 @@ describe('ReportesPage', () => {
   it('renders both report cards with title and description', () => {
     renderWithProviders(<ReportesPage />);
 
-    expect(screen.getByText('Rendimiento Físico')).toBeInTheDocument();
-    expect(
-      screen.getByText('Precisión de pesajes y desperdicio de materia prima por receta y etapa.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Listado de Pasadas por Ruta')).toBeInTheDocument();
+    expect(screen.getByText('Listado de pasadas por ruta.')).toBeInTheDocument();
 
-    expect(screen.getByText('Trazabilidad Comercial')).toBeInTheDocument();
-    expect(
-      screen.getByText('Historial de lotes por artículo y marca para auditorías alimentarias.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Muestras por Ruta y Fecha')).toBeInTheDocument();
+    expect(screen.getByText('Historial de muestras por ruta y fecha.')).toBeInTheDocument();
   });
 
   it('renders both download buttons as disabled (backend not implemented yet)', () => {
