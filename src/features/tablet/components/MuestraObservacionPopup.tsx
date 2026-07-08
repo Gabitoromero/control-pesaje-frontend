@@ -128,7 +128,7 @@ function PopupContent({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:bg-accent transition-colors text-sm font-medium"
+            className="max-[378px]:hidden px-4 py-2 rounded-lg text-muted-foreground hover:bg-accent transition-colors text-sm font-medium"
           >
             Cancelar
           </button>

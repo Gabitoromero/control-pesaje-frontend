@@ -291,4 +291,26 @@ describe('MuestraObservacionPopup', () => {
     expect(scrollRegion!.contains(cancelButton)).toBe(false);
     expect(scrollRegion!.contains(confirmButton)).toBe(false);
   });
+
+  it('hides the Cancelar button below ~378px width, keeping only the header close (X)', () => {
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    const cancelButton = screen.getByRole('button', { name: /cancelar/i });
+    expect(cancelButton.className).toMatch(/max-\[378px\]:hidden/);
+
+    // The header close (X) button has no such breakpoint — it stays visible
+    // at every width, so it remains the only way to dismiss without saving
+    // once Cancelar hides.
+    const closeButton = screen.getByRole('button', { name: /cerrar/i });
+    expect(closeButton.className).not.toMatch(/hidden/);
+  });
 });
