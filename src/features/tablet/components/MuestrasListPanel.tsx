@@ -15,7 +15,7 @@ export function MuestrasListPanel({
 }: MuestrasListPanelProps) {
   if (muestras.length === 0) {
     return (
-      <p className="text-sm text-slate-500 text-center py-4">{emptyMessage}</p>
+      <p className="text-sm text-muted-foreground text-center py-4">{emptyMessage}</p>
     );
   }
 
@@ -28,16 +28,16 @@ export function MuestrasListPanel({
           key={m.id ?? i}
           type="button"
           onClick={() => onSampleClick(i)}
-          className="w-full flex items-center justify-between text-sm bg-slate-700/50 hover:bg-slate-600/60 rounded-lg px-3 py-1.5 transition-colors text-left"
+          className="w-full flex items-center justify-between text-sm bg-muted hover:bg-accent border border-border rounded-lg px-3 py-1.5 transition-colors text-left"
         >
-          <span className="text-slate-300">#{i + 1}</span>
-          {stageName && <span className="text-slate-400 text-xs truncate max-w-[100px]">{stageName}</span>}
-          <span className="font-medium text-white">{m.pesoNeto.toFixed(3)} kg</span>
+          <span className="text-muted-foreground">#{i + 1}</span>
+          {stageName && <span className="text-muted-foreground text-xs truncate max-w-[100px]">{stageName}</span>}
+          <span className="font-medium text-foreground">{m.pesoNeto.toFixed(3)} kg</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
               m.estadoValidacion === 'ok'
-                ? 'bg-green-900/50 text-green-400'
-                : 'bg-red-900/50 text-red-400'
+                ? 'bg-success-muted text-success'
+                : 'bg-danger-muted text-danger'
             }`}
           >
             {m.estadoValidacion}

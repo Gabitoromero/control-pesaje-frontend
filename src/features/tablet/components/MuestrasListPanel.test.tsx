@@ -98,18 +98,18 @@ describe('MuestrasListPanel', () => {
 
   // ── Styling by estadoValidacion ───────────────────────────────────────────────
 
-  it('applies green styling to badge when estadoValidacion is "ok"', () => {
+  it('applies success token styling to badge when estadoValidacion is "ok"', () => {
     const muestras = [makeMuestra({ estadoValidacion: 'ok' })];
     render(<MuestrasListPanel muestras={muestras} onSampleClick={onSampleClick} />);
     const badge = screen.getByText('ok');
-    expect(badge.className).toMatch(/green/);
+    expect(badge.className).toMatch(/success/);
   });
 
-  it('applies red styling to badge when estadoValidacion is not "ok"', () => {
+  it('applies danger token styling to badge when estadoValidacion is not "ok"', () => {
     const muestras = [makeMuestra({ estadoValidacion: 'fuera_de_rango' })];
     render(<MuestrasListPanel muestras={muestras} onSampleClick={onSampleClick} />);
     const badge = screen.getByText('fuera_de_rango');
-    expect(badge.className).toMatch(/red/);
+    expect(badge.className).toMatch(/danger/);
   });
 
   // ── Row click (replaces inline delete) ────────────────────────────────────────
@@ -134,5 +134,34 @@ describe('MuestrasListPanel', () => {
     const muestras = [makeMuestra({ id: 1 }), makeMuestra({ id: 2 })];
     render(<MuestrasListPanel muestras={muestras} onSampleClick={onSampleClick} />);
     expect(screen.queryAllByRole('button', { name: /eliminar/i })).toHaveLength(0);
+  });
+
+  // ── Filtered-array index contract (Phase 4.2 — highest design risk) ──────────
+  // The panel itself has no etapa awareness: it always reports the index INTO
+  // THE ARRAY IT WAS GIVEN. Callers (e.g. MuestrasLibresPage) that pass an
+  // etapa-filtered subset are responsible for translating that index back to
+  // the original full-array index before calling update/removeSample. This
+  // test locks the panel's half of that contract: given a filtered array
+  // built from samples spanning 2+ etapas, clicking row N must report index N
+  // relative to the FILTERED array, not the original one.
+  it('reports the index relative to the given (already-filtered) array, not any original array', async () => {
+    const user = userEvent.setup();
+    const original = [
+      makeMuestra({ id: 1, etapaId: 10, pesoNeto: 1 }),
+      makeMuestra({ id: 2, etapaId: 20, pesoNeto: 2 }),
+      makeMuestra({ id: 3, etapaId: 10, pesoNeto: 3 }),
+      makeMuestra({ id: 4, etapaId: 20, pesoNeto: 4 }),
+    ];
+    // Caller filters to etapaId 20 → originalIndex 1 and 3 survive.
+    const filtered = original.filter((m) => m.etapaId === 20);
+    render(<MuestrasListPanel muestras={filtered} onSampleClick={onSampleClick} />);
+
+    const rows = screen.getAllByRole('button');
+    expect(rows).toHaveLength(2);
+
+    // Clicking the second filtered row must report filtered-index 1 (id 4),
+    // NOT its original-array index 3.
+    await user.click(rows[1]);
+    expect(onSampleClick).toHaveBeenCalledWith(1);
   });
 });
