@@ -2,11 +2,16 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithAuth } from '../test/render';
 import type { User } from '../shared/types/auth';
-import { vi, describe, it, expect, beforeAll } from 'vitest';
+import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { DashboardLayout } from './DashboardLayout';
+import { useAdminSocket } from '../features/dashboard/hooks/useAdminSocket';
 const admin: User    = { id: 1, legajo: 'A1', nombreUsuario: 'admin',  rol: 'administrador', puedeTomarMuestrasLibres: true };
 const jefe: User     = { id: 2, legajo: 'J1', nombreUsuario: 'jefe1',  rol: 'jefe', puedeTomarMuestrasLibres: true };
 const visual: User   = { id: 5, legajo: 'V1', nombreUsuario: 'view1',  rol: 'visualizacion', puedeTomarMuestrasLibres: false };
+
+vi.mock('../features/dashboard/hooks/useAdminSocket', () => ({
+  useAdminSocket: vi.fn(),
+}));
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function mock(
@@ -22,6 +27,13 @@ beforeAll(() => {
 });
 
 describe('DashboardLayout — visibilidad del menú por rol', () => {
+  beforeEach(() => {
+    vi.mocked(useAdminSocket).mockReturnValue({
+      unassignedDevices: [],
+      resolveDevice: vi.fn(),
+    });
+  });
+
   it('administrador ve todos los items de navegación principales', () => {
     renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
     expect(screen.getByRole('link', { name: /monitoreo/i })).toBeInTheDocument();
@@ -115,5 +127,45 @@ describe('DashboardLayout — visibilidad del menú por rol', () => {
     
     // Debería estar cerrado de nuevo
     expect(dialog).not.toBeVisible();
+  });
+});
+
+describe('DashboardLayout — banner de dispositivo sin asignar', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('muestra el banner para jefe cuando hay un dispositivo sin asignar', () => {
+    vi.mocked(useAdminSocket).mockReturnValue({
+      unassignedDevices: ['rpi-unknown-device'],
+      resolveDevice: vi.fn(),
+    });
+
+    renderWithAuth(<DashboardLayout />, { user: jefe, initialEntries: ['/dashboard'] });
+
+    expect(screen.getByText(/dispositivo desconocido/i)).toBeInTheDocument();
+  });
+
+  it('muestra el banner para administrador cuando hay un dispositivo sin asignar', () => {
+    vi.mocked(useAdminSocket).mockReturnValue({
+      unassignedDevices: ['rpi-unknown-device'],
+      resolveDevice: vi.fn(),
+    });
+
+    renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
+
+    expect(screen.getByText(/dispositivo desconocido/i)).toBeInTheDocument();
+  });
+
+  it('no muestra el banner para visualización, ni siquiera con dispositivos sin asignar', () => {
+    vi.mocked(useAdminSocket).mockReturnValue({
+      unassignedDevices: ['rpi-unknown-device'],
+      resolveDevice: vi.fn(),
+    });
+
+    renderWithAuth(<DashboardLayout />, { user: visual, initialEntries: ['/dashboard'] });
+
+    expect(screen.queryByText(/dispositivo desconocido/i)).not.toBeInTheDocument();
+    expect(useAdminSocket).not.toHaveBeenCalled();
   });
 });

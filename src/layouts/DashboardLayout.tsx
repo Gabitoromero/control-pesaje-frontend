@@ -3,6 +3,8 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from '../components/ui/Sidebar';
+import { UsuarioRol } from '../shared/types';
+import { UnassignedDeviceBanner } from '../features/dashboard/components/UnassignedDeviceBanner';
 
 export const DashboardLayout: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -16,6 +18,9 @@ export const DashboardLayout: React.FC = () => {
   if (user?.rol === 'operario') {
     return <Navigate to="/tablet" replace />;
   }
+
+  const isAdmin = user?.rol === UsuarioRol.ADMINISTRADOR;
+  const isJefe = user?.rol === UsuarioRol.JEFE || isAdmin;
 
   const openDrawer = () => {
     dialogRef.current?.showModal();
@@ -72,6 +77,8 @@ export const DashboardLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      {isJefe && <UnassignedDeviceBanner />}
     </div>
   );
 };
