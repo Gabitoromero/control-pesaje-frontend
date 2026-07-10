@@ -9,6 +9,8 @@ export interface Linea {
   activo?: boolean;
   /** Computed by the backend: 'ocupada' if there is an active session on this line */
   estado?: 'disponible' | 'ocupada';
+  /** Raspberry Pi hardware identifier assigned to this línea, if any */
+  hardwareId?: string | null;
 }
 
 export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva'> {
@@ -47,4 +49,9 @@ export const updateLinea = async (id: number, linea: Partial<LineaCreate>): Prom
 
 export const deleteLinea = async (id: number): Promise<void> => {
   await api.delete(`/lineas-produccion/${id}`);
+};
+
+export const assignDeviceToLinea = async (id: number, hardwareId: string): Promise<Linea> => {
+  const response = await api.put<ApiEnvelope<Linea>>(`/lineas-produccion/${id}/device`, { hardwareId });
+  return response.data.data;
 };
