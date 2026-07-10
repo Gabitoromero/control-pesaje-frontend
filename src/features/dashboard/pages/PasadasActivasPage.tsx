@@ -120,8 +120,11 @@ export const PasadasActivasPage: React.FC = () => {
         isOpen={selectedPasada !== null}
         title="Abortar Pasada"
         description="Esta acción no se puede deshacer. Ingresá el motivo del aborto."
-        reasonLabel="Motivo"
-        reasonPlaceholder="Ej: rotura de bolsa, error de carga..."
+        field={{
+          kind: 'reason',
+          label: 'Motivo',
+          placeholder: 'Ej: rotura de bolsa, error de carga...',
+        }}
         confirmText="Confirmar"
         cancelText="Cancelar"
         variant="destructive"

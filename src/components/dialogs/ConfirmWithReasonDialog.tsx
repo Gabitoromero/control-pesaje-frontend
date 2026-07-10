@@ -1,40 +1,43 @@
 import { useState } from 'react';
 
+export type DialogField =
+  | { kind: 'reason'; label: string; placeholder?: string }
+  | { kind: 'select'; label: string; placeholder?: string; options: { value: string; label: string }[] };
+
 export interface ConfirmWithReasonDialogProps {
   isOpen: boolean;
   title: string;
   description?: string;
-  reasonLabel: string;
-  reasonPlaceholder?: string;
+  field: DialogField;
   confirmText: string;
   cancelText?: string;
   variant?: 'destructive' | 'default';
-  onConfirm: (reason: string) => Promise<void>;
+  onConfirm: (value: string) => Promise<void>;
   onClose: () => void;
 }
 
 function DialogContent({
   title,
   description,
-  reasonLabel,
-  reasonPlaceholder,
+  field,
   confirmText,
   cancelText = 'Cancelar',
   variant = 'default',
   onConfirm,
   onClose,
 }: Omit<ConfirmWithReasonDialogProps, 'isOpen'>) {
-  const [reason, setReason] = useState('');
+  const [value, setValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const trimmedReason = reason.trim();
-  const canConfirm = trimmedReason.length > 0 && !isSubmitting;
+  const trimmedValue = value.trim();
+  const canConfirm =
+    field.kind === 'reason' ? trimmedValue.length > 0 && !isSubmitting : value !== '' && !isSubmitting;
 
   const handleConfirm = async () => {
     if (!canConfirm) return;
     setIsSubmitting(true);
     try {
-      await onConfirm(trimmedReason);
+      await onConfirm(field.kind === 'reason' ? trimmedValue : value);
     } finally {
       setIsSubmitting(false);
     }
@@ -60,18 +63,36 @@ function DialogContent({
           )}
           <div>
             <label
-              htmlFor="confirm-with-reason-textarea"
+              htmlFor="confirm-with-reason-field"
               className="block text-sm text-muted-foreground mb-1"
             >
-              {reasonLabel}
+              {field.label}
             </label>
-            <textarea
-              id="confirm-with-reason-textarea"
-              className="w-full min-h-[80px] bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={reasonPlaceholder}
-            />
+            {field.kind === 'reason' ? (
+              <textarea
+                id="confirm-with-reason-field"
+                className="w-full min-h-[80px] bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder={field.placeholder}
+              />
+            ) : (
+              <select
+                id="confirm-with-reason-field"
+                className="w-full bg-background border border-border rounded-lg p-3 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+              >
+                <option value="" disabled>
+                  {field.placeholder}
+                </option>
+                {field.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
