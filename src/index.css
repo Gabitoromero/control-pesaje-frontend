@@ -80,3 +80,8 @@
     --ring: 189 94% 43%; /* brand-primary (#06b6d4) */
   }
 }
+
+@keyframes progress-fill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}

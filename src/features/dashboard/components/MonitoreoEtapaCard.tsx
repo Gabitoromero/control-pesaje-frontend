@@ -33,26 +33,26 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
       {/* Scatter chart area */}
       <div className="relative flex-1 min-h-[200px] bg-accent/30 rounded-sm mb-4 border border-border">
         {/* Tolerance band */}
-        <div className="absolute left-0 right-12 bg-success/10" style={{ top: '10%', bottom: '10%' }} />
+        <div className="absolute left-0 right-12 bg-success/10" style={{ top: '25%', bottom: '25%' }} />
 
         {/* Max line */}
-        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ top: '10%' }} />
-        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ top: '7%' }}>MÁX {etapa.pesoMaximo}</span>
+        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ top: '25%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ top: '22%' }}>MÁX {etapa.pesoMaximo}</span>
 
         {/* Ideal line */}
         <div className="absolute left-0 right-12 h-px bg-cyan-400" style={{ top: '50%' }} />
-        <span className="absolute right-1 text-[9px] font-semibold text-cyan-400 font-mono" style={{ top: '48%' }}>IDEAL {etapa.pesoIdeal}</span>
+        <span className="absolute right-1 text-[9px] font-semibold text-cyan-400 font-mono" style={{ top: '47%' }}>IDEAL {etapa.pesoIdeal}</span>
 
         {/* Min line */}
-        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ bottom: '10%' }} />
-        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ bottom: '7%' }}>MÍN {etapa.pesoMinimo}</span>
+        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ bottom: '25%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ bottom: '22%' }}>MÍN {etapa.pesoMinimo}</span>
 
         {/* Data points */}
         <div className="absolute inset-0">
           {etapa.muestras.map((muestra, i) => {
             const normX = (i / Math.max(etapa.muestras.length - 1, 1)) * 100;
             const range = etapa.pesoMaximo - etapa.pesoMinimo;
-            const normY = range > 0 ? 90 - (((muestra.pesoNeto - etapa.pesoMinimo) / range) * 80) : 50;
+            const normY = range > 0 ? 75 - (((muestra.pesoNeto - etapa.pesoMinimo) / range) * 50) : 50;
             const isOk = muestra.estadoValidacion === 'ok';
             const isLibre = muestra.tipo === 'libre';
             const color = isOk ? 'bg-success border-card' : 'bg-destructive border-card';

@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   getDashboardLineas,
   getDashboardResumen,
@@ -23,6 +24,14 @@ export const MonitoreoFullscreenPage = () => {
   });
 
   const lineaId = lineas[lineaIndex]?.id ?? 1;
+
+  useEffect(() => {
+    if (lineas.length <= 1) return;
+    const interval = setInterval(() => {
+      setLineaIndex((prev) => (prev + 1 >= lineas.length ? 0 : prev + 1));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [lineas.length, lineaIndex]);
 
   const { data: resumen, isLoading: loadingResumen } = useQuery({
     queryKey: ['dashboard-resumen', lineaId],
@@ -76,8 +85,15 @@ export const MonitoreoFullscreenPage = () => {
 
   return (
     <div className="fixed inset-0 bg-background z-50 p-4 md:p-6 overflow-hidden flex flex-col gap-3">
-      {/* Top 30%: header + KPIs */}
-      <div className="flex flex-col gap-3" style={{ flex: '0 0 30%' }}>
+      {/* 60s Global Progress Bar */}
+      {lineas.length > 1 && (
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-accent/30 overflow-hidden z-50">
+          <div key={lineaId} className="h-full bg-cyan-400 origin-left" style={{ animation: 'progress-fill 60s linear forwards' }} />
+        </div>
+      )}
+
+      {/* Top section: header + KPIs */}
+      <div className="flex flex-col gap-3 flex-shrink-0">
         <MonitoreoLineHeader
           resumen={resumen}
           onLineaChange={handleLineaChange}
@@ -88,8 +104,19 @@ export const MonitoreoFullscreenPage = () => {
       </div>
 
       {/* Bottom 70%: chart */}
-      <div className="flex-1 min-h-0">
-        <MonitoreoEtapasCarousel etapas={etapas} />
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={lineaId}
+            initial={{ opacity: 0, scale: 0.97, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.03, y: -10 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            className="flex-1 min-h-0 h-full flex flex-col"
+          >
+            <MonitoreoEtapasCarousel etapas={etapas} />
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

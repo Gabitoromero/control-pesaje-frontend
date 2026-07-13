@@ -91,6 +91,15 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        'progress-fill': {
+          '0%': { width: '0%' },
+          '100%': { width: '100%' },
+        }
+      },
+      animation: {
+        'progress-fill': 'progress-fill linear forwards',
+      },
     },
   },
   plugins: [tailwindcssAnimate],
