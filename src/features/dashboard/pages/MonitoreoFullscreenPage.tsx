@@ -75,7 +75,7 @@ export const MonitoreoFullscreenPage = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 grid grid-rows-[auto_3fr_7fr] gap-3 p-4 md:p-6 overflow-hidden">
+    <div className="fixed inset-0 bg-background z-50 grid grid-rows-[auto_auto_1fr] gap-3 p-4 md:p-6 overflow-hidden">
       <MonitoreoLineHeader
         resumen={resumen}
         onLineaChange={handleLineaChange}

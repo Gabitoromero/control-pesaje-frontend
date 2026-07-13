@@ -71,7 +71,7 @@ export const MonitoreoPage = () => {
   }
 
   return (
-    <div className="grid grid-rows-[auto_3fr_7fr] gap-3 h-full overflow-hidden -m-4 md:-m-8 p-4 md:p-8">
+    <div className="grid grid-rows-[auto_auto_1fr] gap-3 h-full overflow-hidden -m-4 md:-m-8 p-4 md:p-8">
       <MonitoreoLineHeader
         resumen={resumen}
         onLineaChange={handleLineaChange}
