@@ -8,7 +8,7 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
   const estadoColor = etapa.ultimoPesoEstado === 'ok' ? 'text-success' : 'text-destructive';
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 flex-shrink-0 w-[432px]">
+    <div className="bg-card border border-border rounded-2xl p-5 w-full">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
@@ -31,32 +31,32 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
       </div>
 
       {/* Scatter chart area */}
-      <div className="relative h-[125px] bg-accent/30 rounded-sm mb-4 border border-border">
+      <div className="relative h-[300px] bg-accent/30 rounded-sm mb-4 border border-border">
         {/* Tolerance band */}
-        <div className="absolute left-0 right-0 bg-success/10" style={{ top: `${((etapa.pesoMaximo - etapa.pesoMaximo) / (etapa.pesoMaximo - etapa.pesoMinimo)) * 100}%`, bottom: `${((etapa.pesoMinimo - etapa.pesoMinimo) / (etapa.pesoMaximo - etapa.pesoMinimo)) * 100}%` }} />
+        <div className="absolute left-0 right-12 bg-success/10" style={{ top: '10%', bottom: '10%' }} />
 
         {/* Max line */}
-        <div className="absolute left-0 right-0 h-px bg-amber-500/60 top-0" />
-        <span className="absolute right-1 top-0 text-[9px] font-semibold text-amber-500 font-mono">MÁX {etapa.pesoMaximo}</span>
+        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ top: '10%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ top: '7%' }}>MÁX {etapa.pesoMaximo}</span>
 
         {/* Ideal line */}
-        <div className="absolute left-0 right-0 h-px bg-cyan-400" style={{ top: '50%' }} />
+        <div className="absolute left-0 right-12 h-px bg-cyan-400" style={{ top: '50%' }} />
         <span className="absolute right-1 text-[9px] font-semibold text-cyan-400 font-mono" style={{ top: '48%' }}>IDEAL {etapa.pesoIdeal}</span>
 
         {/* Min line */}
-        <div className="absolute left-0 right-0 h-px bg-amber-500/60 bottom-0" />
-        <span className="absolute right-1 bottom-0 text-[9px] font-semibold text-amber-500 font-mono">MÍN {etapa.pesoMinimo}</span>
+        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ bottom: '10%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ bottom: '7%' }}>MÍN {etapa.pesoMinimo}</span>
 
         {/* Data points */}
         <div className="absolute inset-0">
           {etapa.muestras.map((muestra, i) => {
             const normX = (i / Math.max(etapa.muestras.length - 1, 1)) * 100;
             const range = etapa.pesoMaximo - etapa.pesoMinimo;
-            const normY = range > 0 ? 100 - (((muestra.pesoNeto - etapa.pesoMinimo) / range) * 100) : 50;
+            const normY = range > 0 ? 90 - (((muestra.pesoNeto - etapa.pesoMinimo) / range) * 80) : 50;
             const isOk = muestra.estadoValidacion === 'ok';
             const isLibre = muestra.tipo === 'libre';
             const color = isOk ? 'bg-success border-card' : 'bg-destructive border-card';
-            const size = isLibre ? 'w-2 h-2 rotate-45' : 'w-2.5 h-2.5 rounded-full';
+            const size = isLibre ? 'w-3 h-3 rotate-45' : 'w-3.5 h-3.5 rounded-full';
             return (
               <div
                 key={i}
