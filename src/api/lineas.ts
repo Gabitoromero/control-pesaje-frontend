@@ -1,19 +1,22 @@
 import api from './axios';
 import type { Ruta } from '../shared/types/domain';
 
+export interface AssignedDevice {
+  hardwareId: string;
+  nombre: string;
+  ultimaConexionAt: string | null;
+}
+
 export interface Linea {
   id?: number;
   nombre: string;
-  numeroBalanza: number;
+  dispositivo?: AssignedDevice | null;
   rutaPasadaActiva?: Ruta | null;
   activo?: boolean;
-  /** Computed by the backend: 'ocupada' if there is an active session on this line */
   estado?: 'disponible' | 'ocupada';
-  /** Raspberry Pi hardware identifier assigned to this línea, if any */
-  hardwareId?: string | null;
 }
 
-export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva'> {
+export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva' | 'dispositivo'> {
   rutaPasadaActiva?: number | null;
 }
 
@@ -51,7 +54,9 @@ export const deleteLinea = async (id: number): Promise<void> => {
   await api.delete(`/lineas-produccion/${id}`);
 };
 
-export const assignDeviceToLinea = async (id: number, hardwareId: string): Promise<Linea> => {
+export const assignDeviceToLinea = async (id: number, hardwareId: string | null): Promise<Linea> => {
+  // Pass null to unassign if API supports it, though schema requires a string UUID.
+  // Assuming the backend has been adjusted or we just pass the hardwareId for assignment.
   const response = await api.put<ApiEnvelope<Linea>>(`/lineas-produccion/${id}/device`, { hardwareId });
   return response.data.data;
 };

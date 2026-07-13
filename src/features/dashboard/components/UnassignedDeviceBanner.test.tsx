@@ -75,7 +75,13 @@ describe('UnassignedDeviceBanner', () => {
       http.put(`${BASE}/lineas-produccion/:id/device`, async ({ request, params }) => {
         requestedId = params.id as string;
         requestBody = await request.json();
-        return HttpResponse.json({ success: true, data: { ...lineasMock[0], hardwareId: 'rpi-aaaaaaaaaaaa' } });
+        return HttpResponse.json({
+          success: true,
+          data: {
+            ...lineasMock[0],
+            dispositivo: { hardwareId: 'rpi-aaaaaaaaaaaa', ultimaConexionAt: null },
+          },
+        });
       })
     );
 

@@ -6,10 +6,12 @@ import {
   createLinea,
   updateLinea,
   deleteLinea,
+  assignDeviceToLinea,
   type Linea,
   type LineaCreate,
 } from '../../../api/lineas';
 import { getRutas } from '../../../api/rutas';
+import { dispositivosApi } from '../../../api/dispositivos';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -22,11 +24,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-const EMPTY_FORM = { nombre: '', numeroBalanza: 1, rutaPasadaActiva: '' };
+const EMPTY_FORM = { nombre: '', rutaPasadaActiva: '', dispositivoHardwareId: '' };
 
 const LINEA_FIELDS: SearchField[] = [
   { value: 'nombre', label: 'Nombre' },
-  { value: 'numeroBalanza', label: 'N° Balanza' },
 ];
 
 export const LineasPage = () => {
@@ -66,6 +67,11 @@ export const LineasPage = () => {
     queryFn: getRutas,
   });
 
+  const { data: dispositivos = [] } = useQuery({
+    queryKey: ['dispositivos'],
+    queryFn: dispositivosApi.getConectados,
+  });
+
   const isLoading = loadingActivas || loadingInactivas;
   const error = errorActivas || errorInactivas;
 
@@ -83,8 +89,30 @@ export const LineasPage = () => {
     return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [activas, inactivas, status, field, query]);
 
+  const saveDeviceMutation = useMutation({
+    mutationFn: ({ id, hardwareId }: { id: number; hardwareId: string | null }) => 
+      assignDeviceToLinea(id, hardwareId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lineas'] });
+      queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
+      queryClient.invalidateQueries({ queryKey: ['dispositivos'] });
+    },
+    onError: (err: unknown) => {
+      alertError({
+        title: 'Error al asignar dispositivo',
+        description: getApiErrorMessage(err, 'El dispositivo puede estar asignado a otra línea.'),
+      });
+    },
+  });
+
   const createMutation = useMutation({
-    mutationFn: createLinea,
+    mutationFn: async (data: LineaCreate & { activo?: boolean, dispositivoHardwareId?: string }) => {
+      const linea = await createLinea(data);
+      if (data.dispositivoHardwareId && linea.id) {
+        await saveDeviceMutation.mutateAsync({ id: linea.id, hardwareId: data.dispositivoHardwareId });
+      }
+      return linea;
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
       queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
@@ -100,11 +128,20 @@ export const LineasPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: {
+    mutationFn: async ({ id, data, hardwareId }: {
       id: number;
       data: Partial<LineaCreate> & { activo?: boolean };
+      hardwareId?: string;
       accion: 'actualizada' | 'activada';
-    }) => updateLinea(id, data),
+    }) => {
+      const linea = await updateLinea(id, data);
+      
+      const originalHardwareId = editingLinea?.dispositivo?.hardwareId || '';
+      if (hardwareId !== undefined && hardwareId !== originalHardwareId) {
+        await saveDeviceMutation.mutateAsync({ id, hardwareId: hardwareId === '' ? null : hardwareId });
+      }
+      return linea;
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
       queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
@@ -114,7 +151,7 @@ export const LineasPage = () => {
     onError: (err: unknown) => {
       alertError({
         title: 'No se pudo guardar la línea',
-        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado al guardar la línea.'),
       });
     },
   });
@@ -139,8 +176,8 @@ export const LineasPage = () => {
       setEditingLinea(linea);
       setFormData({
         nombre: linea.nombre,
-        numeroBalanza: linea.numeroBalanza,
         rutaPasadaActiva: linea.rutaPasadaActiva?.id?.toString() || '',
+        dispositivoHardwareId: linea.dispositivo?.hardwareId || '',
       });
     } else {
       setEditingLinea(null);
@@ -163,17 +200,17 @@ export const LineasPage = () => {
         id: editingLinea.id,
         data: {
           nombre: formData.nombre,
-          numeroBalanza: Number(formData.numeroBalanza),
           rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         },
+        hardwareId: formData.dispositivoHardwareId,
         accion: 'actualizada',
       });
     } else {
       createMutation.mutate({
         nombre: formData.nombre,
-        numeroBalanza: Number(formData.numeroBalanza),
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : undefined,
         activo: true,
+        dispositivoHardwareId: formData.dispositivoHardwareId,
       });
     }
   };
@@ -197,15 +234,15 @@ export const LineasPage = () => {
       id: editingLinea.id,
       data: {
         nombre: formData.nombre,
-        numeroBalanza: Number(formData.numeroBalanza),
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         activo: true,
       },
+      hardwareId: formData.dispositivoHardwareId,
       accion: 'activada',
     });
   };
 
-  const isBusy = createMutation.isPending || updateMutation.isPending;
+  const isBusy = createMutation.isPending || updateMutation.isPending || saveDeviceMutation.isPending;
 
   if (isLoading) return <div className="p-6 text-foreground">Cargando líneas...</div>;
   if (error) return <div className="p-6 text-destructive">Error al cargar líneas</div>;
@@ -238,7 +275,7 @@ export const LineasPage = () => {
             <thead className="bg-muted">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">N° Balanza</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Dispositivo</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Ruta Activa</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
@@ -248,7 +285,9 @@ export const LineasPage = () => {
               {lineasFiltradas.map((linea) => (
                 <tr key={linea.id} className={`hover:bg-accent even:bg-muted/40 ${linea.activo === false ? 'opacity-60' : ''}`}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{linea.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{linea.numeroBalanza}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {linea.dispositivo ? `${linea.dispositivo.nombre} (${linea.dispositivo.hardwareId.slice(0, 8)})` : '-'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{linea.rutaPasadaActiva?.nombre ?? '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${linea.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
@@ -280,7 +319,7 @@ export const LineasPage = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+              <div className="sm:col-span-2">
                 <label htmlFor="linea-nombre" className="block text-sm font-medium text-foreground">Nombre</label>
                 <input
                   id="linea-nombre"
@@ -292,17 +331,21 @@ export const LineasPage = () => {
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                 />
               </div>
-              <div>
-                <label htmlFor="linea-balanza" className="block text-sm font-medium text-foreground">Número de Balanza</label>
-                <input
-                  id="linea-balanza"
-                  type="number"
-                  required
-                  min="1"
+              <div className="sm:col-span-2">
+                <label htmlFor="linea-dispositivo" className="block text-sm font-medium text-foreground">Dispositivo <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <select
+                  id="linea-dispositivo"
                   className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={formData.numeroBalanza}
-                  onChange={(e) => setFormData({ ...formData, numeroBalanza: Number(e.target.value) })}
-                />
+                  value={formData.dispositivoHardwareId}
+                  onChange={(e) => setFormData({ ...formData, dispositivoHardwareId: e.target.value })}
+                >
+                  <option value="">-- Sin dispositivo --</option>
+                  {dispositivos.map((device) => (
+                    <option key={device.hardwareId} value={device.hardwareId}>
+                      {device.nombre} ({device.hardwareId.slice(0, 8)})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="linea-ruta" className="block text-sm font-medium text-foreground">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
