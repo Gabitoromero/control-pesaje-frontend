@@ -31,26 +31,31 @@ export function MonitoreoLineHeader({ resumen, isFullscreen, onLineaChange, onFu
   const handleNext = useCallback(() => onLineaChange(1), [onLineaChange]);
 
   return (
-    <div className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-3 flex-shrink-0">
+    <div className="bg-card border border-border rounded-2xl px-5 py-3 flex items-center gap-4 flex-shrink-0">
       {/* Left nav */}
-      <button onClick={handlePrev} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Línea anterior">
-        <ChevronLeft size={20} />
+      <button onClick={handlePrev} className="p-1 text-muted-foreground hover:text-foreground flex-shrink-0" aria-label="Línea anterior">
+        <ChevronLeft size={22} />
       </button>
 
-      {/* Line info */}
+      {/* Line info — prominent */}
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{resumen.lineaNombre} · {resumen.rutaActivaNombre}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">LÍNEA Y RUTA ACTIVA</p>
+        <p className="text-base font-bold text-foreground truncate">
+          <span className="text-cyan-400">{resumen.lineaNombre}</span>
+          <span className="text-muted-foreground mx-2">·</span>
+          <span className="text-foreground/80">{resumen.rutaActivaNombre}</span>
+        </p>
       </div>
 
       {/* Right nav */}
-      <button onClick={handleNext} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Línea siguiente">
-        <ChevronRight size={20} />
+      <button onClick={handleNext} className="p-1 text-muted-foreground hover:text-foreground flex-shrink-0" aria-label="Línea siguiente">
+        <ChevronRight size={22} />
       </button>
 
-      {/* Fullscreen toggle — same icon for both states */}
+      {/* Fullscreen toggle */}
       <button
         onClick={onFullscreen}
-        className="p-1.5 rounded-lg bg-accent hover:bg-accent/80 text-muted-foreground"
+        className="p-1.5 rounded-lg bg-accent hover:bg-accent/80 text-muted-foreground flex-shrink-0"
         aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
         title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
       >
@@ -58,16 +63,16 @@ export function MonitoreoLineHeader({ resumen, isFullscreen, onLineaChange, onFu
       </button>
 
       {/* Live badge + timer */}
-      <div className="flex flex-col items-end gap-0.5 min-w-[130px]">
+      <div className="flex flex-col items-end gap-0.5 flex-shrink-0 min-w-[120px]">
         <div className="flex items-center gap-2">
           {resumen.conectado && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-semibold">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
               EN VIVO
             </span>
           )}
         </div>
-        <span className="text-xl md:text-2xl font-bold text-foreground font-mono tabular-nums">{formatElapsed(elapsed)}</span>
+        <span className="text-xl font-bold text-foreground font-mono tabular-nums">{formatElapsed(elapsed)}</span>
       </div>
     </div>
   );

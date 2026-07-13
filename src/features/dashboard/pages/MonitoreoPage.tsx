@@ -71,7 +71,7 @@ export const MonitoreoPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-3 h-full overflow-hidden -m-4 md:-m-8 p-4 md:p-8">
+    <div className="grid grid-rows-[auto_3fr_7fr] gap-3 h-full overflow-hidden -m-4 md:-m-8 p-4 md:p-8">
       <MonitoreoLineHeader
         resumen={resumen}
         onLineaChange={handleLineaChange}
@@ -80,12 +80,12 @@ export const MonitoreoPage = () => {
       />
 
       {kpis && (
-        <div className="flex-[3] min-h-0">
+        <div className="min-h-0">
           <MonitoreoKpiStrip kpis={kpis} />
         </div>
       )}
 
-      <div className="flex-[7] min-h-0">
+      <div className="min-h-0">
         <MonitoreoEtapasCarousel etapas={etapas} />
       </div>
     </div>

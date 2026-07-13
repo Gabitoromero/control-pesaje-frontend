@@ -8,7 +8,7 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
   const estadoColor = etapa.ultimoPesoEstado === 'ok' ? 'text-success' : 'text-destructive';
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 w-full flex flex-col flex-1 min-h-0">
+    <div className="w-full flex flex-col flex-1 min-h-0">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
