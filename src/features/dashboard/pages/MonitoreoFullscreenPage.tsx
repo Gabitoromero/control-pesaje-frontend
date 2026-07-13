@@ -75,21 +75,20 @@ export const MonitoreoFullscreenPage = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 grid grid-rows-[auto_auto_1fr] gap-3 p-4 md:p-6 overflow-hidden">
-      <MonitoreoLineHeader
-        resumen={resumen}
-        onLineaChange={handleLineaChange}
-        onFullscreen={handleExitFullscreen}
-        isFullscreen={true}
-      />
+    <div className="fixed inset-0 bg-background z-50 p-4 md:p-6 overflow-hidden flex flex-col gap-3">
+      {/* Top 30%: header + KPIs */}
+      <div className="flex flex-col gap-3" style={{ flex: '0 0 30%' }}>
+        <MonitoreoLineHeader
+          resumen={resumen}
+          onLineaChange={handleLineaChange}
+          onFullscreen={handleExitFullscreen}
+          isFullscreen={true}
+        />
+        {kpis && <MonitoreoKpiStrip kpis={kpis} />}
+      </div>
 
-      {kpis && (
-        <div className="min-h-0">
-          <MonitoreoKpiStrip kpis={kpis} />
-        </div>
-      )}
-
-      <div className="min-h-0">
+      {/* Bottom 70%: chart */}
+      <div className="flex-1 min-h-0">
         <MonitoreoEtapasCarousel etapas={etapas} />
       </div>
     </div>
