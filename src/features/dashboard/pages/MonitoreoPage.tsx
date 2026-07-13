@@ -72,10 +72,6 @@ export const MonitoreoPage = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Monitoreo en Vivo</h1>
-      </div>
-
       <MonitoreoLineHeader
         resumen={resumen}
         onLineaChange={handleLineaChange}

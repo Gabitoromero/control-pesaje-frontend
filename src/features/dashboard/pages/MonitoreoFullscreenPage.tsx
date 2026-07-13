@@ -77,8 +77,7 @@ export const MonitoreoFullscreenPage = () => {
   return (
     <div className="fixed inset-0 bg-background z-50 p-6 flex flex-col gap-5 overflow-y-auto">
       {/* Top bar with exit button */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Monitoreo en Vivo</h1>
+      <div className="flex items-center justify-end">
         <button
           onClick={handleExitFullscreen}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-muted-foreground text-sm"
@@ -96,7 +95,7 @@ export const MonitoreoFullscreenPage = () => {
 
       {kpis && <MonitoreoKpiStrip kpis={kpis} />}
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex items-center">
         <MonitoreoEtapasCarousel etapas={etapas} />
       </div>
     </div>
