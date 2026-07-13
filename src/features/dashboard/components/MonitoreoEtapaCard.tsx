@@ -31,7 +31,7 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
       </div>
 
       {/* Scatter chart area */}
-      <div className="relative flex-1 bg-accent/30 rounded-sm mb-4 border border-border">
+      <div className="relative flex-1 min-h-[200px] bg-accent/30 rounded-sm mb-4 border border-border">
         {/* Tolerance band */}
         <div className="absolute left-0 right-12 bg-success/10" style={{ top: '10%', bottom: '10%' }} />
 

@@ -24,7 +24,7 @@ export function MonitoreoEtapasCarousel({ etapas }: MonitoreoEtapasCarouselProps
   const goNext = () => setIndex((i) => (i < etapas.length - 1 ? i + 1 : 0));
 
   return (
-    <div className="flex items-stretch gap-3 h-full">
+    <div className="flex items-stretch gap-3">
       {/* Left arrow */}
       {etapas.length > 1 && (
         <button
