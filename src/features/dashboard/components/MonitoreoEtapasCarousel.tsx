@@ -24,7 +24,7 @@ export function MonitoreoEtapasCarousel({ etapas }: MonitoreoEtapasCarouselProps
   const goNext = () => setIndex((i) => (i < etapas.length - 1 ? i + 1 : 0));
 
   return (
-    <div className="flex items-stretch gap-3">
+    <div className="flex items-stretch gap-3 h-full">
       {/* Left arrow */}
       {etapas.length > 1 && (
         <button
@@ -37,7 +37,7 @@ export function MonitoreoEtapasCarousel({ etapas }: MonitoreoEtapasCarouselProps
       )}
 
       {/* Current etapa card — fills remaining space */}
-      <div className="flex-1 flex flex-col gap-3">
+      <div className="flex-1 flex flex-col gap-3 min-h-0">
         <MonitoreoEtapaCard etapa={current} />
 
         {/* Dots + name indicator */}
