@@ -72,7 +72,7 @@ export const DashboardLayout: React.FC = () => {
       </dialog>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-background col-start-1 md:col-start-2 row-start-2 md:row-start-1 h-full" style={{ containerType: 'inline-size' }}>
+      <main className="flex-1 overflow-auto bg-background col-start-1 md:col-start-2 row-start-2 md:row-start-1 h-full relative" style={{ containerType: 'inline-size' }}>
         <div className="p-4 md:p-8">
           <Outlet />
         </div>
