@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getLineas, assignDeviceToLinea } from '../../../api/lineas';
-import { ConfirmWithReasonDialog } from '../../../components/dialogs/ConfirmWithReasonDialog';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { dispositivosApi } from '../../../api/dispositivos';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { useAdminSocket } from '../hooks/useAdminSocket';
+
+const DEVICE_ALREADY_EXISTS_MESSAGE = 'El dispositivo ya existe';
 
 function truncateHardwareId(hardwareId: string): string {
   return hardwareId.length > 8 ? `${hardwareId.slice(0, 8)}…` : hardwareId;
@@ -14,37 +14,29 @@ export function UnassignedDeviceBanner() {
   const { unassignedDevices, resolveDevice } = useAdminSocket();
   const { alertError } = useDialog();
   const queryClient = useQueryClient();
-  const [selectedHardwareId, setSelectedHardwareId] = useState<string | null>(null);
 
-  const { data: lineas = [] } = useQuery({
-    queryKey: ['lineas'],
-    queryFn: getLineas,
-  });
-
-  const assignMutation = useMutation({
-    mutationFn: ({ id, hardwareId }: { id: number; hardwareId: string }) =>
-      assignDeviceToLinea(id, hardwareId),
-    onSuccess: (_data, variables) => {
-      resolveDevice(variables.hardwareId);
-      queryClient.invalidateQueries({ queryKey: ['lineas'] });
-      setSelectedHardwareId(null);
+  const registerMutation = useMutation({
+    mutationFn: (hardwareId: string) => dispositivosApi.createDispositivo(hardwareId),
+    onSuccess: (_data, hardwareId) => {
+      resolveDevice(hardwareId);
+      queryClient.invalidateQueries({ queryKey: ['dispositivos'] });
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, hardwareId) => {
+      const message = getApiErrorMessage(err, 'Ocurrió un error inesperado');
+      // The device is already registered — a race with another registration
+      // path. The device is present in the system either way, so treat it
+      // as success-equivalent: resolve the banner and refresh the list.
+      if (message === DEVICE_ALREADY_EXISTS_MESSAGE) {
+        resolveDevice(hardwareId);
+        queryClient.invalidateQueries({ queryKey: ['dispositivos'] });
+        return;
+      }
       alertError({
-        title: 'No se pudo asignar el dispositivo',
-        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+        title: 'No se pudo registrar el dispositivo',
+        description: message,
       });
     },
   });
-
-  const handleConfirm = async (value: string) => {
-    if (!selectedHardwareId) return;
-    try {
-      await assignMutation.mutateAsync({ id: Number(value), hardwareId: selectedHardwareId });
-    } catch {
-      // Error already surfaced via assignMutation.onError -> alertError.
-    }
-  };
 
   if (unassignedDevices.length === 0) return null;
 
@@ -61,29 +53,13 @@ export function UnassignedDeviceBanner() {
           </p>
           <button
             type="button"
-            onClick={() => setSelectedHardwareId(hardwareId)}
+            onClick={() => registerMutation.mutate(hardwareId)}
             className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-sm font-bold hover:bg-primary/90 transition-colors"
           >
-            Asignar
+            Registrar dispositivo
           </button>
         </div>
       ))}
-
-      <ConfirmWithReasonDialog
-        isOpen={selectedHardwareId !== null}
-        title="Asignar dispositivo a línea"
-        description="Elegí la línea de producción a la que pertenece este dispositivo."
-        field={{
-          kind: 'select',
-          label: 'Línea',
-          placeholder: 'Seleccioná una línea',
-          options: lineas.map((linea) => ({ value: String(linea.id), label: linea.nombre })),
-        }}
-        confirmText="Confirmar"
-        cancelText="Cancelar"
-        onConfirm={handleConfirm}
-        onClose={() => setSelectedHardwareId(null)}
-      />
     </div>
   );
 }
