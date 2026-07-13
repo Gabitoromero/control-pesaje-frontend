@@ -10,7 +10,7 @@ import {
 import { MonitoreoLineHeader } from '../components/MonitoreoLineHeader';
 import { MonitoreoKpiStrip } from '../components/MonitoreoKpiStrip';
 import { MonitoreoEtapasCarousel } from '../components/MonitoreoEtapasCarousel';
-import { Loader2, Minimize2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export const MonitoreoFullscreenPage = () => {
   const navigate = useNavigate();
@@ -75,27 +75,21 @@ export const MonitoreoFullscreenPage = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 p-6 flex flex-col gap-5 overflow-y-auto">
-      {/* Top bar with exit button */}
-      <div className="flex items-center justify-end">
-        <button
-          onClick={handleExitFullscreen}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-muted-foreground text-sm"
-        >
-          <Minimize2 size={16} />
-          Salir de pantalla completa
-        </button>
-      </div>
-
+    <div className="fixed inset-0 bg-background z-50 flex flex-col gap-3 p-4 md:p-6 overflow-hidden">
       <MonitoreoLineHeader
         resumen={resumen}
         onLineaChange={handleLineaChange}
-        onFullscreen={() => {}}
+        onFullscreen={handleExitFullscreen}
+        isFullscreen={true}
       />
 
-      {kpis && <MonitoreoKpiStrip kpis={kpis} />}
+      {kpis && (
+        <div className="flex-[3] min-h-0">
+          <MonitoreoKpiStrip kpis={kpis} />
+        </div>
+      )}
 
-      <div className="flex-1 min-h-0 flex items-center">
+      <div className="flex-[7] min-h-0">
         <MonitoreoEtapasCarousel etapas={etapas} />
       </div>
     </div>
