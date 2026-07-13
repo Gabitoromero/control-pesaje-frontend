@@ -71,7 +71,7 @@ export const MonitoreoPage = () => {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 w-full">
       <MonitoreoLineHeader
         resumen={resumen}
         onLineaChange={handleLineaChange}
@@ -80,7 +80,9 @@ export const MonitoreoPage = () => {
 
       {kpis && <MonitoreoKpiStrip kpis={kpis} />}
 
-      <MonitoreoEtapasCarousel etapas={etapas} />
+      <div className="flex-1 min-h-0">
+        <MonitoreoEtapasCarousel etapas={etapas} />
+      </div>
     </div>
   );
 };
