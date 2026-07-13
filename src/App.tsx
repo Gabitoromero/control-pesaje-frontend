@@ -20,6 +20,8 @@ import { RutaFormPage } from './features/dashboard/pages/RutaFormPage';
 import { SesionesActivasPage } from './features/dashboard/pages/SesionesActivasPage';
 import { DispositivosConectadosPage } from './features/dashboard/pages/DispositivosConectadosPage';
 import { ReportesPage } from './features/dashboard/pages/ReportesPage';
+import { MonitoreoPage } from './features/dashboard/pages/MonitoreoPage';
+import { MonitoreoFullscreenPage } from './features/dashboard/pages/MonitoreoFullscreenPage';
 
 function App() {
   const { isAuthenticated, user } = useAuth();
@@ -57,7 +59,7 @@ function App() {
 
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<div className="bg-card border border-border p-6 rounded-lg shadow-sm text-muted-foreground">Monitoreo en vivo — en construcción</div>} />
+          <Route index element={<MonitoreoPage />} />
           <Route path="planta" element={<Navigate to="/tablet/seleccion-linea" replace />} />
           <Route path="articulos" element={isJefe ? <ArticulosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="etapas" element={isJefe ? <EtapasPage /> : <Navigate to="/dashboard" replace />} />
@@ -70,6 +72,9 @@ function App() {
           <Route path="dispositivos-conectados" element={isAdmin ? <DispositivosConectadosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="reportes" element={<ReportesPage />} />
         </Route>
+
+        {/* Fullscreen Monitoreo (no sidebar) */}
+        <Route path="/dashboard/monitoreo/fullscreen" element={<MonitoreoFullscreenPage />} />
 
         <Route path="/" element={<Navigate to={getDefaultRoute()} replace />} />
         <Route path="*" element={<Navigate to={getDefaultRoute()} replace />} />
