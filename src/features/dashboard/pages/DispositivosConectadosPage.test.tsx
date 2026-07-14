@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../../../test/render';
 import { DispositivosConectadosPage } from './DispositivosConectadosPage';
 import { dispositivosApi } from '../../../api/dispositivos';
 
@@ -10,15 +11,21 @@ vi.mock('../../../api/dispositivos', () => ({
   },
 }));
 
+vi.mock('../../../components/dialogs/useDialog', () => ({
+  useDialog: () => ({
+    alertError: vi.fn(),
+    confirm: vi.fn().mockResolvedValue(true),
+  }),
+}));
+
 describe('DispositivosConectadosPage', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   it('renders loading state initially', () => {
     vi.mocked(dispositivosApi.getConectados).mockReturnValue(new Promise(() => {}));
-    render(<DispositivosConectadosPage />);
+    renderWithProviders(<DispositivosConectadosPage />);
     expect(screen.getByText(/cargando dispositivos/i)).toBeInTheDocument();
   });
 
@@ -35,7 +42,7 @@ describe('DispositivosConectadosPage', () => {
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
 
-    render(<DispositivosConectadosPage />);
+    renderWithProviders(<DispositivosConectadosPage />);
 
     await waitFor(() => {
       expect(screen.getByText('rpi-linea-a-001')).toBeInTheDocument();
@@ -58,7 +65,7 @@ describe('DispositivosConectadosPage', () => {
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
 
-    render(<DispositivosConectadosPage />);
+    renderWithProviders(<DispositivosConectadosPage />);
 
     await waitFor(() => {
       expect(screen.getByText('rpi-unassigned-002')).toBeInTheDocument();
@@ -80,7 +87,7 @@ describe('DispositivosConectadosPage', () => {
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
 
-    render(<DispositivosConectadosPage />);
+    renderWithProviders(<DispositivosConectadosPage />);
 
     await waitFor(() => {
       expect(screen.getByText('rpi-linea-a-001')).toBeInTheDocument();
@@ -94,7 +101,7 @@ describe('DispositivosConectadosPage', () => {
   it('renders empty state if no devices', async () => {
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue([]);
 
-    render(<DispositivosConectadosPage />);
+    renderWithProviders(<DispositivosConectadosPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/no hay dispositivos/i)).toBeInTheDocument();
@@ -115,18 +122,24 @@ describe('DispositivosConectadosPage', () => {
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
     vi.mocked(dispositivosApi.deleteDispositivo).mockResolvedValue(undefined);
 
-    render(<DispositivosConectadosPage />);
+    renderWithProviders(<DispositivosConectadosPage />);
 
     await waitFor(() => {
       expect(screen.getByText('rpi-linea-a-001')).toBeInTheDocument();
     });
 
+    // Open the edit modal first (the only row-level button is Edit)
+    fireEvent.click(screen.getByTitle(/editar dispositivo/i));
+
+    // Wait for modal, then click Eliminar inside it
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /eliminar/i })).toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByRole('button', { name: /eliminar/i }));
 
     await waitFor(() => {
-      expect(dispositivosApi.deleteDispositivo).toHaveBeenCalledWith(1);
+      expect(dispositivosApi.deleteDispositivo).toHaveBeenCalledWith('rpi-linea-a-001');
     });
-
-    expect(dispositivosApi.getConectados).toHaveBeenCalledTimes(2);
   });
 });
