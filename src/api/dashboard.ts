@@ -8,11 +8,14 @@ export interface DashboardLineaItem {
     id: number;
     nombre: string;
   };
+  dispositivo?: {
+    id: number;
+  } | null;
 }
 
 export interface DashboardLineaResumen {
   conectado: boolean;
-  pasadaEnCurso?: {
+  pasadaEnCurso: {
     id: number;
     horaInicio: string;
     estado: string;
@@ -21,7 +24,7 @@ export interface DashboardLineaResumen {
       id: number;
       nombre: string;
     };
-  };
+  } | null;
 }
 
 export interface DashboardKpi {

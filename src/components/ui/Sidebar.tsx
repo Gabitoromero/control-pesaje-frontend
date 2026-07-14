@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import {
-  LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory,
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen, Ban, Sun, Moon, UserCheck
+  LayoutDashboard, FileBarChart, LogOut, Package, Users, UserRoundCog, Factory,
+  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar
 } from 'lucide-react';
 import { useTheme } from '../../features/theme/ThemeContext';
 import { UsuarioRol } from '../../shared/types';
@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors text-muted-foreground hover:bg-accent hover:text-foreground`}
             >
               <div className="flex items-center">
-                <BookOpen className="w-5 h-5 mr-3" />
+                <Cog className="w-5 h-5 mr-3" />
                 Catálogo
               </div>
               {isCatalogoOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
               <div className="mt-1 ml-6 space-y-1">
                 {isAdmin && (
                   <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
-                    <Users className="w-5 h-5 mr-3" />
+                    <UserRoundCog className="w-5 h-5 mr-3" />
                     Usuarios
                   </NavLink>
                 )}
@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                   Etapas
                 </NavLink>
                 <NavLink to="/dashboard/lineas" className={navClass} onClick={handleLinkClick}>
-                  <GitMerge className="w-5 h-5 mr-3" />
+                  <SplinePointer className="w-5 h-5 mr-3" />
                   Líneas
                 </NavLink>
                 <NavLink to="/dashboard/rutas" className={navClass} onClick={handleLinkClick}>
@@ -120,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition-colors text-muted-foreground hover:bg-accent hover:text-foreground`}
             >
               <div className="flex items-center">
-                <Settings className="w-5 h-5 mr-3" />
+                <Radar className="w-5 h-5 mr-3" />
                 Administración
               </div>
               {isAdministracionOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -134,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                 </NavLink>
                 {isAdmin && (
                   <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
-                    <UserCheck className="w-5 h-5 mr-3" />
+                    <Users className="w-5 h-5 mr-3" />
                     Sesiones Activas
                   </NavLink>
                 )}
@@ -159,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
           className="w-full flex items-center px-3 py-2.5 rounded-md transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           {theme === 'dark' ? <Sun className="w-5 h-5 mr-3" /> : <Moon className="w-5 h-5 mr-3" />}
-          Cambiar Tema
+          Tema
         </button>
       </nav>
 

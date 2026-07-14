@@ -40,16 +40,16 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
         <div className="absolute left-0 right-12 bg-success/10" style={{ top: '25%', bottom: '25%' }} />
 
         {/* Max line */}
-        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ top: '25%' }} />
-        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ top: '22%' }}>MÁX {etapa.pesoMaximo}</span>
+        <div className="absolute left-0 right-12 h-px bg-warning/60" style={{ top: '25%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-warning font-mono" style={{ top: '22%' }}>MÁX {etapa.pesoMaximo}</span>
 
         {/* Ideal line */}
-        <div className="absolute left-0 right-12 h-px bg-cyan-400" style={{ top: '50%' }} />
-        <span className="absolute right-1 text-[9px] font-semibold text-cyan-400 font-mono" style={{ top: '47%' }}>IDEAL {etapa.pesoIdeal}</span>
+        <div className="absolute left-0 right-12 h-px bg-primary" style={{ top: '50%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-primary font-mono" style={{ top: '47%' }}>IDEAL {etapa.pesoIdeal}</span>
 
         {/* Min line */}
-        <div className="absolute left-0 right-12 h-px bg-amber-500/60" style={{ bottom: '25%' }} />
-        <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ bottom: '22%' }}>MÍN {etapa.pesoMinimo}</span>
+        <div className="absolute left-0 right-12 h-px bg-warning/60" style={{ bottom: '25%' }} />
+        <span className="absolute right-1 text-[9px] font-semibold text-warning font-mono" style={{ bottom: '22%' }}>MÍN {etapa.pesoMinimo}</span>
 
         {/* Data points */}
         <div className="absolute inset-0 right-12">

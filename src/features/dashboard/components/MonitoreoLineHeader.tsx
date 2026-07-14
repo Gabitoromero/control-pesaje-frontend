@@ -7,6 +7,7 @@ interface MonitoreoLineHeaderProps {
   lineaNombre: string;
   rutaActivaNombre: string | null;
   isFullscreen: boolean;
+  sinDispositivo?: boolean;
   onLineaChange: (delta: 1 | -1) => void;
   onFullscreen: () => void;
 }
@@ -19,7 +20,7 @@ function formatElapsed(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, isFullscreen, onLineaChange, onFullscreen }: MonitoreoLineHeaderProps) {
+export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, isFullscreen, sinDispositivo, onLineaChange, onFullscreen }: MonitoreoLineHeaderProps) {
   const tiempoInicial = resumen.pasadaEnCurso?.tiempoTranscurrido ? Math.floor(resumen.pasadaEnCurso.tiempoTranscurrido / 1000) : 0;
   const [elapsed, setElapsed] = useState(tiempoInicial);
 
@@ -45,9 +46,14 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">LÍNEA Y RUTA ACTIVA</p>
         <p className="text-base font-bold text-foreground truncate">
-          <span className="text-cyan-400">{lineaNombre}</span>
+          <span className="text-primary">{lineaNombre}</span>
           <span className="text-muted-foreground mx-2">·</span>
           <span className="text-foreground/80">{rutaActivaNombre ?? 'Sin ruta activa'}</span>
+          {sinDispositivo && (
+            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-[11px] font-semibold align-middle">
+              Sin dispositivo
+            </span>
+          )}
         </p>
       </div>
 

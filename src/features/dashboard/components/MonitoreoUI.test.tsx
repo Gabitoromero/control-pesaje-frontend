@@ -32,6 +32,60 @@ describe('MonitoreoUI Components', () => {
       expect(screen.getByText('Alfajores Triples')).toBeInTheDocument();
       expect(screen.getByText('01:00:00')).toBeInTheDocument();
     });
+
+    it('uses the semantic primary token instead of raw cyan-400 for the línea name', () => {
+      const resumen = { conectado: false, pasadaEnCurso: null };
+
+      render(
+        <MonitoreoLineHeader
+          resumen={resumen as any}
+          lineaNombre="Linea 1"
+          rutaActivaNombre={null}
+          isFullscreen={false}
+          onLineaChange={() => {}}
+          onFullscreen={() => {}}
+        />
+      );
+
+      const lineaNombre = screen.getByText('Linea 1');
+      expect(lineaNombre.className).toContain('text-primary');
+      expect(lineaNombre.className).not.toContain('text-cyan-400');
+    });
+
+    it('shows a "sin dispositivo" badge when sinDispositivo is true', () => {
+      const resumen = { conectado: false, pasadaEnCurso: null };
+
+      render(
+        <MonitoreoLineHeader
+          resumen={resumen as any}
+          lineaNombre="Linea 1"
+          rutaActivaNombre="Alfajores Triples"
+          isFullscreen={false}
+          sinDispositivo
+          onLineaChange={() => {}}
+          onFullscreen={() => {}}
+        />
+      );
+
+      expect(screen.getByText(/sin dispositivo/i)).toBeInTheDocument();
+    });
+
+    it('does not show the "sin dispositivo" badge when sinDispositivo is false or omitted', () => {
+      const resumen = { conectado: false, pasadaEnCurso: null };
+
+      render(
+        <MonitoreoLineHeader
+          resumen={resumen as any}
+          lineaNombre="Linea 1"
+          rutaActivaNombre="Alfajores Triples"
+          isFullscreen={false}
+          onLineaChange={() => {}}
+          onFullscreen={() => {}}
+        />
+      );
+
+      expect(screen.queryByText(/sin dispositivo/i)).not.toBeInTheDocument();
+    });
   });
 
   describe('MonitoreoKpiStrip', () => {
