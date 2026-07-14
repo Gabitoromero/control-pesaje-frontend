@@ -5,7 +5,11 @@ interface MonitoreoEtapaCardProps {
 }
 
 export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
-  const estadoColor = etapa.ultimoPesoEstado === 'ok' ? 'text-success' : 'text-destructive';
+  const isUltimoOk = etapa.ultimoPeso >= etapa.pesoMinimo && etapa.ultimoPeso <= etapa.pesoMaximo;
+  const estadoColor = isUltimoOk ? 'text-success' : 'text-destructive';
+
+  const muestrasOk = etapa.timeSeries.filter(m => m.peso >= etapa.pesoMinimo && m.peso <= etapa.pesoMaximo).length;
+  const muestrasFuera = etapa.timeSeries.length - muestrasOk;
 
   return (
     <div className="w-full flex flex-col flex-1 min-h-0 h-full">
@@ -13,7 +17,7 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
       <div className="flex justify-between items-start mb-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ETAPA</p>
-          <h3 className="text-lg font-bold text-foreground">{etapa.etapaNombre}</h3>
+          <h3 className="text-lg font-bold text-foreground">{etapa.etapa.nombre}</h3>
           <p className="text-[11px] text-muted-foreground font-mono">
             rango {etapa.pesoMinimo}–{etapa.pesoMaximo} g · ideal {etapa.pesoIdeal} g
           </p>
@@ -25,13 +29,13 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
             <span className="text-sm font-normal text-muted-foreground"> g</span>
           </p>
           <p className={`text-xs font-semibold font-mono ${estadoColor}`}>
-            {etapa.porcentajeConforme}% conforme
+            {etapa.porcentajeConforme.toFixed(1)}% conforme
           </p>
         </div>
       </div>
 
       {/* Scatter chart area */}
-      <div className="relative flex-1 min-h-[200px] bg-accent/30 rounded-sm mb-4 border border-border">
+      <div className="relative flex-1 min-h-[200px] bg-accent/30 rounded-sm mb-4 border border-border overflow-hidden">
         {/* Tolerance band */}
         <div className="absolute left-0 right-12 bg-success/10" style={{ top: '25%', bottom: '25%' }} />
 
@@ -48,21 +52,19 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
         <span className="absolute right-1 text-[9px] font-semibold text-amber-500 font-mono" style={{ bottom: '22%' }}>MÍN {etapa.pesoMinimo}</span>
 
         {/* Data points */}
-        <div className="absolute inset-0">
-          {etapa.muestras.map((muestra, i) => {
-            const normX = (i / Math.max(etapa.muestras.length - 1, 1)) * 100;
+        <div className="absolute inset-0 right-12">
+          {etapa.timeSeries.map((muestra, i) => {
+            const normX = (i / Math.max(etapa.timeSeries.length - 1, 1)) * 100;
             const range = etapa.pesoMaximo - etapa.pesoMinimo;
-            const normY = range > 0 ? 75 - (((muestra.pesoNeto - etapa.pesoMinimo) / range) * 50) : 50;
-            const isOk = muestra.estadoValidacion === 'ok';
-            const isLibre = muestra.tipo === 'libre';
+            const normY = range > 0 ? 75 - (((muestra.peso - etapa.pesoMinimo) / range) * 50) : 50;
+            const isOk = muestra.peso >= etapa.pesoMinimo && muestra.peso <= etapa.pesoMaximo;
             const color = isOk ? 'bg-success border-card' : 'bg-destructive border-card';
-            const size = isLibre ? 'w-3 h-3 rotate-45' : 'w-3.5 h-3.5 rounded-full';
             return (
               <div
                 key={i}
-                className={`absolute border-2 ${size} ${color}`}
-                style={{ left: `${normX}%`, top: `${Math.max(2, Math.min(98, normY))}%`, transform: 'translate(-50%, -50%)' + (isLibre ? ' rotate(45deg)' : '') }}
-                title={`${muestra.pesoNeto.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'} · ${muestra.tipo}`}
+                className={`absolute border-2 w-3.5 h-3.5 rounded-full ${color}`}
+                style={{ left: `${normX}%`, top: `${Math.max(2, Math.min(98, normY))}%`, transform: 'translate(-50%, -50%)' }}
+                title={`${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}`}
               />
             );
           })}
@@ -70,14 +72,14 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
       </div>
 
       {/* Time axis */}
-      <div className="flex justify-between mb-3">
-        {etapa.muestras.length > 0 && (
+      <div className="flex justify-between mb-3 mr-12">
+        {etapa.timeSeries.length > 0 && (
           <>
             <span className="text-[9px] text-muted-foreground font-mono tabular-nums">
-              {new Date(etapa.muestras[0]?.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(etapa.timeSeries[0]?.time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
             </span>
             <span className="text-[9px] text-muted-foreground font-mono tabular-nums">
-              {new Date(etapa.muestras[etapa.muestras.length - 1]?.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(etapa.timeSeries[etapa.timeSeries.length - 1]?.time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </>
         )}
@@ -85,18 +87,15 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
 
       {/* Footer stats */}
       <div className="flex justify-between items-center pt-3 border-t border-border">
-        <span className="text-xs text-muted-foreground font-mono">{etapa.totalMuestras} muestras desde el cambio de ruta</span>
+        <span className="text-xs text-muted-foreground font-mono">{etapa.timeSeries.length} muestras desde el inicio</span>
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono">
             <span className="text-success">● </span>
-            <span className="text-muted-foreground">{etapa.muestrasOk} ok</span>
+            <span className="text-muted-foreground">{muestrasOk} ok</span>
           </span>
           <span className="text-xs font-mono">
             <span className="text-destructive">● </span>
-            <span className="text-muted-foreground">{etapa.muestrasFuera} fuera</span>
-          </span>
-          <span className="text-[10px] text-muted-foreground font-mono">
-            <span className="text-success">●</span> pasada <span className="text-success ml-1">◆</span> libre
+            <span className="text-muted-foreground">{muestrasFuera} fuera</span>
           </span>
         </div>
       </div>

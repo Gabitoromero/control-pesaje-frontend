@@ -51,6 +51,7 @@ export const DispositivosConectadosPage: React.FC = () => {
     
     if (confirmed) {
       deleteMutation.mutate(hardwareId);
+      closeEditModal();
     }
   };
 
@@ -162,18 +163,10 @@ export const DispositivosConectadosPage: React.FC = () => {
                         <button
                           type="button"
                           className="text-muted-foreground hover:text-foreground"
-                          title="Editar Nombre"
+                          title="Editar Dispositivo"
                           onClick={() => openEditModal(device)}
                         >
                           <Edit size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-destructive hover:text-destructive/80"
-                          title="Eliminar"
-                          onClick={() => handleDelete(device.hardwareId)}
-                        >
-                          <Trash size={18} />
                         </button>
                       </div>
                     </td>
@@ -205,13 +198,22 @@ export const DispositivosConectadosPage: React.FC = () => {
                 />
               </div>
             </div>
-            <DialogFooter className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closeEditModal} className="px-4 py-2 border border-border rounded-md text-foreground hover:bg-accent">
-                Cancelar
+            <DialogFooter className="mt-6 flex flex-row sm:justify-between w-full">
+              <button
+                type="button"
+                className="px-4 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors flex items-center gap-2"
+                onClick={() => handleDelete(editingDevice?.hardwareId!)}
+              >
+                <Trash size={18} /> Eliminar
               </button>
-              <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
-                {updateMutation.isPending ? 'Guardando...' : 'Guardar'}
-              </button>
+              <div className="flex gap-3">
+                <button type="button" onClick={closeEditModal} className="px-4 py-2 border border-border rounded-md text-foreground hover:bg-accent">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
+                  {updateMutation.isPending ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -92,6 +92,8 @@ export const MonitoreoPage = () => {
       <div className="flex flex-col gap-3 flex-shrink-0">
         <MonitoreoLineHeader
           resumen={resumen}
+          lineaNombre={lineas[lineaIndex]?.nombre ?? 'Desconocida'}
+          rutaActivaNombre={lineas[lineaIndex]?.rutaPasadaActiva?.nombre ?? null}
           onLineaChange={handleLineaChange}
           onFullscreen={handleFullscreen}
           isFullscreen={false}

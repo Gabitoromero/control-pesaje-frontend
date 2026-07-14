@@ -4,28 +4,32 @@ import type { DashboardLineaResumen } from '../../../api/dashboard';
 
 interface MonitoreoLineHeaderProps {
   resumen: DashboardLineaResumen;
+  lineaNombre: string;
+  rutaActivaNombre: string | null;
   isFullscreen: boolean;
   onLineaChange: (delta: 1 | -1) => void;
   onFullscreen: () => void;
 }
 
 function formatElapsed(seconds: number): string {
+  if (isNaN(seconds)) return '00:00:00';
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export function MonitoreoLineHeader({ resumen, isFullscreen, onLineaChange, onFullscreen }: MonitoreoLineHeaderProps) {
-  const [elapsed, setElapsed] = useState(resumen.tiempoTranscurrido);
+export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, isFullscreen, onLineaChange, onFullscreen }: MonitoreoLineHeaderProps) {
+  const tiempoInicial = resumen.pasadaEnCurso?.tiempoTranscurrido ? Math.floor(resumen.pasadaEnCurso.tiempoTranscurrido / 1000) : 0;
+  const [elapsed, setElapsed] = useState(tiempoInicial);
 
   useEffect(() => {
-    setElapsed(resumen.tiempoTranscurrido);
+    setElapsed(tiempoInicial);
     const timer = setInterval(() => {
       setElapsed((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [resumen.tiempoTranscurrido]);
+  }, [tiempoInicial]);
 
   const handlePrev = useCallback(() => onLineaChange(-1), [onLineaChange]);
   const handleNext = useCallback(() => onLineaChange(1), [onLineaChange]);
@@ -41,9 +45,9 @@ export function MonitoreoLineHeader({ resumen, isFullscreen, onLineaChange, onFu
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">LÍNEA Y RUTA ACTIVA</p>
         <p className="text-base font-bold text-foreground truncate">
-          <span className="text-cyan-400">{resumen.lineaNombre}</span>
+          <span className="text-cyan-400">{lineaNombre}</span>
           <span className="text-muted-foreground mx-2">·</span>
-          <span className="text-foreground/80">{resumen.rutaActivaNombre}</span>
+          <span className="text-foreground/80">{rutaActivaNombre ?? 'Sin ruta activa'}</span>
         </p>
       </div>
 

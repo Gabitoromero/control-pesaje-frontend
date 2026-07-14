@@ -3,8 +3,9 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import {
   LayoutDashboard, FileBarChart, LogOut, Package, Users, Factory,
-  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen, Ban
+  Layers, Route as RouteIcon, GitMerge, ChevronDown, ChevronRight, Settings, Activity, Cpu, BookOpen, Ban, Sun, Moon, UserCheck
 } from 'lucide-react';
+import { useTheme } from '../../features/theme/ThemeContext';
 import { UsuarioRol } from '../../shared/types';
 import { getAvatarInitials } from '../../features/tablet/utils/avatarInitials';
 
@@ -16,6 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const [isCatalogoOpen, setIsCatalogoOpen] = useState(() => {
     return ['/articulos', '/etapas', '/lineas', '/rutas']
@@ -23,7 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   });
 
   const [isAdministracionOpen, setIsAdministracionOpen] = useState(() => {
-    return ['/usuarios', '/sesiones-activas', '/dispositivos-conectados']
+    return ['/usuarios', '/sesiones-activas', '/dispositivos-conectados', '/pasadas-activas']
       .some(path => location.pathname.includes(path));
   });
 
@@ -70,13 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
         )}
 
         {isJefe && (
-          <NavLink to="/dashboard/pasadas-activas" className={navClass} onClick={handleLinkClick}>
-            <Ban className="w-5 h-5 mr-3" />
-            Pasadas Activas
-          </NavLink>
-        )}
-
-        {isJefe && (
           <div>
             <button
               onClick={() => setIsCatalogoOpen(!isCatalogoOpen)}
@@ -91,6 +86,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
 
             {isCatalogoOpen && (
               <div className="mt-1 ml-6 space-y-1">
+                {isAdmin && (
+                  <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
+                    <Users className="w-5 h-5 mr-3" />
+                    Usuarios
+                  </NavLink>
+                )}
                 <NavLink to="/dashboard/articulos" className={navClass} onClick={handleLinkClick}>
                   <Package className="w-5 h-5 mr-3" />
                   Artículos
@@ -112,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
           </div>
         )}
 
-        {isAdmin && (
+        {isJefe && (
           <div>
             <button
               onClick={() => setIsAdministracionOpen(!isAdministracionOpen)}
@@ -127,14 +128,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
 
             {isAdministracionOpen && (
               <div className="mt-1 ml-6 space-y-1">
-                <NavLink to="/dashboard/usuarios" className={navClass} onClick={handleLinkClick}>
-                  <Users className="w-5 h-5 mr-3" />
-                  Usuarios
-                </NavLink>
-                <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
+                <NavLink to="/dashboard/pasadas-activas" className={navClass} onClick={handleLinkClick}>
                   <Activity className="w-5 h-5 mr-3" />
-                  Sesiones Activas
+                  Pasadas Activas
                 </NavLink>
+                {isAdmin && (
+                  <NavLink to="/dashboard/sesiones-activas" className={navClass} onClick={handleLinkClick}>
+                    <UserCheck className="w-5 h-5 mr-3" />
+                    Sesiones Activas
+                  </NavLink>
+                )}
                 <NavLink to="/dashboard/dispositivos-conectados" className={navClass} onClick={handleLinkClick}>
                   <Cpu className="w-5 h-5 mr-3" />
                   Dispositivos
@@ -150,6 +153,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
             Reportes
           </NavLink>
         )}
+
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center px-3 py-2.5 rounded-md transition-colors text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          {theme === 'dark' ? <Sun className="w-5 h-5 mr-3" /> : <Moon className="w-5 h-5 mr-3" />}
+          Cambiar Tema
+        </button>
       </nav>
 
       <div className="p-4 border-t border-border">

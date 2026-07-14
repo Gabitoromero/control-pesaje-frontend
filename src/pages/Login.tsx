@@ -87,7 +87,7 @@ const Login: React.FC = () => {
           key={d}
           onClick={() => handleDigit(d)}
           disabled={loading}
-          className="h-16 rounded-2xl bg-secondary hover:bg-muted active:scale-95 text-2xl font-bold text-foreground transition-all disabled:opacity-50"
+          className="h-12 rounded-2xl bg-secondary hover:bg-muted active:scale-95 text-2xl font-bold text-foreground transition-all disabled:opacity-50"
         >
           {d}
         </button>
@@ -95,7 +95,7 @@ const Login: React.FC = () => {
       <button
         onClick={handleBackspace}
         disabled={loading}
-        className="h-16 rounded-2xl bg-secondary hover:bg-muted active:scale-95 text-2xl font-bold text-muted-foreground transition-all disabled:opacity-50"
+        className="h-12 rounded-2xl bg-secondary hover:bg-muted active:scale-95 text-2xl font-bold text-muted-foreground transition-all disabled:opacity-50"
       >
         ⌫
       </button>
@@ -103,7 +103,7 @@ const Login: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans text-foreground relative">
+    <div className="h-[100dvh] overflow-hidden bg-background flex flex-col md:flex-row font-sans text-foreground relative">
       <button
         type="button"
         onClick={toggleTheme}
@@ -184,15 +184,15 @@ const Login: React.FC = () => {
       </div>
 
       {/* Login Form Side */}
-      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col items-center justify-center p-6 sm:p-12 min-h-screen md:min-h-0 bg-background">
-        <div className="w-full max-w-sm space-y-6">
+      <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col items-center justify-center p-3 sm:p-6 h-full bg-background overflow-hidden">
+        <div className="w-full max-w-sm space-y-3">
 
           {/* Header UI - Only visible on mobile since branding side handles desktop */}
-          <div className="text-center mb-8 md:hidden">
-            <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand/20">
-              <img src="/android-chrome-192x192.png" alt="Controlador de Pesaje" className="w-10 h-10 object-contain rounded-lg" />
+          <div className="text-center mb-4 md:hidden">
+            <div className="w-14 h-14 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-brand/20">
+              <img src="/android-chrome-192x192.png" alt="Controlador de Pesaje" className="w-8 h-8 object-contain rounded-lg" />
             </div>
-            <h1 className="text-2xl font-bold mb-1">Controlador de Pesaje</h1>
+            <h1 className="text-xl font-bold mb-1">Controlador de Pesaje</h1>
             <p className="text-muted-foreground">Ingreso al sistema</p>
           </div>
 
@@ -201,7 +201,7 @@ const Login: React.FC = () => {
           <div
             data-testid="stepper-step-legajo"
             onClick={() => { if (!loading) setStep('legajo'); }}
-            className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 cursor-pointer ${
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 cursor-pointer ${
               isLegajoStep
                 ? 'border-brand bg-brand-muted text-brand'
                 : 'border-border bg-secondary text-muted-foreground'
@@ -217,7 +217,7 @@ const Login: React.FC = () => {
           />
           <div
             data-testid="stepper-step-pin"
-            className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+            className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
               isLegajoStep
                 ? 'border-border bg-secondary text-muted-foreground'
                 : 'border-brand bg-brand-muted text-brand'
@@ -227,7 +227,7 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-center h-8">
+        <div className="text-center h-6">
           <p className="text-sm text-muted-foreground">
             {isLegajoStep ? 'Ingresá tu legajo' : 'Ingresá tu PIN'}
           </p>
@@ -238,7 +238,7 @@ const Login: React.FC = () => {
           if (isLegajoStep && legajo) setStep('pin');
           else if (!isLegajoStep && pin.length >= 4) handleLogin();
         }}>
-          <div className="bg-card border border-border rounded-2xl px-6 py-4 text-center text-3xl font-mono tracking-widest min-h-16 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-2xl px-6 py-2 text-center text-3xl font-mono tracking-widest min-h-12 flex items-center justify-center">
             {isLegajoStep ? (
               <input
                 autoFocus
@@ -274,16 +274,16 @@ const Login: React.FC = () => {
           <button
             onClick={() => setStep('pin')}
             disabled={!legajo || loading}
-            className="w-full h-14 rounded-2xl bg-primary hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold text-primary-foreground transition-all mt-4"
+            className="w-full h-12 rounded-2xl bg-primary hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold text-primary-foreground transition-all mt-2"
           >
             Continuar
           </button>
         ) : (
-          <div className="space-y-3 mt-4">
+          <div className="space-y-3 mt-2">
             <button
               onClick={handleLogin}
               disabled={pin.length < 4 || loading}
-              className="w-full h-14 rounded-2xl bg-brand-light hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-2xl bg-brand-light hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
             >
               {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
               Ingresar
