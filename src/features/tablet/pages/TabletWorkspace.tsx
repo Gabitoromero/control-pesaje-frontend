@@ -30,15 +30,12 @@ export const TabletWorkspace: React.FC = () => {
   useActividadHeartbeat(lineaId);
 
   const { pesoNeto, isConnected } = useBalanzaWebSocket(lineaId);
-  const [apiError, setApiError] = useState<string | null>(null);
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
   // Task 3.3: Load the active run using GET /api/pasadas/:id
   const {
     data: pasada,
     isLoading: loadingPasada,
-    error: errorPasada,
-    refetch: refetchPasada,
   } = useQuery<Pasada>({
     queryKey: ['pasada', pasadaId],
     queryFn: () => getPasada(pasadaId!),
@@ -99,10 +96,9 @@ export const TabletWorkspace: React.FC = () => {
     articuloId: pasada?.articuloId,
     etapas,
     initialMuestras: muestrasList,
-    onApiError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
-      const msg = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error de comunicación';
-      setApiError(msg);
+    onApiError: (_err: unknown) => {
+      // Errors are handled silently at the UI level —
+      // the page remains accessible even when API calls fail.
     },
   });
 
@@ -156,10 +152,8 @@ export const TabletWorkspace: React.FC = () => {
     try {
       await completarPasada(pasadaId);
       navigate('/tablet/pasadas');
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
-      const msg = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error al completar pasada';
-      setApiError(msg);
+    } catch {
+      // Error handled silently — page remains accessible.
     }
   };
 
@@ -178,9 +172,6 @@ export const TabletWorkspace: React.FC = () => {
 
   const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidadMuestrasRequeridas ?? 0;
   
-  // Task 3.7: Render Lockout Overlay when isConnected is false or API requests fail
-  const showLockout = !isConnected || !!apiError || !!errorPasada || !!errorLinea;
-
   // Phase 4: Tolerance bar + OK/Fuera-de-Rango badge (only meaningful with an active stage)
   // Note: `etapaActiva` (from usePasadaState) is the RutaPasadaEtapa wrapper itself —
   // pesoMinimo/pesoIdeal/pesoMaximo live directly on it, NOT nested under `.etapa`
@@ -377,42 +368,6 @@ export const TabletWorkspace: React.FC = () => {
           onDelete={handleRemoveSample}
           onClose={() => setSelectedSampleIndex(null)}
         />
-      )}
-
-      {/* Lockout Overlay */}
-      {showLockout && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-md p-6 select-none animate-fade-in">
-          <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full text-center shadow-2xl flex flex-col items-center">
-            <div className="w-16 h-16 rounded-2xl bg-danger-muted border border-danger/20 flex items-center justify-center mb-6 text-danger animate-pulse">
-              <Scale size={32} />
-            </div>
-            <h3 className="text-2xl font-bold text-foreground mb-2">
-              {!isConnected ? 'Señal de Balanza Perdida' : 'Error de Conexión'}
-            </h3>
-            <p className="text-muted-foreground text-sm mb-6">
-              {!isConnected
-                ? 'La comunicación con la balanza se ha interrumpido. Verifique la conexión para continuar.'
-                : 'Hubo un problema al comunicarse con el servidor o procesar la solicitud.'}
-            </p>
-            {(apiError || errorPasada || errorLinea) && (
-              <div className="bg-danger-muted border border-danger/30 rounded-xl p-3 text-xs text-danger mb-6 font-mono break-all max-h-32 overflow-y-auto">
-                {apiError || (errorPasada as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message ||
-                   (errorPasada as { message?: string })?.message ||
-                   (errorLinea as { response?: { data?: { error?: { message?: string } }; }; message?: string })?.response?.data?.error?.message ||
-                   (errorLinea as { message?: string })?.message}
-              </div>
-            )}
-            <button
-              onClick={() => {
-                setApiError(null);
-                refetchPasada();
-              }}
-              className="w-full py-3.5 bg-secondary hover:bg-accent active:scale-95 text-secondary-foreground rounded-xl text-sm font-semibold transition-all"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
       )}
 
     </div>

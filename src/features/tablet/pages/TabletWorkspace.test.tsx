@@ -236,7 +236,7 @@ describe('TabletWorkspace', () => {
     expect(screen.getByText('1 / 2 muestras OK')).toBeInTheDocument();
   });
 
-  it('muestra el lockout overlay cuando la balanza se desconecta', async () => {
+  it('muestra "Sin señal" y mantiene la página accesible cuando la balanza se desconecta', async () => {
     // Set connection status to disconnected
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 0,
@@ -249,12 +249,18 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    // Should display signal lost overlay
-    expect(await screen.findByText('Señal de Balanza Perdida')).toBeInTheDocument();
-    expect(screen.getByText(/La comunicación con la balanza se ha interrumpido/i)).toBeInTheDocument();
+    // Page should remain accessible — no lockout overlay
+    expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
+
+    // Should display "Sin señal" status instead of "Conectado"
+    expect(screen.getByText('Sin señal')).toBeInTheDocument();
+
+    // Registrar Muestra button should be disabled
+    const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
+    expect(btnRegistrar).toBeDisabled();
   });
 
-  it('muestra el lockout overlay cuando una llamada API falla', async () => {
+  it('mantiene la página accesible cuando una llamada API falla (sin lockout)', async () => {
     // Override MSW handler for getPasada to fail
     server.use(
       http.get(`${BASE}/pasadas/101`, () => {
@@ -271,9 +277,14 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    // Overlay for connection error should be shown with api error details
-    expect(await screen.findByText('Error de Conexión')).toBeInTheDocument();
-    expect(screen.getByText('Servidor no disponible')).toBeInTheDocument();
+    // Page should remain accessible — no lockout overlay.
+    // Line name is still fetched via the (separate) getLinea query, so
+    // the topbar and weighing zone should render with whatever data is available.
+    expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
+
+    // "Señal de Balanza Perdida" / "Error de Conexión" lockout overlay must NOT appear.
+    expect(screen.queryByText('Señal de Balanza Perdida')).not.toBeInTheDocument();
+    expect(screen.queryByText('Error de Conexión')).not.toBeInTheDocument();
   });
 
   it('completa la pasada y redirige a gestion al presionar Finalizar Pasada', async () => {
