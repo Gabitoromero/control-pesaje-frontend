@@ -26,7 +26,7 @@ describe('dispositivosApi', () => {
   it('should call delete for deleteDispositivo', async () => {
     vi.mocked(api.delete).mockResolvedValueOnce({ data: { success: true, data: { id: 3 } } });
 
-    await dispositivosApi.deleteDispositivo(3);
+    await dispositivosApi.deleteDispositivo('3');
 
     expect(api.delete).toHaveBeenCalledWith('/dispositivos/3');
   });

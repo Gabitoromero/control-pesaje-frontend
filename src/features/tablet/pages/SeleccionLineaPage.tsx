@@ -122,7 +122,6 @@ export const SeleccionLineaPage: React.FC = () => {
                 >
                   <div className="text-left">
                     <p className="font-semibold text-xl text-foreground">{linea.nombre}</p>
-                    <p className="text-sm text-muted-foreground mt-1">Balanza #{linea.numeroBalanza}</p>
                     {linea.rutaPasadaActiva?.nombre && (
                       <p className="text-sm text-primary mt-1">Ruta: {linea.rutaPasadaActiva.nombre}</p>
                     )}

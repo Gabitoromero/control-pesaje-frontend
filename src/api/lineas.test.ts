@@ -50,6 +50,6 @@ describe('assignDeviceToLinea', () => {
     const result = await assignDeviceToLinea(7, 'rpi-xyz999');
 
     expect(api.put).toHaveBeenCalledWith('/lineas-produccion/7/device', { hardwareId: 'rpi-xyz999' });
-    expect(result.dispositivo.hardwareId).toBe('rpi-xyz999');
+    expect(result.dispositivo?.hardwareId).toBe('rpi-xyz999');
   });
 });

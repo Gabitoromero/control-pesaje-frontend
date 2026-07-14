@@ -34,6 +34,7 @@ describe('DispositivosConectadosPage', () => {
       {
         id: 1,
         hardwareId: 'rpi-linea-a-001',
+        nombre: 'RPI Linea A',
         lineaId: 5,
         lineaNombre: 'Línea A',
         estado: 'Conectado' as const,
@@ -55,8 +56,8 @@ describe('DispositivosConectadosPage', () => {
   it('renders Desconectado estado and a dash for unpaired devices without a línea nombre', async () => {
     const mockDevices = [
       {
-        id: 2,
         hardwareId: 'rpi-unassigned-002',
+        nombre: 'RPI Unassigned',
         lineaId: null,
         lineaNombre: null,
         estado: 'Desconectado' as const,
@@ -77,12 +78,12 @@ describe('DispositivosConectadosPage', () => {
   it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
     const mockDevices = [
       {
-        id: 1,
         hardwareId: 'rpi-linea-a-001',
+        nombre: 'RPI Linea A',
         lineaId: 5,
         lineaNombre: 'Línea A',
         estado: 'Conectado' as const,
-        ultimaConexionAt: new Date().toISOString(),
+        ultimaConexionAt: '2026-07-13T10:00:00Z',
       },
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
@@ -111,8 +112,8 @@ describe('DispositivosConectadosPage', () => {
   it('deletes a dispositivo when the delete action is confirmed and refetches the list', async () => {
     const mockDevices = [
       {
-        id: 1,
         hardwareId: 'rpi-linea-a-001',
+        nombre: 'RPI Linea A',
         lineaId: 5,
         lineaNombre: 'Línea A',
         estado: 'Desconectado' as const,
