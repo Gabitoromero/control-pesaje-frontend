@@ -102,15 +102,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch { /* storage unavailable */ }
   }, [activeLineaId]);
 
-  // Global listener for session termination
+  // Global listener for session termination forced by an admin.
+  // We also re-join the socket room on every reconnect so that the
+  // 'sesion-cerrada' event is never missed, regardless of the current page.
   useEffect(() => {
     if (!activeLineaId) return;
 
     const socket = getSocket();
     socket.connect();
-    
-    // Ensure the socket is in the room even if we are not in TabletWorkspace
-    socket.emit('join-linea', activeLineaId);
+
+    const joinRoom = () => {
+      socket.emit('join-linea', activeLineaId);
+    };
+
+    // Join immediately if already connected; 'connect' will handle future reconnects
+    if (socket.connected) {
+      joinRoom();
+    }
+    socket.on('connect', joinRoom);
 
     const onSesionCerrada = async () => {
       console.log('[AuthContext] Sesión forzada a cerrar por un administrador.');
@@ -125,6 +134,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     socket.on('sesion-cerrada', onSesionCerrada);
 
     return () => {
+      socket.off('connect', joinRoom);
       socket.off('sesion-cerrada', onSesionCerrada);
     };
   }, [activeLineaId, logout, user, alertWarning]);
