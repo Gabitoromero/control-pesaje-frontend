@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth/context/AuthContext';
@@ -33,6 +33,7 @@ export const TabletWorkspace: React.FC = () => {
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
   // Task 3.3: Load the active run using GET /api/pasadas/:id
+  // Poll every 5 s so the workspace detects if the run is aborted externally
   const {
     data: pasada,
     isLoading: loadingPasada,
@@ -40,7 +41,15 @@ export const TabletWorkspace: React.FC = () => {
     queryKey: ['pasada', pasadaId],
     queryFn: () => getPasada(pasadaId!),
     enabled: !!pasadaId,
+    refetchInterval: 5000,
   });
+
+  // Redirect back to the pasadas list when this run has been aborted externally
+  useEffect(() => {
+    if (pasada?.estado === 'abortada') {
+      navigate('/tablet/pasadas', { replace: true });
+    }
+  }, [pasada?.estado, navigate]);
 
   // Load production line details to get the route and stages
   const targetLineaId = pasada?.lineaProduccionId ?? activeLineaId ?? 0;

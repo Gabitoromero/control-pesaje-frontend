@@ -28,6 +28,8 @@ export const GestionPasadasPage: React.FC = () => {
     queryKey: ['pasadas-activas', activeLineaId],
     queryFn: () => getPasadas({ lineaProduccionId: activeLineaId ?? undefined, estado: 'en_curso' }),
     enabled: !!activeLineaId,
+    // Poll every 5 s so aborted/completed runs disappear without a page reload
+    refetchInterval: 5000,
   });
 
   // Query the active line to verify it has a route assigned
