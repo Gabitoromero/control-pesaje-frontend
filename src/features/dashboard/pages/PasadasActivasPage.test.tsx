@@ -150,4 +150,64 @@ describe('PasadasActivasPage', () => {
 
     expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
   });
+  it('renders em-dash fallbacks when lineaProduccion, usuario and articulo relations are null', async () => {
+    server.use(
+      http.get(`${BASE}/pasadas`, () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              id: 99,
+              lineaProduccionId: null,
+              usuarioId: null,
+              articuloId: null,
+              estado: 'en_curso',
+              horaInicio: '2026-07-08T10:00:00.000Z',
+              lineaProduccion: null,
+              usuario: null,
+              articulo: null,
+            },
+          ],
+        })
+      )
+    );
+
+    renderWithProviders(<PasadasActivasPage />);
+
+    await waitFor(() => {
+      // Each null relation column should show an em-dash instead of crashing
+      const dashes = screen.getAllByText('—');
+      expect(dashes.length).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  it('shows a specific message when the abort fails because the run was already aborted by another session', async () => {
+    server.use(
+      http.put(`${BASE}/pasadas/10`, () =>
+        HttpResponse.json(
+          { success: false, error: { message: 'La pasada ya no está en curso' } },
+          { status: 400 }
+        )
+      )
+    );
+
+    renderWithProviders(<PasadasActivasPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /abortar pasada/i }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByRole('textbox'), 'Error de sistema');
+    await userEvent.click(within(dialog).getByRole('button', { name: /confirmar/i }));
+
+    // The error dialog must surface the backend message so the operator knows
+    // it was already aborted by another admin session (race condition)
+    const errorDialog = await screen.findByRole('alertdialog');
+    expect(within(errorDialog).getByText('La pasada ya no está en curso')).toBeInTheDocument();
+
+    // Row must still be visible (the UI doesn't optimistically remove it)
+    expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+  });
 });
