@@ -60,8 +60,8 @@ const mockArticulos = [
 const lineaConRuta = {
   id: 1,
   nombre: 'Línea 1',
-  numeroBalanza: 1,
   rutaPasadaActiva: { id: 10, nombre: 'Ruta A', etapas: [] },
+  dispositivo: { id: 1, hardwareId: 'rpi-linea-a-001' },
   activo: true,
 };
 

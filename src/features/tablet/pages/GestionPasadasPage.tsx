@@ -40,6 +40,9 @@ export const GestionPasadasPage: React.FC = () => {
   });
 
   const sinRutaAsignada = linea !== undefined && !linea.rutaPasadaActiva;
+  // Block production actions when the line has no hardware device (balanza) assigned
+  const sinDispositivo = linea !== undefined && !linea.dispositivo;
+  const bloqueado = sinRutaAsignada || sinDispositivo;
   const etapasRuta = linea?.rutaPasadaActiva?.etapas ?? [];
 
   // Query articles for the "Nueva Pasada" modal
@@ -170,9 +173,16 @@ export const GestionPasadasPage: React.FC = () => {
           <aside className="flex flex-col gap-6">
             <button
               onClick={() => setIsModalOpen(true)}
-              disabled={sinRutaAsignada}
+              disabled={bloqueado}
+              title={
+                sinDispositivo
+                  ? 'No hay balanza asignada a esta línea'
+                  : sinRutaAsignada
+                  ? 'Asignale una ruta a la línea para iniciar una pasada'
+                  : undefined
+              }
               className={`flex items-center justify-center gap-2 h-16 rounded-2xl text-lg font-bold transition-all shadow-lg ${
-                sinRutaAsignada
+                bloqueado
                   ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
                   : 'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98]'
               }`}
@@ -181,8 +191,14 @@ export const GestionPasadasPage: React.FC = () => {
               Nueva Pasada
             </button>
 
-            {/* Free quality samples CTA — visible only for authorized users with an active route */}
-            {user?.puedeTomarMuestrasLibres && !sinRutaAsignada && linea?.rutaPasadaActiva && (
+            {sinDispositivo && (
+              <p className="text-sm text-warning text-center -mt-2">
+                Sin balanza asignada — no se puede iniciar una pasada ni tomar muestras
+              </p>
+            )}
+
+            {/* Free quality samples CTA — visible only for authorized users with an active route and an assigned device */}
+            {user?.puedeTomarMuestrasLibres && !sinRutaAsignada && !sinDispositivo && linea?.rutaPasadaActiva && (
               <section
                 data-testid="muestras-libres-section"
                 className="bg-card border border-border rounded-2xl p-6"
