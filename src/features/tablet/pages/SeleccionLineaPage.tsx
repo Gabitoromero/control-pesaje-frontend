@@ -21,7 +21,8 @@ export const SeleccionLineaPage: React.FC = () => {
     queryFn: async () => {
       const response = await api.get('/lineas-produccion');
       if (response.data?.success) {
-        return response.data.data;
+        const rawLineas = response.data.data as Linea[];
+        return rawLineas.sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
       }
       throw new Error('No se pudo obtener la lista de líneas');
     },
