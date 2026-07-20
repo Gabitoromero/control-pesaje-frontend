@@ -12,6 +12,7 @@ import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import { useActividadGlobal } from '../hooks/useActividadGlobal';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ export const ArticulosPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const { hayActividad } = useActividadGlobal();
 
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
@@ -181,11 +183,24 @@ export const ArticulosPage = () => {
         <h1 className="text-2xl font-bold text-foreground">Gestión de Artículos</h1>
         <button
           onClick={() => openModal()}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
+          disabled={hayActividad}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={hayActividad ? 'Bloqueado por actividad en el sistema' : ''}
         >
           <Plus size={18} /> Nuevo Artículo
         </button>
       </div>
+
+      {hayActividad && (
+        <div className="mb-6 p-4 bg-warning/20 border border-warning/50 rounded-md text-foreground">
+          <p className="font-semibold flex items-center gap-2">
+            ⚠️ Bloqueo de seguridad activo
+          </p>
+          <p className="text-sm mt-1">
+            No se pueden crear, editar ni eliminar artículos porque hay pasadas en curso o usuarios operando en línea.
+          </p>
+        </div>
+      )}
 
       <SearchToolbar
         status={status}
@@ -221,7 +236,12 @@ export const ArticulosPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => openModal(articulo)} className="text-muted-foreground hover:text-foreground" title="Editar">
+                    <button 
+                      onClick={() => openModal(articulo)} 
+                      disabled={hayActividad}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed" 
+                      title={hayActividad ? 'Bloqueado por actividad en el sistema' : 'Editar'}
+                    >
                       <Edit size={18} />
                     </button>
                   </td>

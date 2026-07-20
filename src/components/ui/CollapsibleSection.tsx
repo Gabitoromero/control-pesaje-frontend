@@ -44,7 +44,7 @@ export function CollapsibleSection({
   }, [isOpen, children]);
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-card border border-border rounded-lg shadow">
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
@@ -54,13 +54,13 @@ export function CollapsibleSection({
       >
         <span className="flex items-center gap-2">
           {isOpen ? (
-            <ChevronDown data-testid="chevron-down" size={20} className="text-gray-500" />
+            <ChevronDown data-testid="chevron-down" size={20} className="text-muted-foreground" />
           ) : (
-            <ChevronRight data-testid="chevron-right" size={20} className="text-gray-500" />
+            <ChevronRight data-testid="chevron-right" size={20} className="text-muted-foreground" />
           )}
-          <h2 className="text-lg font-medium text-gray-800">{title}</h2>
+          <h2 className="text-lg font-medium text-foreground">{title}</h2>
         </span>
-        <span className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">
+        <span className="bg-secondary text-secondary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
           {count}
         </span>
       </button>

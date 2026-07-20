@@ -6,7 +6,7 @@ import { GestionPasadasPage } from './GestionPasadasPage';
 import { vi } from 'vitest';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
-import { getLinea } from '../../../api/lineas';
+import { getLinea, type Linea } from '../../../api/lineas';
 import type { Pasada } from '../../../shared/types/domain';
 
 const navigateMock = vi.fn();
