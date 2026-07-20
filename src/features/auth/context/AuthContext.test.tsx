@@ -190,6 +190,24 @@ describe('AuthContext', () => {
     expect(result.current.activeLineaId).toBeNull();
   });
 
+  it('closeLineSession remueve el listener de socket sesion-cerrada', async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthWithDialog });
+
+    act(() => {
+      result.current.openLineSession(5);
+    });
+
+    expect(mockSocket.on).toHaveBeenCalledWith('sesion-cerrada', expect.any(Function));
+    
+    mockSocket.off.mockClear();
+
+    await act(async () => {
+      await result.current.closeLineSession();
+    });
+
+    expect(mockSocket.off).toHaveBeenCalledWith('sesion-cerrada', expect.any(Function));
+  });
+
   describe('sesion-cerrada forced logout warning', () => {
     function Consumer() {
       useAuth();

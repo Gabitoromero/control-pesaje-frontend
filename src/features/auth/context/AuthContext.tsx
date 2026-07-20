@@ -90,16 +90,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const closeLineSession = useCallback(async () => {
-    try {
-      if (activeLineaId) await cerrarSesionLinea(activeLineaId);
-    } catch (error) {
-      console.error('Failed to close line session:', error);
-      // Even if API fails, clear local state
-    }
+    const targetLineaId = activeLineaId;
     setActiveLineaId(null);
     try {
       localStorage.removeItem('activeLineaId');
     } catch { /* storage unavailable */ }
+
+    if (targetLineaId) {
+      try {
+        await cerrarSesionLinea(targetLineaId);
+      } catch (error) {
+        console.error('Failed to close line session:', error);
+      }
+    }
   }, [activeLineaId]);
 
   // Global listener for session termination forced by an admin.

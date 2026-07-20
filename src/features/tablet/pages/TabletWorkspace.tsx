@@ -16,9 +16,11 @@ import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { useDialog } from '../../../components/dialogs/useDialog';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
+  const { alertWarning } = useDialog();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const pasadaIdString = searchParams.get('pasadaId');
@@ -47,16 +49,22 @@ export const TabletWorkspace: React.FC = () => {
   // Redirect back to the pasadas list when this run has been aborted externally
   useEffect(() => {
     if (pasada?.estado === 'abortada') {
-      navigate('/tablet/pasadas', { replace: true });
+      const showWarningAndRedirect = async () => {
+        await alertWarning({
+          title: 'Pasada abortada',
+          description: 'Esta pasada fue abortada por un administrador.',
+        });
+        navigate('/tablet/pasadas', { replace: true });
+      };
+      showWarningAndRedirect();
     }
-  }, [pasada?.estado, navigate]);
+  }, [pasada?.estado, navigate, alertWarning]);
 
   // Load production line details to get the route and stages
   const targetLineaId = pasada?.lineaProduccionId ?? activeLineaId ?? 0;
   const {
     data: linea,
     isLoading: loadingLinea,
-    error: errorLinea,
   } = useQuery({
     queryKey: ['linea', targetLineaId],
     queryFn: () => getLinea(targetLineaId),

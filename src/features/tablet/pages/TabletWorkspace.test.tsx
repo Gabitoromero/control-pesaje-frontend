@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
@@ -502,5 +502,43 @@ describe('TabletWorkspace', () => {
     // '15.000 kg' also matches the tolerance params row (IDEAL=15 for Amasado) — use findAllByText.
     expect((await screen.findAllByText('15.000 kg')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /descartar muestra/i })).not.toBeInTheDocument();
+  });
+
+  it('muestra una alerta y redirige a /tablet/pasadas cuando la pasada es abortada por un admin', async () => {
+    server.use(
+      http.get(`${BASE}/pasadas/101`, () => {
+        return HttpResponse.json({
+          success: true,
+          data: {
+            id: 101,
+            lineaProduccionId: 1,
+            usuarioId: 3,
+            estado: 'abortada',
+            articuloId: 1,
+            createdAt: '2026-06-23T18:44:38Z',
+            updatedAt: '2026-06-23T18:44:38Z',
+            muestras: [],
+          },
+        });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Pasada abortada')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('Esta pasada fue abortada por un administrador.')
+    ).toBeInTheDocument();
+
+    expect(navigateMock).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas', { replace: true });
   });
 });
