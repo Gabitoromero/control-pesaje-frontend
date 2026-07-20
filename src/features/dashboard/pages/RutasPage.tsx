@@ -80,7 +80,7 @@ export const RutasPage = () => {
       />
 
       {hayActividad && (
-        <div className="mb-6 p-4 bg-warning/20 border border-warning/50 rounded-md text-warning-foreground">
+        <div className="mb-6 p-4 bg-warning/20 border border-warning/50 rounded-md text-foreground">
           <p className="font-semibold flex items-center gap-2">
             ⚠️ Bloqueo de seguridad activo
           </p>
