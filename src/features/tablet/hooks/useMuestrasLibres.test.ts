@@ -261,6 +261,46 @@ describe('useMuestrasLibres', () => {
     expect(result.current.isRegistering).toBe(false);
   });
 
+  it('changing selectedEtapaId while addSample is in flight does not break registration or state', async () => {
+    let resolveApi: (value: unknown) => void;
+    const apiPromise = new Promise<unknown>((resolve) => {
+      resolveApi = resolve;
+    });
+    vi.mocked(registrarMuestra).mockReturnValue(apiPromise as Promise<Muestra>);
+
+    const { result } = renderHook(() => useMuestrasLibres(baseProps));
+    expect(result.current.selectedEtapaId).toBe(10);
+
+    // 1. Start addSample (in flight)
+    let addSamplePromise: Promise<Muestra | undefined>;
+    act(() => {
+      addSamplePromise = result.current.addSample(15);
+    });
+
+    expect(result.current.isRegistering).toBe(true);
+    expect(registrarMuestra).toHaveBeenCalledWith(
+      expect.objectContaining({ etapaId: 10, pesoNeto: 15 })
+    );
+
+    // 2. Change etapa while in flight
+    act(() => {
+      result.current.setSelectedEtapaId(20);
+    });
+    expect(result.current.selectedEtapaId).toBe(20);
+
+    // 3. Resolve API
+    await act(async () => {
+      resolveApi!({ ...mockMuestra, id: 99, etapaId: 10 });
+      await addSamplePromise;
+    });
+
+    // It should have safely appended the sample with its original etapaId
+    expect(result.current.isRegistering).toBe(false);
+    expect(result.current.muestras).toHaveLength(1);
+    expect(result.current.muestras[0].id).toBe(99);
+    expect(result.current.muestras[0].etapaId).toBe(10);
+  });
+
   // ── T7: updateSample ──────────────────────────────────────────────────────
 
   describe('updateSample', () => {
