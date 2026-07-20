@@ -56,19 +56,41 @@ describe('Sidebar', () => {
 
     expect(screen.queryByRole('button', { name: /gestión/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /administración/i })).toBeInTheDocument();
+
+    // Usuarios (admin-only) está bajo Catálogo
+    const catalogoToggle = screen.getByRole('button', { name: /catálogo/i });
+    await userEventSetup.click(catalogoToggle);
+
+    expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /artículos/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /rutas/i })).toBeInTheDocument();
+
+    // Administración tiene sus propios sub-items
+    const administracionToggle = screen.getByRole('button', { name: /administración/i });
+    await userEventSetup.click(administracionToggle);
+
+    expect(screen.getByRole('link', { name: /sesiones activas/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /pasadas activas/i })).toBeInTheDocument();
+  });
+
+  it('hides admin-only sub-items from jefe but shows Administración group', async () => {
+    const userEventSetup = userEvent.setup();
+
+    renderWithAuth(<Sidebar />, { user: jefe, initialEntries: ['/dashboard'] });
+
+    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+    // Administración es visible para jefe, pero sus sub-items admin-only se ocultan
+    expect(screen.getByRole('button', { name: /administración/i })).toBeInTheDocument();
 
     const administracionToggle = screen.getByRole('button', { name: /administración/i });
     await userEventSetup.click(administracionToggle);
 
-    expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /sesiones activas/i })).toBeInTheDocument();
+    // Pasadas Activas y Dispositivos visibles para jefe
+    expect(screen.getByRole('link', { name: /pasadas activas/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
-  });
-
-  it('hides the Administración group for jefe (non-admin) users', () => {
-    renderWithAuth(<Sidebar />, { user: jefe, initialEntries: ['/dashboard'] });
-
-    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /administración/i })).not.toBeInTheDocument();
+    // Sesiones Activas es admin-only — el jefe NO la ve
+    expect(screen.queryByRole('link', { name: /sesiones activas/i })).not.toBeInTheDocument();
   });
 });

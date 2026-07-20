@@ -16,7 +16,7 @@ describe('dispositivosApi', () => {
         ultimaConexionAt: new Date().toISOString(),
       },
     ];
-    vi.mocked(api.get).mockResolvedValueOnce({ data: mockData });
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { data: mockData } });
 
     const result = await dispositivosApi.getConectados();
     expect(result).toEqual(mockData);

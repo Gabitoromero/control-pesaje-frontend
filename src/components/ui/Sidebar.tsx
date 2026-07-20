@@ -20,12 +20,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const { theme, toggleTheme } = useTheme();
 
   const [isCatalogoOpen, setIsCatalogoOpen] = useState(() => {
-    return ['/articulos', '/etapas', '/lineas', '/rutas']
+    return ['/usuarios', '/articulos', '/etapas', '/lineas', '/rutas']
       .some(path => location.pathname.includes(path));
   });
 
   const [isAdministracionOpen, setIsAdministracionOpen] = useState(() => {
-    return ['/usuarios', '/sesiones-activas', '/dispositivos-conectados', '/pasadas-activas']
+    return ['/sesiones-activas', '/dispositivos-conectados', '/pasadas-activas']
       .some(path => location.pathname.includes(path));
   });
 
