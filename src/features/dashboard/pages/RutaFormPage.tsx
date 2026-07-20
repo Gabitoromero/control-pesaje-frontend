@@ -16,6 +16,8 @@ import { rutaSchema } from './RutaFormPage.schemas.js';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import { useActividadGlobal } from '../hooks/useActividadGlobal';
+
 
 type RutaFormValues = z.infer<typeof rutaSchema>;
 
@@ -25,6 +27,8 @@ export const RutaFormPage = () => {
   const queryClient = useQueryClient();
   const { confirm, alertError } = useDialog();
   const isEditing = Boolean(id);
+
+  const { hayActividad } = useActividadGlobal();
 
   const { data: etapasOptions = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
   const { data: articulosOptions = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });
@@ -273,6 +277,17 @@ export const RutaFormPage = () => {
         </h1>
       </div>
 
+      {hayActividad && (
+        <div className="mb-6 p-4 bg-warning/20 border border-warning/50 rounded-md text-warning-foreground">
+          <p className="font-semibold flex items-center gap-2">
+            ⚠️ Bloqueo de seguridad activo
+          </p>
+          <p className="text-sm mt-1">
+            No se permite crear o editar rutas mientras haya pasadas o sesiones activas en el sistema.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="bg-card border border-border rounded-lg shadow p-6">
           <h2 className="text-lg font-medium mb-4 text-foreground">Información General</h2>
@@ -506,8 +521,8 @@ export const RutaFormPage = () => {
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="px-4 py-2 text-destructive border border-destructive/30 rounded-md hover:bg-destructive/10 disabled:opacity-50 flex items-center gap-2"
+                disabled={deleteMutation.isPending || hayActividad}
+                className="px-4 py-2 text-destructive border border-destructive/30 rounded-md hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Trash size={18} /> Eliminar Ruta
               </button>
@@ -516,8 +531,8 @@ export const RutaFormPage = () => {
               <button
                 type="button"
                 onClick={handleReactivar}
-                disabled={updateMutation.isPending}
-                className="px-4 py-2 text-success border border-success/30 rounded-md hover:bg-success/10 disabled:opacity-50 flex items-center gap-2 mr-auto"
+                disabled={updateMutation.isPending || hayActividad}
+                className="px-4 py-2 text-success border border-success/30 rounded-md hover:bg-success/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mr-auto"
               >
                 <RefreshCw size={18} /> Reactivar Ruta
               </button>
@@ -533,8 +548,8 @@ export const RutaFormPage = () => {
             </button>
             <button
               type="submit"
-              disabled={isBusy}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+              disabled={isBusy || hayActividad}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Save size={18} /> {isBusy ? 'Guardando...' : 'Guardar Ruta'}
             </button>

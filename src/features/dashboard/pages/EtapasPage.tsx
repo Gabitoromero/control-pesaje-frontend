@@ -12,6 +12,8 @@ import {
 import { Plus, Edit, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { useActividadGlobal } from '../hooks/useActividadGlobal';
+
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
 import {
@@ -39,6 +41,9 @@ export const EtapasPage = () => {
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
   const [query, setQuery] = useState('');
+
+  const { hayActividad } = useActividadGlobal();
+
 
   const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
     queryKey: ['etapas'],
@@ -183,7 +188,9 @@ export const EtapasPage = () => {
         <h1 className="text-2xl font-bold text-foreground">Gestión de Etapas</h1>
         <button
           onClick={() => openModal()}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2"
+          disabled={hayActividad}
+          title={hayActividad ? 'No se pueden crear etapas mientras haya pasadas o sesiones activas' : ''}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus size={18} /> Nueva Etapa
         </button>
@@ -198,6 +205,17 @@ export const EtapasPage = () => {
         query={query}
         onQueryChange={setQuery}
       />
+
+      {hayActividad && (
+        <div className="mb-6 p-4 bg-warning/20 border border-warning/50 rounded-md text-warning-foreground">
+          <p className="font-semibold flex items-center gap-2">
+            ⚠️ Bloqueo de seguridad activo
+          </p>
+          <p className="text-sm mt-1">
+            No se permite crear, editar o eliminar etapas mientras haya pasadas o sesiones activas en el sistema.
+          </p>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
@@ -221,7 +239,12 @@ export const EtapasPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => openModal(etapa)} className="text-muted-foreground hover:text-foreground" title="Editar">
+                    <button 
+                      onClick={() => openModal(etapa)} 
+                      disabled={hayActividad}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed" 
+                      title={hayActividad ? 'Bloqueado por actividad en el sistema' : 'Editar'}
+                    >
                       <Edit size={18} />
                     </button>
                   </td>
