@@ -9,6 +9,8 @@ import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
 import { PasadaCard } from '../components/PasadaCard';
+import { resetSocket } from '../../../services/websocket';
+
 
 export const GestionPasadasPage: React.FC = () => {
   const { user, closeLineSession, activeLineaId, logout } = useAuth();
@@ -75,6 +77,7 @@ export const GestionPasadasPage: React.FC = () => {
       navigate('/dashboard');
       closeLineSession();
     } else {
+      resetSocket();
       closeLineSession().finally(() => {
         logout();
       });
