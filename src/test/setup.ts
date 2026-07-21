@@ -28,6 +28,16 @@ export function mockMatchMedia(matches: boolean): void {
 
 mockMatchMedia(false);
 
+import { vi } from 'vitest';
+vi.mock('../features/dashboard/hooks/useActividadGlobal', () => ({
+  useActividadGlobal: () => ({
+    hayActividad: false,
+    pasadas: [],
+    sesiones: [],
+    isLoading: false,
+  })
+}));
+
 /**
  * jsdom does not implement `Element.prototype.scrollIntoView`. Provide a
  * no-op default so components exercising scroll-into-view behavior (e.g.

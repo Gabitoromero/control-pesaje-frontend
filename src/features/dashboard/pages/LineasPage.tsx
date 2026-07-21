@@ -16,6 +16,8 @@ import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import { toast } from 'sonner';
+import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +36,7 @@ const LINEA_FIELDS: SearchField[] = [
 
 export const LineasPage = () => {
   const queryClient = useQueryClient();
-  const { alertSuccess, alertWarning, alertError, confirm } = useDialog();
+  const { alertSuccess, alertWarning, confirm } = useDialog();
 
   const notifyOutcome = (accion: 'creada' | 'actualizada' | 'activada', rutaPasadaActiva: number | null | undefined) => {
     if (rutaPasadaActiva) {
@@ -102,8 +104,7 @@ export const LineasPage = () => {
       queryClient.invalidateQueries({ queryKey: ['dispositivos'] });
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'Error al asignar dispositivo',
+      toast.error('Error al asignar dispositivo', {
         description: getApiErrorMessage(err, 'El dispositivo puede estar asignado a otra línea.'),
       });
     },
@@ -124,8 +125,7 @@ export const LineasPage = () => {
       notifyOutcome('creada', variables.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'No se pudo crear la línea',
+      toast.error('No se pudo crear la línea', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
@@ -153,8 +153,7 @@ export const LineasPage = () => {
       notifyOutcome(variables.accion, variables.data.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'No se pudo guardar la línea',
+      toast.error('No se pudo guardar la línea', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado al guardar la línea.'),
       });
     },
@@ -168,8 +167,7 @@ export const LineasPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'No se pudo eliminar la línea',
+      toast.error('No se pudo eliminar la línea', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
@@ -354,34 +352,24 @@ export const LineasPage = () => {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label htmlFor="linea-dispositivo" className="block text-sm font-medium text-foreground">Dispositivo <span className="text-muted-foreground font-normal">(opcional)</span></label>
-                <select
-                  id="linea-dispositivo"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                <label className="block text-sm font-medium text-foreground mb-1">Dispositivo <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <SearchableCombobox
                   value={formData.dispositivoHardwareId}
-                  onChange={(e) => setFormData({ ...formData, dispositivoHardwareId: e.target.value })}
-                >
-                  <option value="">-- Sin dispositivo --</option>
-                  {dispositivos.map((device) => (
-                    <option key={device.hardwareId} value={device.hardwareId}>
-                      {device.nombre} ({device.hardwareId.slice(0, 8)})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, dispositivoHardwareId: (val as string) || '' })}
+                  options={dispositivos.map((device) => ({ id: device.hardwareId, nombre: `${device.nombre} (${device.hardwareId.slice(0, 8)})` }))}
+                  placeholder="Buscar dispositivo..."
+                  clearable
+                />
               </div>
               <div className="sm:col-span-2">
-                <label htmlFor="linea-ruta" className="block text-sm font-medium text-foreground">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
-                <select
-                  id="linea-ruta"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={formData.rutaPasadaActiva}
-                  onChange={(e) => setFormData({ ...formData, rutaPasadaActiva: e.target.value })}
-                >
-                  <option value="">-- Sin ruta --</option>
-                  {rutas.map((ruta) => (
-                    <option key={ruta.id} value={ruta.id}>{ruta.nombre}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-foreground mb-1">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <SearchableCombobox
+                  value={formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null}
+                  onChange={(val) => setFormData({ ...formData, rutaPasadaActiva: val ? String(val) : '' })}
+                  options={rutas}
+                  placeholder="Buscar ruta..."
+                  clearable
+                />
               </div>
             </div>
             <DialogFooter className="mt-6 flex justify-end gap-3">

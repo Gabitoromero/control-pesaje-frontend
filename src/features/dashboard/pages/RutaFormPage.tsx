@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import type { Control, UseFormRegister, FieldErrors, UseFieldArrayRemove, UseFieldArrayMove } from 'react-hook-form';
 import type { Resolver } from 'react-hook-form';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -10,8 +12,192 @@ import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
 import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
-import { Plus, Trash, ArrowUp, ArrowDown, ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { Plus, Trash, ArrowLeft, Save, RefreshCw, GripVertical, Minus } from 'lucide-react';
 import { toast } from 'sonner';
+import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+
+
+const SortableEtapaItem = ({
+  id,
+  index,
+  register,
+  control,
+  errors,
+  etapasOptions,
+  remove,
+  fieldsLength,
+  confirm
+}: {
+  id: string;
+  index: number;
+  register: UseFormRegister<RutaFormValues>;
+  control: Control<RutaFormValues>;
+  errors: FieldErrors<RutaFormValues>;
+  etapasOptions: { id?: number; nombre: string }[];
+  remove: UseFieldArrayRemove;
+  swap: UseFieldArrayMove;
+  fieldsLength: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  confirm: any;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : 0,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex gap-4 bg-card border rounded-xl p-5 shadow-sm transition-colors duration-200 ${isOver ? 'border-primary' : 'border-border'}`}
+    >
+      <div className="flex flex-col items-center gap-2 pt-1">
+        <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 text-primary font-mono text-xs font-bold flex items-center justify-center">
+          {index + 1}
+        </div>
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing focus:outline-none focus:ring-0 focus-visible:ring-0 touch-none"
+          title="Arrastrar para reordenar"
+        >
+          <GripVertical size={20} />
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-5">
+        <div className="flex flex-col md:flex-row gap-5 items-start">
+          <div className="flex-[1.3] flex flex-col gap-1.5 w-full">
+            <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Etapa</label>
+            <Controller
+              name={`etapas.${index}.etapa`}
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <SearchableCombobox value={value} onChange={onChange} options={etapasOptions} placeholder="Buscar etapa..." />
+              )}
+            />
+            {errors.etapas?.[index]?.etapa && (
+              <span className="text-destructive text-xs">{errors.etapas[index]?.etapa?.message}</span>
+            )}
+          </div>
+
+          <div className="flex-1 flex flex-col gap-1.5 w-full">
+            <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Muestras Requeridas</label>
+            <div className="flex items-center gap-2">
+              <Controller
+                name={`etapas.${index}.cantidadMuestrasRequeridas`}
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onChange(Math.max(1, (Number(value) || 1) - 1))}
+                      className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center hover:bg-muted"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <div className="min-w-[48px] text-center font-mono text-lg font-bold text-primary bg-primary/10 border border-primary/20 rounded-md py-1 px-1">
+                      {value || 1}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onChange((Number(value) || 1) + 1)}
+                      className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center hover:bg-muted"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </>
+                )}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            title="Eliminar etapa"
+            onClick={async () => {
+              if (fieldsLength === 1) {
+                const confirmed = await confirm({
+                  title: "¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion",
+                  confirmText: 'Eliminar',
+                  cancelText: 'Cancelar',
+                  variant: 'destructive',
+                });
+                if (confirmed) remove(index);
+              } else {
+                remove(index);
+              }
+            }}
+            className="md:mt-6 w-8 h-8 rounded-md border border-border text-muted-foreground flex items-center justify-center hover:text-destructive hover:border-destructive/40 hover:bg-destructive/10 transition-colors"
+          >
+            <Trash size={16} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Rango de Peso (kg)</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span className="text-[10px] font-bold tracking-widest uppercase text-amber-500">Mínimo</span>
+              </div>
+              <input
+                type="number"
+                step="0.001"
+                {...register(`etapas.${index}.pesoMinimo`, { valueAsNumber: true })}
+                className="w-full bg-background border border-amber-500/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
+              />
+            </div>
+            
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-2.5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                <span className="text-[10px] font-bold tracking-widest uppercase text-primary">Ideal</span>
+              </div>
+              <input
+                type="number"
+                step="0.001"
+                {...register(`etapas.${index}.pesoIdeal`, { valueAsNumber: true })}
+                className="w-full bg-background border border-primary/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
+              />
+            </div>
+
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-2.5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
+                <span className="text-[10px] font-bold tracking-widest uppercase text-destructive">Máximo</span>
+              </div>
+              <input
+                type="number"
+                step="0.001"
+                {...register(`etapas.${index}.pesoMaximo`, { valueAsNumber: true })}
+                className="w-full bg-background border border-destructive/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-destructive dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 import { rutaSchema } from './RutaFormPage.schemas.js';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -198,6 +384,28 @@ export const RutaFormPage = () => {
   // IDs of articulos already assigned — used to exclude them from the selector
   const articulosAsignadosIds = new Set(articulosMostrados.map(a => a.articulo.id));
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      const oldIndex = fields.findIndex((item) => item.id === active.id);
+      const newIndex = fields.findIndex((item) => item.id === over?.id);
+      swap(oldIndex, newIndex);
+    }
+  };
+
   const deleteMutation = useMutation({
     mutationFn: deleteRuta,
     onSuccess: () => {
@@ -336,117 +544,27 @@ export const RutaFormPage = () => {
             </button>
           </div>
 
-          <div className="space-y-4" data-testid="etapas-container">
-            {fields.map((field: { id: string }, index: number) => (
-              <div key={field.id} className="border border-border rounded-lg p-4 bg-muted flex items-start gap-4">
-                <div className="flex flex-col gap-1 mt-1">
-                  <button
-                    type="button"
-                    title="Subir etapa"
-                    aria-label="Subir etapa"
-                    onClick={() => index > 0 && swap(index, index - 1)}
-                    disabled={index === 0}
-                    className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  >
-                    <ArrowUp size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    title="Bajar etapa"
-                    aria-label="Bajar etapa"
-                    onClick={() => index < fields.length - 1 && swap(index, index + 1)}
-                    disabled={index === fields.length - 1}
-                    className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  >
-                    <ArrowDown size={16} />
-                  </button>
-                </div>
-
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Etapa</label>
-                    <select
-                      {...register(`etapas.${index}.etapa`)}
-                      className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-1.5 shadow-sm text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                    >
-                      <option value={0}>Seleccione...</option>
-                      {etapasOptions.map(e => (
-                        <option key={e.id} value={e.id}>{e.nombre}</option>
-                      ))}
-                    </select>
-                    {errors.etapas?.[index]?.etapa && (
-                      <span className="text-destructive text-xs">{errors.etapas[index]?.etapa?.message}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Muestras Requeridas</label>
-                    <input
-                      type="number"
-                      {...register(`etapas.${index}.cantidadMuestrasRequeridas`)}
-                      className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-1.5 shadow-sm text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Peso Mínimo</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      {...register(`etapas.${index}.pesoMinimo`)}
-                      className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-1.5 shadow-sm text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Peso Ideal</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      {...register(`etapas.${index}.pesoIdeal`)}
-                      className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-1.5 shadow-sm text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Peso Máximo</label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      {...register(`etapas.${index}.pesoMaximo`)}
-                      className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-1.5 shadow-sm text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  title="Eliminar etapa"
-                  aria-label="Eliminar etapa"
-                  onClick={async () => {
-                    if (fields.length === 1) {
-                      const confirmed = await confirm({
-                        title: "¿Esta seguro que desea eliminar la ultima etapa? \nNo se podra asignar una ruta sin etapas a una linea de produccion",
-                        confirmText: 'Eliminar',
-                        cancelText: 'Cancelar',
-                        variant: 'destructive',
-                      });
-                      if (confirmed) {
-                        remove(index);
-                      }
-                    } else {
-                      remove(index);
-                    }
-                  }}
-                  className="p-2 text-muted-foreground hover:text-destructive mt-5"
-                >
-                  <Trash size={18} />
-                </button>
-              </div>
-            ))}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <div className="space-y-4" data-testid="etapas-container">
+              <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                {fields.map((field: { id: string }, index: number) => (
+                  <SortableEtapaItem
+                    key={field.id}
+                    id={field.id}
+                    index={index}
+                    register={register}
+                    control={control}
+                    errors={errors}
+                    etapasOptions={etapasOptions}
+                    remove={remove}
+                    swap={swap}
+                    fieldsLength={fields.length}
+                    confirm={confirm}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+          </DndContext>
         </CollapsibleSection>
 
         {/* Articulos asignados */}
@@ -456,22 +574,17 @@ export const RutaFormPage = () => {
         >
           {/* Selector to add a new articulo */}
           <div className="flex gap-2 mb-4">
-            <select
-              value={selectedArticuloId}
-              onChange={(e) => setSelectedArticuloId(Number(e.target.value))}
-              aria-label="Seleccionar artículo"
-              className="flex-1 rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value={0}>Seleccione un artículo...</option>
-              {articulosOptions
-                .filter(a => !articulosAsignadosIds.has(a.id!))
-                .map(a => (
-                  <option key={a.id} value={a.id}>
-                    {a.marca ? `[${a.marca}] ` : ''}{a.nombre}
-                  </option>
-                ))
-              }
-            </select>
+            <div className="flex-1">
+              <SearchableCombobox 
+                value={selectedArticuloId} 
+                onChange={(val) => setSelectedArticuloId(val)}
+                options={articulosOptions
+                  .filter(a => !articulosAsignadosIds.has(a.id!))
+                  .map(a => ({ id: a.id, nombre: a.marca ? `[${a.marca}] ${a.nombre}` : a.nombre }))
+                } 
+                placeholder="Buscar artículo..." 
+              />
+            </div>
             <button
               type="button"
               onClick={handleAddArticulo}

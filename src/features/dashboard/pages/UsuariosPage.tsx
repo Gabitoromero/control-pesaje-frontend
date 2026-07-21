@@ -14,6 +14,8 @@ import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import { toast } from 'sonner';
+import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
 import {
   Dialog,
   DialogContent,
@@ -47,7 +49,7 @@ const USUARIO_FIELDS: SearchField[] = [
 
 export const UsuariosPage = () => {
   const queryClient = useQueryClient();
-  const { confirm, alertError } = useDialog();
+  const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -89,8 +91,7 @@ export const UsuariosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'No se pudo crear el usuario',
+      toast.error('No se pudo crear el usuario', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
@@ -104,8 +105,7 @@ export const UsuariosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'No se pudo guardar el usuario',
+      toast.error('No se pudo guardar el usuario', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
@@ -119,8 +119,7 @@ export const UsuariosPage = () => {
       closeModal();
     },
     onError: (err: unknown) => {
-      alertError({
-        title: 'No se pudo eliminar el usuario',
+      toast.error('No se pudo eliminar el usuario', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
@@ -313,17 +312,13 @@ export const UsuariosPage = () => {
               </div>
 
               <div>
-                <label htmlFor="rol" className="block text-sm font-medium text-foreground">Rol</label>
-                <select
-                  id="rol"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                <label className="block text-sm font-medium text-foreground mb-1">Rol</label>
+                <SearchableCombobox
                   value={formData.rol}
-                  onChange={(e) => setFormData({ ...formData, rol: e.target.value, pin: '' })}
-                >
-                  {Object.entries(ROL_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, rol: (val as string) || UsuarioRol.OPERARIO, pin: '' })}
+                  options={Object.entries(ROL_LABELS).map(([id, nombre]) => ({ id, nombre }))}
+                  placeholder="Buscar rol..."
+                />
               </div>
 
               <div>

@@ -241,7 +241,6 @@ const Login: React.FC = () => {
           <div className="bg-card border border-border rounded-2xl px-6 py-2 text-center text-3xl font-mono tracking-widest min-h-12 flex items-center justify-center">
             {isLegajoStep ? (
               <input
-                autoFocus
                 type="text"
                 aria-label="Usuario o Legajo"
                 className="bg-transparent text-center w-full outline-none text-foreground placeholder-muted-foreground"
@@ -250,7 +249,6 @@ const Login: React.FC = () => {
               />
             ) : (
               <input
-                autoFocus
                 type="password"
                 aria-label="Contraseña"
                 className="bg-transparent text-center w-full outline-none tracking-widest text-foreground placeholder-muted-foreground"
