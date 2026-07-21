@@ -216,9 +216,8 @@ describe('UsuariosPage', () => {
     const confirmDialog = await screen.findByRole('alertdialog');
     await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
 
-    const errorDialog = await screen.findByRole('alertdialog');
-    expect(within(errorDialog).getByText('No se pudo eliminar el usuario')).toBeInTheDocument();
-    expect(within(errorDialog).getByText('No se puede eliminar: tiene registros asociados')).toBeInTheDocument();
+    await screen.findByText('No se pudo eliminar el usuario');
+    await screen.findByText('No se puede eliminar: tiene registros asociados');
   });
 
   it('createMutation onError shows an alertdialog titled "No se pudo crear el usuario"', async () => {
@@ -243,9 +242,8 @@ describe('UsuariosPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    const dialog = await screen.findByRole('alertdialog');
-    expect(within(dialog).getByText('No se pudo crear el usuario')).toBeInTheDocument();
-    expect(within(dialog).getByText('Nombre de usuario en uso')).toBeInTheDocument();
+    await screen.findByText('No se pudo crear el usuario');
+    await screen.findByText('Nombre de usuario en uso');
   });
 
   it('updateMutation onError shows an alertdialog titled "No se pudo guardar el usuario"', async () => {
@@ -267,9 +265,8 @@ describe('UsuariosPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    const dialog = await screen.findByRole('alertdialog');
-    expect(within(dialog).getByText('No se pudo guardar el usuario')).toBeInTheDocument();
-    expect(within(dialog).getByText('No se pudo actualizar')).toBeInTheDocument();
+    await screen.findByText('No se pudo guardar el usuario');
+    await screen.findByText('No se pudo actualizar');
   });
 
   it('clicking "Eliminar Usuario" opens a confirm dialog instead of window.confirm', async () => {

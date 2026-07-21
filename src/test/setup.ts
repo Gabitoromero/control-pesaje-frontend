@@ -50,3 +50,15 @@ vi.mock('../features/dashboard/hooks/useActividadGlobal', () => ({
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {};
 }
+
+/**
+ * jsdom does not implement `ResizeObserver`. cmdk (used by SearchableCombobox)
+ * relies on it. Provide a minimal stub so tests don't crash.
+ */
+if (typeof ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

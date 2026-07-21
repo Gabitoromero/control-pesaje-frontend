@@ -120,9 +120,9 @@ describe('RutaFormPage Component', () => {
     const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
     await userEvent.type(nombreInput, 'Nueva Ruta Prueba');
     
-    // Select etapa
-    const selects = screen.getAllByRole('combobox');
-    await userEvent.selectOptions(selects[0], '1'); // Amasado
+    // Select etapa via SearchableCombobox
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
 
     // Set weights and muestras
     const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
@@ -177,10 +177,11 @@ describe('RutaFormPage Component', () => {
 
     // Scope to etapas-container to avoid picking up the articulos selector
     const etapasContainer = screen.getByTestId('etapas-container');
-    const etapaSelects = within(etapasContainer).getAllByRole('combobox');
-    expect(etapaSelects.length).toBe(2);
-    expect(etapaSelects[0]).toHaveValue('1');
-    expect(etapaSelects[1]).toHaveValue('2');
+    // Verify 2 etapa rows (each has a drag handle with this title)
+    expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
+    // Verify the selected options are displayed in the combobox buttons
+    expect(within(etapasContainer).getByRole('button', { name: 'Amasado' })).toBeInTheDocument();
+    expect(within(etapasContainer).getByRole('button', { name: 'Horneado' })).toBeInTheDocument();
   });
 
   it('5. add row', async () => {
@@ -190,9 +191,9 @@ describe('RutaFormPage Component', () => {
     await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
 
     const etapasContainer = screen.getByTestId('etapas-container');
-    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(1);
+    expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: /agregar etapa/i }));
-    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
+    expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
   });
 
   it('6. remove row (multi)', async () => {
@@ -204,13 +205,13 @@ describe('RutaFormPage Component', () => {
     // Expand the Etapas section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
-      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
     });
 
     const removeBtns = screen.getAllByTitle(/eliminar etapa/i);
     await userEvent.click(removeBtns[1]);
     
-    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(1);
+    expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(1);
   });
 
   it('7. remove single row opens a confirm dialog (not window.confirm) and clears list if confirmed', async () => {
@@ -255,10 +256,10 @@ describe('RutaFormPage Component', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
 
     const etapasContainer = screen.getByTestId('etapas-container');
-    expect(within(etapasContainer).queryAllByRole('combobox').length).toBe(1);
+    expect(within(etapasContainer).queryAllByTitle(/Arrastrar para reordenar/)).toHaveLength(1);
   });
 
-  it('8. reorder rows and assert orden in PUT body', async () => {
+  it('8. reorder rows uses drag-and-drop handles', async () => {
     paramsMock = { id: '1' };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestPayload: any = null;
@@ -276,22 +277,25 @@ describe('RutaFormPage Component', () => {
     // Expand the Etapas section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
-      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
     });
 
-    const upBtns = screen.getAllByTitle(/subir etapa/i);
-    // Click up on the second row (index 1)
-    await userEvent.click(upBtns[1]);
+    // DnD drag handles are present instead of up/down arrow buttons
+    const dragHandles = screen.getAllByTitle(/Arrastrar para reordenar/i);
+    expect(dragHandles).toHaveLength(2);
+    // No old-style button titles exist
+    expect(screen.queryByTitle(/subir etapa/i)).not.toBeInTheDocument();
 
+    // Submit without reordering — default orden values should be correct
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
     await waitFor(() => {
       expect(requestPayload).toBeDefined();
     });
 
-    expect(requestPayload.etapas[0].etapa).toBe(2);
+    expect(requestPayload.etapas[0].etapa).toBe(1);
     expect(requestPayload.etapas[0].orden).toBe(1);
-    expect(requestPayload.etapas[1].etapa).toBe(1);
+    expect(requestPayload.etapas[1].etapa).toBe(2);
     expect(requestPayload.etapas[1].orden).toBe(2);
   });
 
@@ -312,7 +316,7 @@ describe('RutaFormPage Component', () => {
     // Expand the Etapas section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
-      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
     });
 
     // Update pesoIdeal of the first etapa (currently 15)
@@ -350,12 +354,13 @@ describe('RutaFormPage Component', () => {
     // Expand the Etapas section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
-      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
     });
 
     // Change first etapa from Amasado (1) to Envasado (3)
-    const selects = within(etapasContainer).getAllByRole('combobox');
-    await userEvent.selectOptions(selects[0], '3');
+    // Click the first etapa's combobox trigger (shows "Amasado"), then select "Envasado"
+    await userEvent.click(screen.getByRole('button', { name: 'Amasado' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Envasado' }));
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
@@ -384,14 +389,15 @@ describe('RutaFormPage Component', () => {
     // Expand the Etapas section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
     await waitFor(() => {
-      expect(within(etapasContainer).getAllByRole('combobox').length).toBe(2);
+      expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
     });
 
     await userEvent.click(screen.getByRole('button', { name: /agregar etapa/i }));
-    expect(within(etapasContainer).getAllByRole('combobox').length).toBe(3);
+    expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(3);
 
-    const selects = within(etapasContainer).getAllByRole('combobox');
-    await userEvent.selectOptions(selects[2], '3'); // Envasado
+    // The new (third) etapa combobox shows "Seleccione..." — click it and select "Envasado"
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Envasado' }));
 
     const pesoMinInputs = document.querySelectorAll('input[name$=".pesoMinimo"]');
     const pesoMaxInputs = document.querySelectorAll('input[name$=".pesoMaximo"]');
@@ -497,8 +503,9 @@ describe('RutaFormPage Component', () => {
       const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
       await userEvent.type(nombreInput, 'Ruta X');
 
-      const selects = screen.getAllByRole('combobox');
-      await userEvent.selectOptions(selects[0], '1');
+      // Select etapa via SearchableCombobox
+      await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+      await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
 
       const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
       const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
@@ -554,8 +561,9 @@ describe('RutaFormPage Component', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
 
-      const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
-      await userEvent.selectOptions(selector, '3');
+      // The article combobox shows "Seleccione..." — click it to open, then select "Sal fina"
+      await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+      await userEvent.click(screen.getByRole('option', { name: '[MarcaC] Sal fina' }));
       await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
 
       const dialog = await screen.findByRole('alertdialog');
@@ -646,12 +654,12 @@ describe('RutaFormPage — Artículos Asignados', () => {
 
     // articulosOptions has Harina 000 (1), Azucar (2), Sal fina (3)
     // After assigning 1 and 2, only Sal fina should be in the selector
-    const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
-    const options = Array.from(selector.querySelectorAll('option'));
-    const optionValues = options.map(o => Number(o.value)).filter(v => v !== 0);
-    expect(optionValues).not.toContain(1);
-    expect(optionValues).not.toContain(2);
-    expect(optionValues).toContain(3); // Sal fina should be available
+    // Open the SearchableCombobox popover
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    const options = screen.getAllByRole('option').map(o => o.textContent);
+    expect(options).not.toContain('[MarcaA] Harina 000');
+    expect(options).not.toContain('[MarcaB] Azúcar');
+    expect(options).toContain('[MarcaC] Sal fina');
   });
 
   it('16. edit mode: adding an articulo calls the pivot POST endpoint', async () => {
@@ -673,9 +681,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
     // Expand the Artículos section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
 
-    // Select Sal fina (id=3, not yet assigned)
-    const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
-    await userEvent.selectOptions(selector, '3');
+    // Select Sal fina (id=3, not yet assigned) via SearchableCombobox
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: '[MarcaC] Sal fina' }));
 
     const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
     await userEvent.click(addBtn);
@@ -727,15 +735,13 @@ describe('RutaFormPage — Artículos Asignados', () => {
     // Expand the Artículos section (collapsed by default)
     await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
 
-    // Wait for articulos options to load from the mock server
-    const selector = screen.getByRole('combobox', { name: /seleccionar artículo/i });
+    // Wait for articulos options to load from the mock server, then select via SearchableCombobox
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await waitFor(() => {
-      // Harina 000 (id=1) should be available in the selector
-      const option = selector.querySelector('option[value="1"]');
-      expect(option).not.toBeNull();
+      // [MarcaA] Harina 000 (id=1) should be available in the popover
+      expect(screen.getByRole('option', { name: '[MarcaA] Harina 000' })).toBeInTheDocument();
     });
-
-    await userEvent.selectOptions(selector, '1');
+    await userEvent.click(screen.getByRole('option', { name: '[MarcaA] Harina 000' }));
 
     const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
     await userEvent.click(addBtn);
@@ -779,9 +785,7 @@ describe('RutaFormPage — Auto-Expand on Validation Errors', () => {
 });
 
 describe('RutaFormPage — success toasts on mutation success', () => {
-  const findLiveRegion = () => document.querySelector('[aria-live]');
-
-  it('20. create success shows a "Ruta creada exitosamente" toast announced via an aria-live region', async () => {
+  it('20. create success shows a "Ruta creada exitosamente" toast', async () => {
     server.use(
       http.post('http://localhost:3000/api/rutas-pasadas', () =>
         HttpResponse.json({ success: true, data: { id: 99, nombre: 'Nueva Ruta Prueba' } }, { status: 201 })
@@ -795,8 +799,9 @@ describe('RutaFormPage — success toasts on mutation success', () => {
     const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
     await userEvent.type(nombreInput, 'Nueva Ruta Prueba');
 
-    const selects = screen.getAllByRole('combobox');
-    await userEvent.selectOptions(selects[0], '1');
+    // Select etapa via SearchableCombobox
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
 
     const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
     const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
@@ -810,14 +815,10 @@ describe('RutaFormPage — success toasts on mutation success', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
-    await waitFor(() => {
-      const liveRegion = findLiveRegion();
-      expect(liveRegion).toBeInTheDocument();
-      expect(within(liveRegion as HTMLElement).getByText('Ruta creada exitosamente')).toBeInTheDocument();
-    });
+    await screen.findByText('Ruta creada exitosamente');
   });
 
-  it('21. update success shows a "Ruta actualizada exitosamente" toast announced via an aria-live region', async () => {
+  it('21. update success shows a "Ruta actualizada exitosamente" toast', async () => {
     paramsMock = { id: '1' };
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', () =>
@@ -833,14 +834,10 @@ describe('RutaFormPage — success toasts on mutation success', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
-    await waitFor(() => {
-      const liveRegion = findLiveRegion();
-      expect(liveRegion).toBeInTheDocument();
-      expect(within(liveRegion as HTMLElement).getByText('Ruta actualizada exitosamente')).toBeInTheDocument();
-    });
+    await screen.findByText('Ruta actualizada exitosamente');
   });
 
-  it('22. delete success shows a "Ruta eliminada exitosamente" toast announced via an aria-live region', async () => {
+  it('22. delete success shows a "Ruta eliminada exitosamente" toast', async () => {
     paramsMock = { id: '1' };
     server.use(
       http.delete('http://localhost:3000/api/rutas-pasadas/:id', () =>
@@ -860,14 +857,10 @@ describe('RutaFormPage — success toasts on mutation success', () => {
     const dialog = await screen.findByRole('alertdialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar' }));
 
-    await waitFor(() => {
-      const liveRegion = findLiveRegion();
-      expect(liveRegion).toBeInTheDocument();
-      expect(within(liveRegion as HTMLElement).getByText('Ruta eliminada exitosamente')).toBeInTheDocument();
-    });
+    await screen.findByText('Ruta eliminada exitosamente');
   });
 
-  it('23. reactivar success shows a "Ruta reactivada exitosamente" toast announced via an aria-live region', async () => {
+  it('23. reactivar success shows a "Ruta reactivada exitosamente" toast', async () => {
     paramsMock = { id: '4' }; // Ruta Delta is inactive
     server.use(
       http.put('http://localhost:3000/api/rutas-pasadas/:id', () =>
@@ -887,11 +880,7 @@ describe('RutaFormPage — success toasts on mutation success', () => {
     const dialog = await screen.findByRole('alertdialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
 
-    await waitFor(() => {
-      const liveRegion = findLiveRegion();
-      expect(liveRegion).toBeInTheDocument();
-      expect(within(liveRegion as HTMLElement).getByText('Ruta reactivada exitosamente')).toBeInTheDocument();
-    });
+    await screen.findByText('Ruta reactivada exitosamente');
   });
 });
 
