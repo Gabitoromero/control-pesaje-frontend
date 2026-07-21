@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
@@ -86,12 +86,55 @@ describe('GestionPasadasPage', () => {
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
   });
 
-  it('llama a closeLineSession y logout al hacer click en Cerrar sesión', async () => {
+  // Task 3.7 / 3.9: clicking "Cerrar sesión" with an active line session
+  // opens a confirm dialog before actually logging out.
+  it('muestra diálogo de confirmación al hacer click en Cerrar sesión cuando hay activeLineaId (Task 3.7)', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+    const btnCerrar = await screen.findByRole('button', { name: /cerrar sesión/i });
+    await userEvent.click(btnCerrar);
+
+    // The confirm dialog text must be visible and neither logout nor
+    // closeLineSession should have run yet (user hasn't confirmed).
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      within(dialog).getByText(/tenés una sesión activa en esta línea/i)
+    ).toBeInTheDocument();
+  });
+
+  it('llama a closeLineSession y logout solo después de confirmar el diálogo (Task 3.9)', async () => {
     const { authValue } = renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
     const btnCerrar = await screen.findByRole('button', { name: /cerrar sesión/i });
     await userEvent.click(btnCerrar);
+
+    // Confirm dialog appears; logout should NOT have been called yet
+    const dialog = await screen.findByRole('alertdialog');
+    expect(authValue.closeLineSession).not.toHaveBeenCalled();
+    expect(authValue.logout).not.toHaveBeenCalled();
+
+    // Now confirm — destructive action button label matches confirmText
+    const btnConfirmar = within(dialog).getByRole('button', { name: /cerrar sesión|confirmar/i });
+    await userEvent.click(btnConfirmar);
     expect(authValue.closeLineSession).toHaveBeenCalled();
     expect(authValue.logout).toHaveBeenCalled();
+  });
+
+  it('no llama a logout si el usuario cancela el diálogo de confirmación (Task 3.9)', async () => {
+    const { authValue } = renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+    const btnCerrar = await screen.findByRole('button', { name: /cerrar sesión/i });
+    await userEvent.click(btnCerrar);
+
+    const dialog = await screen.findByRole('alertdialog');
+    const btnCancelar = within(dialog).getByRole('button', { name: /cancelar/i });
+    await userEvent.click(btnCancelar);
+
+    expect(authValue.closeLineSession).not.toHaveBeenCalled();
+    expect(authValue.logout).not.toHaveBeenCalled();
+  });
+
+  it('no muestra diálogo de confirmación cuando activeLineaId es null (Task 3.8)', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: null });
+    // The page redirects; the logout confirm text must never appear
+    expect(screen.queryByText(/tenés una sesión activa en esta línea/i)).not.toBeInTheDocument();
   });
 
   it('muestra la lista de pasadas mockeadas', async () => {
@@ -111,6 +154,20 @@ describe('GestionPasadasPage', () => {
   it('redirige si activeLineaId es null', () => {
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: null });
     expect(screen.queryByText('Gestión de Pasadas')).not.toBeInTheDocument();
+  });
+
+  it('encierra el contenido en un raíz de altura fija con región de scroll interna (sin scroll del body)', async () => {
+    const { container } = renderWithAuth(<GestionPasadasPage />, {
+      user: operarioUser,
+      activeLineaId: 1,
+    });
+    const root = container.querySelector('[data-testid="tablet-page-root"]');
+    expect(root).not.toBeNull();
+    const scrollRegion = root?.querySelector('[data-testid="tablet-page-scroll"]');
+    expect(scrollRegion).not.toBeNull();
+    // Content lives INSIDE the internal scroll region, never outside it
+    const pasada = await screen.findByText('Pasada #101');
+    expect(scrollRegion?.contains(pasada)).toBe(true);
   });
 
   it('muestra el modal y permite iniciar una pasada', async () => {

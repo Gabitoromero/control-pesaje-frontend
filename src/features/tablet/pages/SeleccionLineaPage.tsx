@@ -12,7 +12,7 @@ import type { Linea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
 
 export const SeleccionLineaPage: React.FC = () => {
-  const { isAuthenticated, user, logout, openLineSession } = useAuth();
+  const { isAuthenticated, user, logout, openLineSession, activeLineaId } = useAuth();
   const navigate = useNavigate();
   const [activatingId, setActivatingId] = React.useState<number | null>(null);
 
@@ -40,7 +40,7 @@ export const SeleccionLineaPage: React.FC = () => {
       setActivatingId(linea.id);
       await abrirSesionLinea(linea.id);
       openLineSession(linea.id);
-      navigate('/tablet/pasadas', { state: { lineaId: linea.id, lineaNombre: linea.nombre } });
+      navigate('/tablet/pasadas', { replace: true, state: { lineaId: linea.id, lineaNombre: linea.nombre } });
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 409) {
         toast.error(err.response.data?.error?.message || 'Línea ocupada');
@@ -53,7 +53,7 @@ export const SeleccionLineaPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans text-foreground">
+    <div data-testid="tablet-page-root" className="h-screen bg-background flex flex-col font-sans text-foreground overflow-hidden">
       {/* Header */}
       <header className="bg-card border-b border-border p-4 md:px-8 flex items-center justify-between gap-4">
         <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
@@ -86,7 +86,7 @@ export const SeleccionLineaPage: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
+      <main data-testid="tablet-page-scroll" className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
             <Loader2 className="animate-spin text-primary" size={32} />

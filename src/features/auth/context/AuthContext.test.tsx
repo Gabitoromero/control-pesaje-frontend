@@ -8,16 +8,30 @@ import Cookies from 'js-cookie';
 import { cerrarSesionLinea } from '../../../api/auth';
 import { setLogoutHandler } from '../../../api/axios';
 import { resetSocket } from '../../../services/websocket';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { AuthNavigateBridge } from './AuthContext';
 
-// AuthProvider calls useDialog() internally (ADR-1/ADR-4), so it must always
-// be rendered inside a real DialogProvider — matching the app-wide nesting in
-// main.tsx (DialogProvider > AuthProvider).
+// AuthProvider is intentionally router-agnostic: it uses a module-level
+// SPA-navigate bridge set by <AuthNavigateBridge/> rendered inside a router.
+// For tests that assert the SPA logout path, the bridge is rendered inside
+// a MemoryRouter alongside AuthProvider.
 function AuthWithDialog({ children }: { children: ReactNode }) {
   return (
     <DialogProvider>
       <AuthProvider>{children}</AuthProvider>
     </DialogProvider>
   );
+}
+
+function LocationProbe() {
+  const loc = useLocation();
+  return <div data-testid="loc">{loc.pathname}</div>;
+}
+
+let latestCtx: ReturnType<typeof useAuth> | undefined;
+function Consumer() {
+  latestCtx = useAuth();
+  return null;
 }
 
 const mockSocket = vi.hoisted(() => ({
@@ -172,6 +186,34 @@ describe('AuthContext', () => {
     expect(result.current.activeLineaId).toBeNull();
   });
 
+  it('logout navega vía React Router a /login (SPA, sin recarga hard del navegador)', () => {
+    render(
+      <DialogProvider>
+        <MemoryRouter initialEntries={['/somewhere']}>
+          <AuthProvider>
+            <AuthNavigateBridge />
+            <Consumer />
+            <LocationProbe />
+          </AuthProvider>
+        </MemoryRouter>
+      </DialogProvider>
+    );
+
+    expect(screen.getByTestId('loc').textContent).toBe('/somewhere');
+
+    act(() => {
+      latestCtx?.login({
+        token: 'jwt-123',
+        user: { id: 1, legajo: 'L1', nombreUsuario: 'UserA', rol: 'operario', puedeTomarMuestrasLibres: true },
+      });
+    });
+    act(() => {
+      latestCtx?.logout();
+    });
+
+    expect(screen.getByTestId('loc').textContent).toBe('/login');
+  });
+
   it('login sets activeLineaId to null — no cross-user leak from previous session', () => {
     const { result } = renderHook(() => useAuth(), { wrapper: AuthWithDialog });
 
@@ -217,9 +259,11 @@ describe('AuthContext', () => {
     function renderAuthWithDialog() {
       return render(
         <DialogProvider>
-          <AuthProvider>
-            <Consumer />
-          </AuthProvider>
+          <MemoryRouter initialEntries={['/somewhere']}>
+            <AuthProvider>
+              <Consumer />
+            </AuthProvider>
+          </MemoryRouter>
         </DialogProvider>
       );
     }

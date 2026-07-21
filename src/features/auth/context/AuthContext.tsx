@@ -6,6 +6,7 @@ import { setLogoutHandler } from '../../../api/axios';
 import { cerrarSesionLinea } from '../../../api/auth';
 import { resetSocket, getSocket } from '../../../services/websocket';
 import { useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDialog } from '../../../components/dialogs/useDialog';
 
 export interface AuthContextType {
@@ -20,6 +21,41 @@ export interface AuthContextType {
 }
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// --- Soft-logout navigation bridge ---------------------------------------
+// AuthProvider renders OUTSIDE <BrowserRouter> in main.tsx
+// (AuthProvider > App > BrowserRouter), so it cannot call useNavigate() itself.
+// Instead, a tiny component rendered INSIDE the router registers the SPA
+// `navigate` here; logout() uses it when available and falls back to the legacy
+// hard `window.location.href` reload (preserving prior behavior) when the
+// bridge is not mounted (e.g. isolated tests without the bridge).
+type SpaNavigate = (to: string, opts?: { replace?: boolean }) => void;
+let spaNavigate: SpaNavigate | null = null;
+
+export function setSpaNavigate(fn: SpaNavigate | null): void {
+  spaNavigate = fn;
+}
+
+function spaNavigateOrHardReload(to: string): void {
+  if (spaNavigate) {
+    spaNavigate(to, { replace: true });
+  } else {
+    window.location.href = to;
+  }
+}
+
+/**
+ * Render once inside the active <BrowserRouter>/<RouterProvider> so the SPA
+ * navigate function is available to AuthProvider's logout logic.
+ */
+export const AuthNavigateBridge: React.FC = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    setSpaNavigate((to, opts) => navigate(to, opts));
+    return () => setSpaNavigate(null);
+  }, [navigate]);
+  return null;
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { alertWarning } = useDialog();
@@ -63,7 +99,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem('activeLineaId');
       Cookies.remove('token');
     } catch { /* storage unavailable */ }
-    window.location.href = '/login';
+    // SPA navigation preserves React Query cache and component state; falls back
+    // to a hard reload if the AuthNavigateBridge isn't mounted (no router scope).
+    spaNavigateOrHardReload('/login');
   }, []);
 
   useEffect(() => {
@@ -131,7 +169,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: 'Tu sesión fue cerrada por un administrador.',
       });
       logout();
-      window.location.href = user?.rol === 'operario' ? '/' : '/dashboard';
+      const target = user?.rol === 'operario' ? '/' : '/dashboard';
+      spaNavigateOrHardReload(target);
     };
 
     socket.on('sesion-cerrada', onSesionCerrada);

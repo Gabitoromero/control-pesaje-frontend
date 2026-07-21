@@ -16,6 +16,7 @@ function renderApp() {
 vi.mock('./features/auth/context/AuthContext', () => ({
   useAuth: vi.fn(),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AuthNavigateBridge: () => null,
 }));
 
 vi.mock('./features/tablet/pages/SeleccionLineaPage', () => ({

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getLinea } from '../../../api/lineas';
 import { MuestrasLibresProvider } from '../context/MuestrasLibresContext';
+import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import type { RutaPasadaEtapa } from '../../../shared/types/domain';
 
 export function MuestrasLibresLayout() {
@@ -13,6 +14,12 @@ export function MuestrasLibresLayout() {
     queryFn: () => getLinea(activeLineaId!),
     enabled: !!activeLineaId,
   });
+
+  // Heartbeat: keep the backend line session alive while the operator is on
+  // any child route (pasadas list or free quality samples).
+  // Called before the guard so the Rules of Hooks hold; the hook no-ops when
+  // activeLineaId is null.
+  useActividadHeartbeat(activeLineaId);
 
   if (!activeLineaId || !user) {
     return <Navigate to="/tablet/seleccion-linea" replace />;

@@ -5,11 +5,17 @@ import type { Pasada } from '../../../shared/types/domain';
 import { ConfirmWithReasonDialog } from '../../../components/dialogs/ConfirmWithReasonDialog';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
 
 export const PasadasActivasPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { alertError } = useDialog();
   const [selectedPasada, setSelectedPasada] = useState<Pasada | null>(null);
+
+  // Responsive columns: hide Artículo below 1024px, Estado below 768px so the
+  // table fits tablet viewports (1024×768 / 1280×800) without horizontal scroll.
+  const showArticulo = useMediaQuery('(min-width: 1024px)');
+  const showEstado = useMediaQuery('(min-width: 768px)');
 
   const { data: pasadas = [], isLoading: loading, error } = useQuery<Pasada[]>({
     queryKey: ['pasadas-activas'],
@@ -59,22 +65,26 @@ export const PasadasActivasPage: React.FC = () => {
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Línea de Producción
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Operario
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Artículo
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {showArticulo && (
+                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Artículo
+                    </th>
+                  )}
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Hora de Inicio
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {showEstado && (
+                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Estado
+                    </th>
+                  )}
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -82,24 +92,28 @@ export const PasadasActivasPage: React.FC = () => {
               <tbody className="bg-card divide-y divide-border">
                 {pasadas.map((pasada) => (
                   <tr key={pasada.id} className="hover:bg-accent even:bg-muted/40">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                    <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                       {pasada.lineaProduccion?.nombre ?? '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">
                       {pasada.usuario?.nombreApellido ?? pasada.usuario?.nombreUsuario ?? '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      {pasada.articulo?.nombre ?? '—'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {showArticulo && (
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">
+                        {pasada.articulo?.nombre ?? '—'}
+                      </td>
+                    )}
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {pasada.horaInicio ? new Date(pasada.horaInicio).toLocaleString() : '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-                        En curso
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {showEstado && (
+                      <td className="px-3 py-4 whitespace-nowrap text-sm">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                          En curso
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => setSelectedPasada(pasada)}
                         disabled={abortMutation.isPending}

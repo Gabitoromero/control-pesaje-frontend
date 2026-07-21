@@ -8,9 +8,11 @@ import { ThemeProvider } from '../features/theme/ThemeContext';
 import Login from './Login';
 import { loginApi } from '../api/auth';
 import { vi } from 'vitest';
+import Cookies from 'js-cookie';
 
 vi.mock('../api/auth', () => ({
   loginApi: vi.fn(),
+  cerrarSesionLinea: vi.fn(),
 }));
 
 function renderLogin() {
@@ -92,6 +94,43 @@ describe('Login — routing por rol', () => {
     await waitFor(() =>
       expect(screen.getByText(/PIN o legajo incorrecto/i)).toBeInTheDocument()
     );
+  });
+
+  it('cierra la sesión huérfana y limpia el token al montar con activeLineaId', async () => {
+    const { cerrarSesionLinea } = await import('../api/auth');
+    const calls: string[] = [];
+
+    vi.mocked(cerrarSesionLinea).mockImplementation(async () => {
+      calls.push('close-session');
+    });
+
+    const removeSpy = vi.spyOn(Cookies, 'remove').mockImplementation(() => {
+      calls.push('remove-token');
+      return undefined;
+    });
+
+    // Simulate orphaned session: mock localStorage so AuthProvider
+    // initializes activeLineaId = 5 on mount.
+    const storage: Record<string, string> = { activeLineaId: '5' };
+    const lsMock = {
+      getItem: vi.fn((key: string) => storage[key] ?? null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      get length() { return Object.keys(storage).length; },
+      key: vi.fn(),
+    };
+    vi.stubGlobal('localStorage', lsMock);
+
+    renderLogin();
+
+    await waitFor(() => {
+      expect(calls).toEqual(['close-session', 'remove-token']);
+    });
+
+    expect(cerrarSesionLinea).toHaveBeenCalledWith(5);
+
+    removeSpy.mockRestore();
   });
 
   it('muestra el botón Continuar deshabilitado si está vacío', async () => {

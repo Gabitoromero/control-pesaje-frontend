@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { User, Lock, Sun, Moon } from 'lucide-react';
 import { isAxiosError } from 'axios';
+import Cookies from 'js-cookie';
 import { loginApi } from '../api/auth';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useTheme } from '../features/theme/ThemeContext';
@@ -18,8 +19,37 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, activeLineaId, closeLineSession } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  // Close orphaned line session and clear auth token when landing on
+  // login from the tablet flow (browser back). closeLineSession is async
+  // (calls the backend API) — we must wait for it BEFORE removing the
+  // token, otherwise the API request goes out without Authorization.
+  const orphanedSessionId = useRef(activeLineaId);
+  useEffect(() => {
+    if (orphanedSessionId.current) {
+      closeLineSession().finally(() => {
+        Cookies.remove('token');
+      });
+    }
+  }, [closeLineSession]);
+
+  // Prevent browser forward navigation from login. After logout, the
+  // user must not be able to press "forward" back into authenticated pages.
+  useEffect(() => {
+    // Push a guard entry — when the user presses forward and hits it,
+    // we push another guard, trapping them on login. Back navigation
+    // is still allowed because those pages have no guard state.
+    window.history.pushState({ __loginGuard: true }, '', window.location.href);
+
+    const trapForward = () => {
+      window.history.pushState({ __loginGuard: true }, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', trapForward);
+    return () => window.removeEventListener('popstate', trapForward);
+  }, []);
 
   const isLegajoStep = step === 'legajo';
 

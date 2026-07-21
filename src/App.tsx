@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import { useAuth } from './features/auth/context/AuthContext';
+import { useAuth, AuthNavigateBridge } from './features/auth/context/AuthContext';
 import { ThemeToggle } from './features/theme/ThemeToggle';
 import { TabletLayout } from './layouts/TabletLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
@@ -40,6 +40,7 @@ function App() {
 
   return (
     <Router>
+      <AuthNavigateBridge />
       {showDevTheme && <ThemeToggle />}
       <Routes>
         <Route path="/login" element={<Login />} />

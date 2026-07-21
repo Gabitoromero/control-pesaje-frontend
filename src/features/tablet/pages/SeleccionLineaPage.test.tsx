@@ -80,6 +80,17 @@ describe('SeleccionLineaPage', () => {
     expect(await screen.findByText('operario1')).toBeInTheDocument();
   });
 
+  it('encierra el contenido en un raíz de altura fija con región de scroll interna (sin scroll del body)', async () => {
+    const { container } = renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+    const root = container.querySelector('[data-testid="tablet-page-root"]');
+    expect(root).not.toBeNull();
+    const scrollRegion = root?.querySelector('[data-testid="tablet-page-scroll"]');
+    expect(scrollRegion).not.toBeNull();
+    // The line list lives INSIDE the internal scroll region, never on the body
+    const linea1 = await screen.findByText('Línea 1 — Envasado A');
+    expect(scrollRegion?.contains(linea1)).toBe(true);
+  });
+
   it('las líneas disponibles muestran flecha de navegación', async () => {
     renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
     // Disponible lines show ArrowRight icon; occupied ones don't
@@ -91,12 +102,15 @@ describe('SeleccionLineaPage', () => {
     expect(linea2?.querySelector('svg')).not.toBeInTheDocument();
   });
 
-  it('navega a /tablet/pasadas y abre la sesión al hacer click en una línea', async () => {
+  it('navega a /tablet/pasadas con replace (sin apilar historial) y abre la sesión al hacer click en una línea', async () => {
     const { authValue } = renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
     const button = await screen.findByText('Línea 1 — Envasado A');
     await userEvent.click(button);
     expect(authValue.openLineSession).toHaveBeenCalledWith(1);
-    expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas', { state: { lineaId: 1, lineaNombre: 'Línea 1 — Envasado A' } });
+    expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas', {
+      replace: true,
+      state: { lineaId: 1, lineaNombre: 'Línea 1 — Envasado A' },
+    });
   });
 
   it('llama a logout al hacer click en Salir si es operario', async () => {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { Menu, X } from 'lucide-react';
@@ -7,8 +7,19 @@ import { UsuarioRol } from '../shared/types';
 import { UnassignedDeviceBanner } from '../features/dashboard/components/UnassignedDeviceBanner';
 
 export const DashboardLayout: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, activeLineaId, closeLineSession } = useAuth();
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Close any orphaned line session when entering the dashboard from the
+  // tablet flow (e.g., browser back button). The tablet flow uses
+  // replace:true so the selection page is never in history — pressing
+  // back lands here with the backend session still alive.
+  const orphanedSessionId = useRef(activeLineaId);
+  useEffect(() => {
+    if (orphanedSessionId.current) {
+      closeLineSession();
+    }
+  }, [closeLineSession]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

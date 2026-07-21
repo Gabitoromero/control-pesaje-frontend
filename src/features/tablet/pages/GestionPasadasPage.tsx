@@ -10,15 +10,34 @@ import type { Pasada } from '../../../shared/types/domain';
 import type { Articulo } from '../../../api/articulos';
 import { PasadaCard } from '../components/PasadaCard';
 import { resetSocket } from '../../../services/websocket';
+import { useDialog } from '../../../components/dialogs/useDialog';
+import { CONFIRM_LOGOUT_MESSAGE } from '../constants/logoutGuard';
 
 
 export const GestionPasadasPage: React.FC = () => {
   const { user, closeLineSession, activeLineaId, logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedArticuloId, setSelectedArticuloId] = React.useState<number | null>(null);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
+
+  // Task 3.9: guard against accidental tab close / page reload while a line
+  // session is active. When activeLineaId is set the browser will prompt the
+  // native "Leave site?" confirmation using `returnValue` as the message.
+  React.useEffect(() => {
+    if (!activeLineaId) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Modern browsers ignore the custom message but require returnValue to
+      // be set in order to trigger the native prompt at all.
+      event.returnValue = CONFIRM_LOGOUT_MESSAGE;
+      return CONFIRM_LOGOUT_MESSAGE;
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [activeLineaId]);
 
   // Task 2.1: Query live active runs using React Query
   const {
@@ -72,10 +91,27 @@ export const GestionPasadasPage: React.FC = () => {
     return byFlatId || byUsuarioNumber || byUsuarioObject;
   });
 
-  const handleLogout = () => {
+  // Task 3.9: when the user explicitly clicks "Cerrar sesión" while a line
+  // session is active, ask for confirmation via the in-app dialog before
+  // actually tearing the session down. Without an active line session we
+  // proceed directly (there is nothing to lose).
+  const handleLogout = async () => {
+    if (activeLineaId) {
+      const ok = await confirm({
+        title: 'Cerrar sesión',
+        description: CONFIRM_LOGOUT_MESSAGE,
+        confirmText: 'Cerrar sesión',
+        cancelText: 'Cancelar',
+        variant: 'destructive',
+      });
+      if (!ok) return;
+    }
     if (user?.rol === 'jefe' || user?.rol === 'administrador') {
+      // Don't closeLineSession here — the guard above would fire a
+      // <Navigate> to /tablet/seleccion-linea as soon as activeLineaId
+      // becomes null, overriding this navigate('/dashboard').
+      // DashboardLayout already handles orphaned sessions on mount.
       navigate('/dashboard');
-      closeLineSession();
     } else {
       resetSocket();
       closeLineSession().finally(() => {
@@ -107,7 +143,7 @@ export const GestionPasadasPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans text-foreground relative">
+    <div data-testid="tablet-page-root" className="h-screen bg-background flex flex-col font-sans text-foreground relative overflow-hidden">
       <header className="bg-card border-b border-border p-4 md:px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
@@ -125,7 +161,7 @@ export const GestionPasadasPage: React.FC = () => {
         </button>
       </header>
 
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
+      <main data-testid="tablet-page-scroll" className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
         {/* Warning: line has no route assigned */}
         {sinRutaAsignada && (
           <div className="flex items-start gap-3 bg-warning/10 border border-warning/50 rounded-2xl p-5 mb-6">

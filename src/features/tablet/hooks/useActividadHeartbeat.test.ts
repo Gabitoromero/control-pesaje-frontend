@@ -1,11 +1,27 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useActividadHeartbeat } from './useActividadHeartbeat';
+import { useActividadHeartbeat, resolveHeartbeatInterval } from './useActividadHeartbeat';
 import { actualizarActividad } from '../../../api/auth';
 
 vi.mock('../../../api/auth', () => ({
   actualizarActividad: vi.fn().mockResolvedValue(undefined),
 }));
+
+describe('resolveHeartbeatInterval', () => {
+  it('devuelve el valor del env cuando es un número positivo válido', () => {
+    expect(resolveHeartbeatInterval('5000')).toBe(5000);
+  });
+
+  it('devuelve el default (120000) cuando el env es undefined', () => {
+    expect(resolveHeartbeatInterval(undefined)).toBe(120000);
+  });
+
+  it('devuelve el default cuando el env no es un número finito positivo', () => {
+    expect(resolveHeartbeatInterval('abc')).toBe(120000);
+    expect(resolveHeartbeatInterval('0')).toBe(120000);
+    expect(resolveHeartbeatInterval('-100')).toBe(120000);
+  });
+});
 
 describe('useActividadHeartbeat', () => {
   beforeEach(() => {

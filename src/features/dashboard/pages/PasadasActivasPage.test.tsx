@@ -4,10 +4,28 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { vi } from 'vitest';
 import { handlers } from '../../../test/handlers';
+import { mockMatchMedia } from '../../../test/setup';
 import { renderWithProviders } from '../../../test/render';
 import { PasadasActivasPage } from './PasadasActivasPage';
 
 const BASE = 'http://localhost:3000/api';
+
+function setMatchMediaFor(queries: Record<string, boolean>) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: queries[query] ?? false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
 
 const pasadasActivasMock = [
   {
@@ -34,8 +52,14 @@ beforeAll(() => server.listen());
 afterEach(() => {
   server.resetHandlers();
   vi.restoreAllMocks();
+  // Restore a wide-screen default so existing assertions (all columns visible)
+  // are not affected by responsive hiding after each test mutates matchMedia.
+  mockMatchMedia(true);
 });
 afterAll(() => server.close());
+
+// Existing tests assume a wide screen where every column is visible.
+mockMatchMedia(true);
 
 describe('PasadasActivasPage', () => {
   it('renders pasadas from the API with línea, operario, artículo and hora de inicio', async () => {
@@ -209,5 +233,61 @@ describe('PasadasActivasPage', () => {
 
     // Row must still be visible (the UI doesn't optimistically remove it)
     expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+  });
+
+  describe('columnas responsivas', () => {
+    it('oculta la columna Artículo en viewports < 1024px pero mantiene Estado (≥768px)', async () => {
+      setMatchMediaFor({
+        '(min-width: 1024px)': false,
+        '(min-width: 768px)': true,
+      });
+
+      renderWithProviders(<PasadasActivasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      // Artículo column is hidden below 1024px
+      expect(screen.queryByText('Artículo')).not.toBeInTheDocument();
+      expect(screen.queryByText('Harina 000')).not.toBeInTheDocument();
+
+      // Estado column stays visible at 768px+
+      expect(screen.getByText('Hora de Inicio')).toBeInTheDocument();
+    });
+
+    it('oculta también la columna Estado en viewports < 768px', async () => {
+      setMatchMediaFor({
+        '(min-width: 1024px)': false,
+        '(min-width: 768px)': false,
+      });
+
+      renderWithProviders(<PasadasActivasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Artículo')).not.toBeInTheDocument();
+      expect(screen.queryByText('Estado')).not.toBeInTheDocument();
+      expect(screen.queryByText('En curso')).not.toBeInTheDocument();
+    });
+
+    it('muestra todas las columnas en viewports ≥ 1024px', async () => {
+      setMatchMediaFor({
+        '(min-width: 1024px)': true,
+        '(min-width: 768px)': true,
+      });
+
+      renderWithProviders(<PasadasActivasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Artículo')).toBeInTheDocument();
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+      expect(screen.getByText('Estado')).toBeInTheDocument();
+    });
   });
 });
