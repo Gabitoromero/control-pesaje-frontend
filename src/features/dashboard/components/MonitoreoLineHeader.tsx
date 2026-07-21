@@ -21,16 +21,33 @@ function formatElapsed(seconds: number): string {
 }
 
 export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, isFullscreen, sinDispositivo, onLineaChange, onFullscreen }: MonitoreoLineHeaderProps) {
-  const tiempoInicial = resumen.pasadaEnCurso?.tiempoTranscurrido ? Math.floor(resumen.pasadaEnCurso.tiempoTranscurrido / 1000) : 0;
-  const [elapsed, setElapsed] = useState(tiempoInicial);
+  // Primary timer: time since the route was assigned to this line (x1).
+  // Does NOT reset when a new pasada starts — only resets when the route changes.
+  const rutaInitialSeconds = resumen.tiempoDesdeRuta != null
+    ? Math.floor(resumen.tiempoDesdeRuta / 1000)
+    : null;
+  const [elapsedRuta, setElapsedRuta] = useState(rutaInitialSeconds ?? 0);
 
   useEffect(() => {
-    setElapsed(tiempoInicial);
-    const timer = setInterval(() => {
-      setElapsed((prev) => prev + 1);
-    }, 1000);
+    if (rutaInitialSeconds === null) return;
+    setElapsedRuta(rutaInitialSeconds);
+    const timer = setInterval(() => setElapsedRuta((prev) => prev + 1), 1000);
     return () => clearInterval(timer);
-  }, [tiempoInicial]);
+  }, [rutaInitialSeconds]);
+
+  // Secondary timer: time since the current pasada started.
+  // Resets every time a new pasada begins.
+  const pasadaInitialSeconds = resumen.pasadaEnCurso?.tiempoTranscurrido != null
+    ? Math.floor(resumen.pasadaEnCurso.tiempoTranscurrido / 1000)
+    : null;
+  const [elapsedPasada, setElapsedPasada] = useState(pasadaInitialSeconds ?? 0);
+
+  useEffect(() => {
+    if (pasadaInitialSeconds === null) return;
+    setElapsedPasada(pasadaInitialSeconds);
+    const timer = setInterval(() => setElapsedPasada((prev) => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, [pasadaInitialSeconds]);
 
   const handlePrev = useCallback(() => onLineaChange(-1), [onLineaChange]);
   const handleNext = useCallback(() => onLineaChange(1), [onLineaChange]);
@@ -72,8 +89,8 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
         <Maximize2 size={16} />
       </button>
 
-      {/* Live badge + timer */}
-      <div className="flex flex-col items-end gap-0.5 flex-shrink-0 min-w-[120px]">
+      {/* Live badge + timers */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 min-w-[140px]">
         <div className="flex items-center gap-2">
           {resumen.conectado && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-semibold">
@@ -82,7 +99,22 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
             </span>
           )}
         </div>
-        <span className="text-xl font-bold text-foreground font-mono tabular-nums">{formatElapsed(elapsed)}</span>
+        {/* Primary: line timer since x1 */}
+        <div className="flex flex-col items-end">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-0.5">En ruta</span>
+          <span className="text-xl font-bold text-foreground font-mono tabular-nums leading-none">
+            {rutaInitialSeconds !== null ? formatElapsed(elapsedRuta) : '--:--:--'}
+          </span>
+        </div>
+        {/* Secondary: current pasada timer (only when a pasada is active) */}
+        {resumen.pasadaEnCurso && (
+          <div className="flex flex-col items-end">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/70 leading-none mb-0.5">Pasada actual</span>
+            <span className="text-sm font-semibold text-muted-foreground font-mono tabular-nums leading-none">
+              {formatElapsed(elapsedPasada)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

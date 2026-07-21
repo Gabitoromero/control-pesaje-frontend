@@ -4,22 +4,24 @@ export interface DashboardLineaItem {
   id: number;
   nombre: string;
   activo: boolean;
+  rutaAsignadaAt: string | null; // x1: moment the current route was assigned to this line
   rutaPasadaActiva?: {
     id: number;
     nombre: string;
   };
   dispositivo?: {
-    id: number;
+    id: string; // hardwareId — string, not numeric DB id
   } | null;
 }
 
 export interface DashboardLineaResumen {
   conectado: boolean;
+  tiempoDesdeRuta: number | null; // ms since x1 (rutaAsignadaAt). null if route was never stamped.
   pasadaEnCurso: {
     id: number;
     horaInicio: string;
     estado: string;
-    tiempoTranscurrido: number;
+    tiempoTranscurrido: number; // ms since this specific pasada started
     rutaPasada?: {
       id: number;
       nombre: string;
@@ -37,6 +39,8 @@ export interface DashboardKpi {
 export interface DashboardEtapaMuestra {
   peso: number;
   time: string;
+  pasadaId: number | null;          // null = muestra libre (sin pasada activa)
+  estadoValidacion: 'ok' | 'fuera_de_rango';
 }
 
 export interface DashboardEtapa {
