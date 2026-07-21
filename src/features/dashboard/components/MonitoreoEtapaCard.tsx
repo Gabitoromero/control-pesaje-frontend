@@ -2,14 +2,31 @@ import type { DashboardEtapa } from '../../../api/dashboard';
 
 interface MonitoreoEtapaCardProps {
   etapa: DashboardEtapa;
+  rutaAsignadaAt: string | null;
 }
 
-export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
+export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt }: MonitoreoEtapaCardProps) {
   const isUltimoOk = etapa.ultimoPeso >= etapa.pesoMinimo && etapa.ultimoPeso <= etapa.pesoMaximo;
   const estadoColor = isUltimoOk ? 'text-success' : 'text-destructive';
 
-  const muestrasOk = etapa.timeSeries.filter(m => m.peso >= etapa.pesoMinimo && m.peso <= etapa.pesoMaximo).length;
+  // Use estadoValidacion from backend — single source of truth, no re-calculation.
+  const muestrasOk = etapa.timeSeries.filter(m => m.estadoValidacion === 'ok').length;
   const muestrasFuera = etapa.timeSeries.length - muestrasOk;
+
+  const x1 = (() => {
+    if (rutaAsignadaAt) {
+      return new Date(rutaAsignadaAt).getTime();
+    }
+    if (etapa.timeSeries.length > 0) {
+      return new Date(etapa.timeSeries[0].time).getTime();
+    }
+    return Date.now() - 3600000;
+  })();
+
+  const x2 = (() => {
+    const now = Date.now();
+    return now > x1 + 1000 ? now : x1 + 1001;
+  })();
 
   return (
     <div className="w-full flex flex-col flex-1 min-h-0 h-full">
@@ -54,17 +71,22 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
         {/* Data points */}
         <div className="absolute inset-0 right-12">
           {etapa.timeSeries.map((muestra, i) => {
-            const normX = (i / Math.max(etapa.timeSeries.length - 1, 1)) * 100;
+            const t = new Date(muestra.time).getTime();
+            const normX = Math.max(0, Math.min(100, ((t - x1) / (x2 - x1)) * 100));
             const range = etapa.pesoMaximo - etapa.pesoMinimo;
             const normY = range > 0 ? 75 - (((muestra.peso - etapa.pesoMinimo) / range) * 50) : 50;
-            const isOk = muestra.peso >= etapa.pesoMinimo && muestra.peso <= etapa.pesoMaximo;
-            const color = isOk ? 'bg-success border-card' : 'bg-destructive border-card';
+            const isOk = muestra.estadoValidacion === 'ok';
+            const isLibre = muestra.pasadaId === null;
+            // Pasada samples: filled circle. Free samples: smaller, dimmed, diamond shape.
+            const colorClass = isOk ? 'bg-success border-card' : 'bg-destructive border-card';
+            const sizeClass = isLibre ? 'w-2.5 h-2.5 opacity-60 rotate-45' : 'w-3.5 h-3.5';
+            const label = `${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}${isLibre ? ' · muestra libre' : ''}`;
             return (
               <div
                 key={i}
-                className={`absolute border-2 w-3.5 h-3.5 rounded-full ${color}`}
+                className={`absolute border-2 rounded-full ${colorClass} ${sizeClass}`}
                 style={{ left: `${normX}%`, top: `${Math.max(2, Math.min(98, normY))}%`, transform: 'translate(-50%, -50%)' }}
-                title={`${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}`}
+                title={label}
               />
             );
           })}
@@ -73,16 +95,12 @@ export function MonitoreoEtapaCard({ etapa }: MonitoreoEtapaCardProps) {
 
       {/* Time axis */}
       <div className="flex justify-between mb-3 mr-12">
-        {etapa.timeSeries.length > 0 && (
-          <>
-            <span className="text-[9px] text-muted-foreground font-mono tabular-nums">
-              {new Date(etapa.timeSeries[0]?.time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-            <span className="text-[9px] text-muted-foreground font-mono tabular-nums">
-              {new Date(etapa.timeSeries[etapa.timeSeries.length - 1]?.time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </>
-        )}
+        <span className="text-[9px] text-muted-foreground font-mono tabular-nums">
+          {new Date(x1).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        <span className="text-[9px] text-muted-foreground font-mono tabular-nums">
+          {new Date(x2).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
       </div>
 
       {/* Footer stats */}

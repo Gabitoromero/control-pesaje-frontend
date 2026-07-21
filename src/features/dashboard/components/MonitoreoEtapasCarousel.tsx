@@ -6,9 +6,10 @@ import { MonitoreoEtapaCard } from './MonitoreoEtapaCard';
 
 interface MonitoreoEtapasCarouselProps {
   etapas: DashboardEtapa[];
+  rutaAsignadaAt: string | null;
 }
 
-export function MonitoreoEtapasCarousel({ etapas }: MonitoreoEtapasCarouselProps) {
+export function MonitoreoEtapasCarousel({ etapas, rutaAsignadaAt }: MonitoreoEtapasCarouselProps) {
   const [index, setIndex] = useState(0);
 
   const goNext = () => setIndex((i) => (i < etapas.length - 1 ? i + 1 : 0));
@@ -59,7 +60,7 @@ export function MonitoreoEtapasCarousel({ etapas }: MonitoreoEtapasCarouselProps
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="flex-1 flex flex-col min-h-0 h-full"
           >
-            <MonitoreoEtapaCard etapa={current} />
+            <MonitoreoEtapaCard etapa={current} rutaAsignadaAt={rutaAsignadaAt} />
           </motion.div>
         </AnimatePresence>
 

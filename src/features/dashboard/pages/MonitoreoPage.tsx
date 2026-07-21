@@ -84,7 +84,7 @@ export const MonitoreoPage = () => {
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             className="flex-1 min-h-0 h-full flex flex-col"
           >
-            <MonitoreoEtapasCarousel etapas={etapas} />
+            <MonitoreoEtapasCarousel etapas={etapas} rutaAsignadaAt={lineaActual?.rutaAsignadaAt ?? null} />
           </motion.div>
         </AnimatePresence>
       </div>
