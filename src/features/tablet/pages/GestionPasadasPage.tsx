@@ -87,7 +87,11 @@ export const GestionPasadasPage: React.FC = () => {
   const articulosFiltrados =
     normalizedSearch === ''
       ? articulos
-      : articulos.filter((a) => normalizeForSearch(a.nombre).includes(normalizedSearch));
+      : articulos.filter(
+          (a) =>
+            normalizeForSearch(a.nombre).includes(normalizedSearch) ||
+            normalizeForSearch(a.marca ?? '').includes(normalizedSearch),
+        );
 
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
@@ -334,7 +338,7 @@ export const GestionPasadasPage: React.FC = () => {
                             onClick={() => setSelectedArticuloId(articulo.id ?? null)}
                             className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
                               ${isSelected
-                                ? 'bg-primary/25 border-primary text-primary-foreground shadow-md shadow-primary/5'
+                                ? 'bg-primary/25 border-primary text-foreground shadow-md shadow-primary/5'
                                 : 'bg-muted border-border hover:bg-muted/70 text-foreground'
                               }`}
                           >

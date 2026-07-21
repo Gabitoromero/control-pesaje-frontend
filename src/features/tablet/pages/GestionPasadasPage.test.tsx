@@ -231,6 +231,22 @@ describe('GestionPasadasPage', () => {
     expect(screen.getByText('Ácido Cítrico')).toBeInTheDocument();
   });
 
+  it('filtra los artículos por marca sin distinguir mayúsculas ni acentos', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    await userEvent.click(btnNuevaPasada);
+
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText(/buscar artículo/i);
+    await userEvent.type(searchInput, 'marca x');
+
+    expect(screen.queryByText('Articulo B')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ácido Cítrico')).not.toBeInTheDocument();
+    expect(screen.getByText('Articulo A')).toBeInTheDocument();
+  });
+
   it('muestra el empty state "Sin resultados" cuando la búsqueda no coincide con ningún artículo', async () => {
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
