@@ -31,7 +31,7 @@ describe('Sidebar', () => {
     expect(handleNavClick).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onNavClick when a nested navigation link is clicked (e.g. catalogo)', async () => {
+  it('calls onNavClick when a nested navigation link is clicked (e.g. parametrizacion)', async () => {
     const userEventSetup = userEvent.setup();
     const handleNavClick = vi.fn();
 
@@ -40,7 +40,7 @@ describe('Sidebar', () => {
       initialEntries: ['/dashboard']
     });
 
-    const catalogoToggle = screen.getByRole('button', { name: /catálogo/i });
+    const catalogoToggle = screen.getByRole('button', { name: /parametrización/i });
     await userEventSetup.click(catalogoToggle);
 
     const articulosLink = screen.getByRole('link', { name: /artículos/i });
@@ -49,17 +49,17 @@ describe('Sidebar', () => {
     expect(handleNavClick).toHaveBeenCalledTimes(1);
   });
 
-  it('splits Gestión into separate Catálogo (jefe) and Administración (admin-only) groups', async () => {
+  it('splits Gestión into separate Parametrización (jefe) and Administración (admin-only) groups', async () => {
     const userEventSetup = userEvent.setup();
 
     renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
 
     expect(screen.queryByRole('button', { name: /gestión/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /parametrización/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /administración/i })).toBeInTheDocument();
 
-    // Usuarios (admin-only) está bajo Catálogo
-    const catalogoToggle = screen.getByRole('button', { name: /catálogo/i });
+    // Usuarios (admin-only) está bajo Parametrización
+    const catalogoToggle = screen.getByRole('button', { name: /parametrización/i });
     await userEventSetup.click(catalogoToggle);
 
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe('Sidebar', () => {
 
     renderWithAuth(<Sidebar />, { user: jefe, initialEntries: ['/dashboard'] });
 
-    expect(screen.getByRole('button', { name: /catálogo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /parametrización/i })).toBeInTheDocument();
     // Administración es visible para jefe, pero sus sub-items admin-only se ocultan
     expect(screen.getByRole('button', { name: /administración/i })).toBeInTheDocument();
 
