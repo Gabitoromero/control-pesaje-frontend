@@ -55,6 +55,7 @@ const mockPasadas: Partial<Pasada>[] = [
 const mockArticulos = [
   { id: 1, nombre: 'Articulo A', marca: 'Marca X', activo: true },
   { id: 2, nombre: 'Articulo B', marca: 'Marca Y', activo: true },
+  { id: 3, nombre: 'Ácido Cítrico', marca: 'Marca Z', activo: true },
 ];
 
 const lineaConRuta = {
@@ -205,6 +206,44 @@ describe('GestionPasadasPage', () => {
 
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
     expect(screen.getByText('No hay artículos asignados a esta ruta')).toBeInTheDocument();
+  });
+
+  // ── ux-polish Task 3: article search in the Nueva Pasada modal ─────────────
+
+  it('filtra los artículos por nombre sin distinguir mayúsculas ni acentos (acido → Ácido Cítrico)', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    await userEvent.click(btnNuevaPasada);
+
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    // All three articles visible initially.
+    expect(screen.getByText('Articulo A')).toBeInTheDocument();
+    expect(screen.getByText('Articulo B')).toBeInTheDocument();
+    expect(screen.getByText('Ácido Cítrico')).toBeInTheDocument();
+
+    // Type "acido" — accent/case-insensitive substring match should keep only Ácido Cítrico.
+    const searchInput = screen.getByPlaceholderText(/buscar artículo/i);
+    await userEvent.type(searchInput, 'acido');
+
+    expect(screen.queryByText('Articulo A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Articulo B')).not.toBeInTheDocument();
+    expect(screen.getByText('Ácido Cítrico')).toBeInTheDocument();
+  });
+
+  it('muestra el empty state "Sin resultados" cuando la búsqueda no coincide con ningún artículo', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    await userEvent.click(btnNuevaPasada);
+
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText(/buscar artículo/i);
+    await userEvent.type(searchInput, 'inexistente');
+
+    expect(screen.getByText(/sin resultados/i)).toBeInTheDocument();
+    expect(screen.queryByText('Articulo A')).not.toBeInTheDocument();
   });
 
   describe('cuando la línea no tiene ruta asignada', () => {

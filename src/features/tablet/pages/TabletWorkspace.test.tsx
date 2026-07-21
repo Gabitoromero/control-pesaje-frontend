@@ -363,8 +363,82 @@ describe('TabletWorkspace', () => {
     });
   });
 
-  it('muestra el PasadaBlock (numero de pasada + hora de inicio) en el panel de muestras', async () => {
+  // ── Tolerance guard (ux-polish Task 1) ────────────────────────────────────
+
+  it('bloquea el registro y muestra alerta cuando el peso está fuera de tolerancia y el rango es estrecho', async () => {
+    // Override the line with a tight-range etapa (range=2 < 0.4*15=6).
     server.use(
+      http.get(`${BASE}/lineas-produccion/1`, () => {
+        return HttpResponse.json({
+          success: true,
+          data: {
+            id: 1,
+            nombre: 'Línea 1 — Envasado A',
+            numeroBalanza: 1,
+            activo: true,
+            rutaPasadaActiva: {
+              id: 1,
+              nombre: 'Ruta 1',
+              activo: true,
+              etapas: [
+                {
+                  id: 10,
+                  etapa: { id: 1, nombre: 'Amasado' },
+                  orden: 1,
+                  pesoMinimo: 14,
+                  pesoIdeal: 15,
+                  pesoMaximo: 16,
+                  cantidadMuestrasRequeridas: 2,
+                },
+              ],
+            },
+          },
+        });
+      })
+    );
+
+    // Far from ideal: pesoNeto=25 → tolerance=10 > threshold=3 → blocked.
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+      pesoNeto: 25.0,
+      isConnected: true,
+    });
+
+    let muestraPosted = false;
+    server.use(
+      http.post(`${BASE}/muestras`, () => {
+        muestraPosted = true;
+        return HttpResponse.json({
+          success: true,
+          data: { id: 50, pesoNeto: 25, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T20:00:00Z' },
+        });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
+
+    const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
+    // Button stays clickable (NOT disabled) — gray appearance, not the success green.
+    expect(btnRegistrar).not.toBeDisabled();
+    expect(btnRegistrar.className).not.toContain('bg-success');
+    expect(btnRegistrar.className).toContain('bg-muted');
+
+    await userEvent.click(btnRegistrar);
+
+    // alertWarning popup appears with an Aceptar button.
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByRole('button', { name: 'Aceptar' })).toBeInTheDocument();
+
+    // addSample was NOT called — the guard short-circuited.
+    expect(muestraPosted).toBe(false);
+  });
+
+  it('muestra el PasadaBlock (numero de pasada + hora de inicio) en el panel de muestras', async () => {    server.use(
       http.get(`${BASE}/pasadas/101`, () => {
         return HttpResponse.json({
           success: true,

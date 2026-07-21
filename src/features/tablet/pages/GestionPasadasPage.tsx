@@ -12,6 +12,7 @@ import { PasadaCard } from '../components/PasadaCard';
 import { resetSocket } from '../../../services/websocket';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { CONFIRM_LOGOUT_MESSAGE } from '../constants/logoutGuard';
+import { normalizeForSearch } from '../../../utils/normalize';
 
 
 export const GestionPasadasPage: React.FC = () => {
@@ -22,6 +23,8 @@ export const GestionPasadasPage: React.FC = () => {
   const [selectedArticuloId, setSelectedArticuloId] = React.useState<number | null>(null);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
+  // ux-polish Task 3: article search term in the Nueva Pasada modal.
+  const [articuloSearch, setArticuloSearch] = React.useState('');
 
   // Task 3.9: guard against accidental tab close / page reload while a line
   // session is active. When activeLineaId is set the browser will prompt the
@@ -78,6 +81,14 @@ export const GestionPasadasPage: React.FC = () => {
     enabled: isModalOpen && !!rutaPasadaId,
   });
 
+  // ux-polish Task 3: accent- and case-insensitive substring filtering of the
+  // article list by the search term typed in the modal.
+  const normalizedSearch = normalizeForSearch(articuloSearch);
+  const articulosFiltrados =
+    normalizedSearch === ''
+      ? articulos
+      : articulos.filter((a) => normalizeForSearch(a.nombre).includes(normalizedSearch));
+
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
   }
@@ -132,6 +143,7 @@ export const GestionPasadasPage: React.FC = () => {
       });
       setIsModalOpen(false);
       setSelectedArticuloId(null);
+      setArticuloSearch('');
       navigate(`/tablet?pasadaId=${newPasada.id}`);
     } catch (err: unknown) {
       console.error('Error starting pasada:', err);
@@ -272,6 +284,7 @@ export const GestionPasadasPage: React.FC = () => {
                   setIsModalOpen(false);
                   setSelectedArticuloId(null);
                   setErrorIniciar(null);
+                  setArticuloSearch('');
                 }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -298,34 +311,50 @@ export const GestionPasadasPage: React.FC = () => {
               ) : articulos.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No hay artículos asignados a esta ruta</p>
               ) : (
-                <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
-                  {articulos.map((articulo) => {
-                    const isSelected = selectedArticuloId === articulo.id;
-                    return (
-                      <button
-                        key={articulo.id}
-                        onClick={() => setSelectedArticuloId(articulo.id ?? null)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
-                          ${isSelected
-                            ? 'bg-primary/25 border-primary text-primary-foreground shadow-md shadow-primary/5'
-                            : 'bg-muted border-border hover:bg-muted/70 text-foreground'
-                          }`}
-                      >
-                        <div>
-                          <p className="font-semibold text-sm">
-                            {articulo.nombre}
-                          </p>
-                          {articulo.marca && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{articulo.marca}</p>
-                          )}
-                        </div>
-                        {isSelected && (
-                          <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  {/* ux-polish Task 3: accent-insensitive article search */}
+                  <input
+                    type="text"
+                    value={articuloSearch}
+                    onChange={(e) => setArticuloSearch(e.target.value)}
+                    placeholder="Buscar artículo..."
+                    aria-label="Buscar artículo"
+                    className="w-full mb-3 px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+
+                  {articulosFiltrados.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Sin resultados</p>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
+                      {articulosFiltrados.map((articulo) => {
+                        const isSelected = selectedArticuloId === articulo.id;
+                        return (
+                          <button
+                            key={articulo.id}
+                            onClick={() => setSelectedArticuloId(articulo.id ?? null)}
+                            className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
+                              ${isSelected
+                                ? 'bg-primary/25 border-primary text-primary-foreground shadow-md shadow-primary/5'
+                                : 'bg-muted border-border hover:bg-muted/70 text-foreground'
+                              }`}
+                          >
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {articulo.nombre}
+                              </p>
+                              {articulo.marca && (
+                                <p className="text-xs text-muted-foreground mt-0.5">{articulo.marca}</p>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -336,6 +365,7 @@ export const GestionPasadasPage: React.FC = () => {
                   setIsModalOpen(false);
                   setSelectedArticuloId(null);
                   setErrorIniciar(null);
+                  setArticuloSearch('');
                 }}
                 className="px-4.5 py-2.5 bg-muted hover:bg-muted/70 text-foreground rounded-xl text-sm font-semibold transition-colors"
                 disabled={iniciando}

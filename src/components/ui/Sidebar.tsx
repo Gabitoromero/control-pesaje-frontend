@@ -54,8 +54,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col shadow-sm flex-shrink-0 h-full">
-      <div className="h-16 flex items-center px-6 border-b border-border">
-        <h1 className="text-xl font-bold text-foreground">Control de Pesaje</h1>
+      {/* Avatar + logout block (ux-polish Task 2: moved from bottom to top so
+          the user is always visible without scrolling the nav). */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
+              {getAvatarInitials(user?.nombreUsuario)}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-foreground truncate">{user?.nombreUsuario}</span>
+              <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+            title="Cerrar sesión"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
@@ -164,24 +183,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
       </nav>
 
       <div className="p-4 border-t border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
-              {getAvatarInitials(user?.nombreUsuario)}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-foreground truncate">{user?.nombreUsuario}</span>
-              <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-            title="Cerrar sesión"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
+        {/* ux-polish Task 2: title moved to bottom and de-emphasized,
+            with a version line below it. */}
+        <h1 className="text-sm text-muted-foreground">Control de Pesaje</h1>
+        <p className="text-xs text-muted-foreground/60">MaciaSoft v1.0</p>
       </div>
     </aside>
   );

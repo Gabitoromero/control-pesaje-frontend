@@ -16,6 +16,7 @@ import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { isToleranceBlocked } from '../utils/tolerance';
 import { useDialog } from '../../../components/dialogs/useDialog';
 
 export const TabletWorkspace: React.FC = () => {
@@ -138,12 +139,20 @@ export const TabletWorkspace: React.FC = () => {
 
   // Task 3.4: Bind weight capture (addSample) from WebSocket to registrarMuestra API
   const handleRegistrarMuestra = async () => {
-    if (isConnected) {
-      try {
-        await addSample(pesoNeto);
-      } catch {
-        // usePasadaState already triggers onApiError
-      }
+    if (!isConnected) return;
+    if (isToleranceBlockedFlag) {
+      await alertWarning({
+        title: 'Muestra fuera de tolerancia',
+        description:
+          'El peso se aleja más del 20% del ideal y el rango configurado es muy estrecho. ' +
+          'Corregí el peso antes de registrar la muestra.',
+      });
+      return;
+    }
+    try {
+      await addSample(pesoNeto);
+    } catch {
+      // usePasadaState already triggers onApiError
     }
   };
 
@@ -197,6 +206,14 @@ export const TabletWorkspace: React.FC = () => {
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
+
+  // ux-polish Task 1: guard against out-of-tolerance samples when the admin's
+  // configured range is too tight to absorb the deviation. The button stays
+  // clickable (NOT disabled) so the operator gets an alertWarning popup.
+  const isToleranceBlockedFlag =
+    hasTolerancia &&
+    etapaActiva !== null &&
+    isToleranceBlocked(pesoNeto, pesoIdeal!, pesoMinimo!, pesoMaximo!);
 
   // Phase 4: PasadaBlock start-time formatting (native Intl, no date library)
   const inicioLabel = pasada?.horaInicio
@@ -291,9 +308,11 @@ export const TabletWorkspace: React.FC = () => {
             onClick={handleRegistrarMuestra}
             disabled={!isConnected || etapaActiva === null}
             className={`w-full py-4 rounded-2xl text-xl font-bold transition-all shadow-lg
-              ${isConnected && etapaActiva !== null
+              ${isConnected && etapaActiva !== null && !isToleranceBlockedFlag
                 ? 'bg-success hover:bg-success/90 text-white active:scale-95'
-                : 'bg-muted text-muted-foreground cursor-not-allowed'
+                : isToleranceBlockedFlag
+                  ? 'bg-muted text-muted-foreground'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
           >
             Registrar Muestra

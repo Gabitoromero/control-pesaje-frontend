@@ -93,4 +93,27 @@ describe('Sidebar', () => {
     // Sesiones Activas es admin-only — el jefe NO la ve
     expect(screen.queryByRole('link', { name: /sesiones activas/i })).not.toBeInTheDocument();
   });
+
+  // ── ux-polish Task 2: header/avatar reorder ───────────────────────────────
+
+  it('places the avatar+logout block above the nav and the title at the bottom', () => {
+    const { container } = renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
+    const aside = container.querySelector('aside');
+    expect(aside).not.toBeNull();
+
+    // The avatar block (with the user name) must appear BEFORE the <nav>.
+    const avatarText = screen.getByText('admin');
+    const nav = aside!.querySelector('nav');
+    expect(aside!.querySelector('nav')).not.toBeNull();
+    // Compare document positions: avatar's container should precede the nav.
+    const avatarBlock = avatarText.closest('div.p-4') ?? avatarText.parentElement;
+    expect(avatarBlock!.compareDocumentPosition(nav!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    // The title "Control de Pesaje" and the "MaciaSoft v1.0" version line
+    // must appear AFTER the <nav>.
+    const title = screen.getByText('Control de Pesaje');
+    const version = screen.getByText('MaciaSoft v1.0');
+    expect(nav!.compareDocumentPosition(title)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(nav!.compareDocumentPosition(version)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });

@@ -225,4 +225,45 @@ describe('MuestrasLibresPage', () => {
     expect(screen.getByText(/sin ruta de pesaje asignada/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /registrar muestra de calidad/i })).not.toBeInTheDocument();
   });
+
+  // ── Tolerance guard (ux-polish Task 1) ────────────────────────────────────
+
+  it('bloquea el registro y muestra alerta cuando el peso está fuera de tolerancia y el rango es estrecho', async () => {
+    // Tight range: pesoMinimo=14, pesoIdeal=15, pesoMaximo=16 (range=2 < 0.4*15=6).
+    const etapaTight: RutaPasadaEtapa = {
+      id: 1,
+      etapa: { id: 10, nombre: 'Amasado' },
+      orden: 1,
+      pesoMinimo: 14,
+      pesoIdeal: 15,
+      pesoMaximo: 16,
+      cantidadMuestrasRequeridas: 2,
+    };
+
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({
+      ...baseContextValue,
+      etapas: [etapaTight],
+      selectedEtapa: etapaTight,
+      selectedEtapaId: 10,
+    });
+    // Far from ideal: pesoNeto=25 → tolerance=10 > threshold=3 → blocked.
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 25.0, isConnected: true });
+
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnRegistrar = screen.getByRole('button', { name: /registrar muestra de calidad/i });
+    // Button stays clickable (NOT disabled) — gray appearance, not warning amber.
+    expect(btnRegistrar).not.toBeDisabled();
+    expect(btnRegistrar.className).not.toContain('bg-warning');
+    expect(btnRegistrar.className).toContain('bg-muted');
+
+    await userEvent.click(btnRegistrar);
+
+    // alertWarning popup appears with an Aceptar button.
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toBeInTheDocument();
+
+    // addSample was NOT called — the guard short-circuited.
+    expect(addSampleMock).not.toHaveBeenCalled();
+  });
 });
