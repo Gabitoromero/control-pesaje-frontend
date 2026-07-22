@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Sidebar } from '../components/ui/Sidebar';
 import { UsuarioRol } from '../shared/types';
 import { UnassignedDeviceBanner } from '../features/dashboard/components/UnassignedDeviceBanner';
