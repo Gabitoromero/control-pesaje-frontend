@@ -26,7 +26,6 @@ export const normalizeMuestra = (m: any): Muestra => {
         ? m.etapa
         : 0);
   const lineaProduccionId = m.lineaProduccionId ?? m.linea_produccion_id ?? 0;
-  const articuloId = m.articuloId ?? m.articulo_id;
   const timestamp = m.timestamp ?? new Date();
 
   return {
@@ -37,13 +36,11 @@ export const normalizeMuestra = (m: any): Muestra => {
     usuarioId,
     etapaId,
     lineaProduccionId,
-    articuloId,
     peso_neto: pesoNeto,
     estado_validacion: estadoValidacion,
     usuario_id: usuarioId,
     etapa_id: etapaId,
     linea_produccion_id: lineaProduccionId,
-    articulo_id: articuloId,
     timestamp,
   };
 };

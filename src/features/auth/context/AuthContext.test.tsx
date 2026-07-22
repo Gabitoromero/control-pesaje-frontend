@@ -11,6 +11,17 @@ import { resetSocket } from '../../../services/websocket';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AuthNavigateBridge } from './AuthContext';
 
+const toastWarning = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: toastWarning,
+    info: vi.fn(),
+  },
+  Toaster: () => null,
+}));
+
 // AuthProvider is intentionally router-agnostic: it uses a module-level
 // SPA-navigate bridge set by <AuthNavigateBridge/> rendered inside a router.
 // For tests that assert the SPA logout path, the bridge is rendered inside
@@ -271,7 +282,7 @@ describe('AuthContext', () => {
     function getSesionCerradaHandler() {
       const call = mockSocket.on.mock.calls.find(([event]) => event === 'sesion-cerrada');
       if (!call) throw new Error('sesion-cerrada handler was never registered');
-      return call[1] as () => Promise<void>;
+      return call[1] as (payload?: { lineaProduccionId?: number; reason?: string }) => Promise<void>;
     }
 
     beforeEach(() => {
@@ -301,6 +312,87 @@ describe('AuthContext', () => {
       await userEvent.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
 
       expect(resetSocket).toHaveBeenCalled();
+    });
+
+    it('shows the admin-forced message when sesion-cerrada carries reason "admin"', async () => {
+      renderAuthWithDialog();
+      const handler = getSesionCerradaHandler();
+
+      act(() => {
+        void handler({ lineaProduccionId: 5, reason: 'admin' });
+      });
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Sesión cerrada')).toBeInTheDocument();
+      expect(
+        within(dialog).getByText('Tu sesión fue cerrada por un administrador.')
+      ).toBeInTheDocument();
+    });
+
+    it('shows the inactivity message when sesion-cerrada carries reason "inactivity"', async () => {
+      renderAuthWithDialog();
+      const handler = getSesionCerradaHandler();
+
+      act(() => {
+        void handler({ lineaProduccionId: 5, reason: 'inactivity' });
+      });
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Sesión cerrada')).toBeInTheDocument();
+      expect(
+        within(dialog).getByText('Tu sesión fue cerrada por inactividad.')
+      ).toBeInTheDocument();
+    });
+
+    it('falls back to the admin message when sesion-cerrada carries no reason', async () => {
+      renderAuthWithDialog();
+      const handler = getSesionCerradaHandler();
+
+      act(() => {
+        void handler({ lineaProduccionId: 5 });
+      });
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(
+        within(dialog).getByText('Tu sesión fue cerrada por un administrador.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('sesion-expirando immediate-close warning', () => {
+    beforeEach(() => {
+      mockStorage['activeLineaId'] = '5';
+    });
+
+    function getSesionExpirandoHandler() {
+      const call = mockSocket.on.mock.calls.find(([event]) => event === 'sesion-expirando');
+      if (!call) throw new Error('sesion-expirando handler was never registered');
+      return call[1] as (payload: { lineaProduccionId: number }) => void;
+    }
+
+    it('fires a non-blocking warning toast on sesion-expirando and does NOT logout', () => {
+      render(
+        <DialogProvider>
+          <MemoryRouter initialEntries={['/somewhere']}>
+            <AuthProvider>
+              <Consumer />
+            </AuthProvider>
+          </MemoryRouter>
+        </DialogProvider>
+      );
+
+      const handler = getSesionExpirandoHandler();
+
+      act(() => {
+        handler({ lineaProduccionId: 5 });
+      });
+
+      expect(toastWarning).toHaveBeenCalledWith(
+        expect.stringContaining('inactividad')
+      );
+      // Inactivity warning must NOT log the operator out — the blocking close
+      // only comes with sesion-cerrada.
+      expect(resetSocket).not.toHaveBeenCalled();
     });
   });
 });

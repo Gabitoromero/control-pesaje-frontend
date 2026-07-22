@@ -160,7 +160,6 @@ describe('usePasadaState', () => {
       pesoNeto: 15,
       usuarioId: 3,
       lineaProduccionId: 1,
-      articuloId: undefined,
     });
 
     expect(added).toBeDefined();

@@ -10,7 +10,6 @@ describe('normalizeMuestra', () => {
       usuarioId: 3,
       etapaId: 10,
       lineaProduccionId: 1,
-      articuloId: 7,
       timestamp: new Date('2024-01-01'),
     };
 
@@ -22,7 +21,6 @@ describe('normalizeMuestra', () => {
     expect(result.usuarioId).toBe(3);
     expect(result.etapaId).toBe(10);
     expect(result.lineaProduccionId).toBe(1);
-    expect(result.articuloId).toBe(7);
   });
 
   it('maps snake_case fields when camelCase is absent', () => {
@@ -33,7 +31,6 @@ describe('normalizeMuestra', () => {
       usuario_id: 5,
       etapa_id: 20,
       linea_produccion_id: 2,
-      articulo_id: 9,
       timestamp: new Date('2024-01-02'),
     };
 
@@ -44,7 +41,6 @@ describe('normalizeMuestra', () => {
     expect(result.usuarioId).toBe(5);
     expect(result.etapaId).toBe(20);
     expect(result.lineaProduccionId).toBe(2);
-    expect(result.articuloId).toBe(9);
     // snake_case aliases must also be set
     expect(result.pesoNeto).toBe(12.0);
     expect(result.estadoValidacion).toBe('fuera_de_rango');

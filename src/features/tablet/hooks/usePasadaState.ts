@@ -16,7 +16,6 @@ interface UsePasadaStateProps {
   pasadaId: number | undefined;
   usuarioId: number;
   lineaProduccionId: number;
-  articuloId?: number;
   etapas: RutaPasadaEtapa[];
   initialMuestras?: Muestra[];
   onApiError?: (error: unknown) => void;
@@ -27,7 +26,6 @@ export function usePasadaState({
   pasadaId,
   usuarioId,
   lineaProduccionId,
-  articuloId,
   etapas,
   initialMuestras,
   onApiError,
@@ -164,7 +162,6 @@ export function usePasadaState({
         pesoNeto,
         usuarioId,
         lineaProduccionId,
-        articuloId,
       };
 
       const nuevaMuestra = await registrarMuestra(data);
@@ -182,7 +179,7 @@ export function usePasadaState({
       }
       throw error;
     }
-  }, [pasadaId, etapaActiva, usuarioId, lineaProduccionId, articuloId, onApiError]);
+  }, [pasadaId, etapaActiva, usuarioId, lineaProduccionId, onApiError]);
 
   const updateSample = useCallback(async (index: number, data: { observacion: string | null }) => {
     const sampleToUpdate = muestras[index];

@@ -111,7 +111,6 @@ export const TabletWorkspace: React.FC = () => {
     pasadaId,
     usuarioId: user?.id ?? 0,
     lineaProduccionId: targetLineaId,
-    articuloId: pasada?.articuloId,
     etapas,
     initialMuestras: muestrasList,
     onApiError: (_err: unknown) => {

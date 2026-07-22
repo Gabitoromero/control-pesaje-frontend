@@ -12,7 +12,6 @@ export const registrarMuestra = async (data: {
   pesoNeto: number;
   usuarioId: number;
   lineaProduccionId: number;
-  articuloId?: number;
 }): Promise<Muestra> => {
   const response = await api.post<ApiEnvelope<Muestra>>('/muestras', data);
   return response.data.data;

@@ -8,6 +8,7 @@ import { resetSocket, getSocket } from '../../../services/websocket';
 import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDialog } from '../../../components/dialogs/useDialog';
+import { toast } from 'sonner';
 
 export interface AuthContextType {
   user: User | null;
@@ -162,22 +163,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     socket.on('connect', joinRoom);
 
-    const onSesionCerrada = async () => {
-      console.log('[AuthContext] Sesión forzada a cerrar por un administrador.');
+    // Forced session close (admin) or inactivity expiry. Both arrive on the
+    // same event with a `reason` discriminator; a blocking dialog precedes
+    // logout so the operator acknowledges what happened before being routed
+    // away.
+    const onSesionCerrada = async (payload: { lineaProduccionId?: number; reason?: string } = {}) => {
+      const isAdminForced = (payload.reason ?? 'admin') !== 'inactivity';
+      console.log(
+        isAdminForced
+          ? '[AuthContext] Sesión forzada a cerrar por un administrador.'
+          : '[AuthContext] Sesión cerrada por inactividad.'
+      );
       await alertWarning({
         title: 'Sesión cerrada',
-        description: 'Tu sesión fue cerrada por un administrador.',
+        description: isAdminForced
+          ? 'Tu sesión fue cerrada por un administrador.'
+          : 'Tu sesión fue cerrada por inactividad.',
       });
       logout();
       const target = user?.rol === 'operario' ? '/' : '/dashboard';
       spaNavigateOrHardReload(target);
     };
 
+    // Pre-expiry warning (T-30s). Non-blocking toast — the operator keeps
+    // working; only the subsequent sesion-cerrada (reason: inactivity)
+    // actually logs them out.
+    const onSesionExpirando = (payload: { lineaProduccionId?: number } = {}) => {
+      if (payload.lineaProduccionId !== activeLineaId) return;
+      toast.warning('Tu sesión expirará por inactividad en 30 segundos.');
+    };
+
     socket.on('sesion-cerrada', onSesionCerrada);
+    socket.on('sesion-expirando', onSesionExpirando);
 
     return () => {
       socket.off('connect', joinRoom);
       socket.off('sesion-cerrada', onSesionCerrada);
+      socket.off('sesion-expirando', onSesionExpirando);
     };
   }, [activeLineaId, logout, user, alertWarning]);
 
