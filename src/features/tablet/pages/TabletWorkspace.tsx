@@ -205,7 +205,6 @@ export const TabletWorkspace: React.FC = () => {
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
-
   // ux-polish Task 1: guard against out-of-tolerance samples when the admin's
   // configured range is too tight to absorb the deviation. The button stays
   // clickable (NOT disabled) so the operator gets an alertWarning popup.
@@ -213,6 +212,7 @@ export const TabletWorkspace: React.FC = () => {
     hasTolerancia &&
     etapaActiva !== null &&
     isToleranceBlocked(pesoNeto, pesoIdeal!, pesoMinimo!, pesoMaximo!);
+
 
   // Phase 4: PasadaBlock start-time formatting (native Intl, no date library)
   const inicioLabel = pasada?.horaInicio
