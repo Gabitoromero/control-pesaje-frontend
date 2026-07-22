@@ -10,16 +10,7 @@ interface ReporteDefinicion {
 }
 
 const REPORTES: ReporteDefinicion[] = [
-  {
-    id: 'rendimiento-fisico',
-    titulo: 'Listado de Pasadas por Ruta',
-    descripcion: 'Listado de pasadas por ruta.',
-  },
-  {
-    id: 'trazabilidad-comercial',
-    titulo: 'Muestras por Ruta y Fecha',
-    descripcion: 'Historial de muestras por ruta y fecha.',
-  },
+
   {
     id: 'reporte-pasadas-muestras',
     titulo: 'Reporte de Pasadas y Muestras',
@@ -54,7 +45,7 @@ export const ReportesPage: React.FC = () => {
 
   const validationError = validateDates();
 
-  const handleDownload = async (e: React.FormEvent) => {
+  const handleDownload = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (validationError) return;
 
