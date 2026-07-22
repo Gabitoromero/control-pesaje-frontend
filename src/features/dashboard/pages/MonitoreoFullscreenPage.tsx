@@ -22,6 +22,9 @@ export const MonitoreoFullscreenPage = () => {
     onLineaChange,
   } = useMonitoreoLineas();
 
+  // x2: Calculate current timestamp for graph limit
+  const ahora = new Date().toISOString();
+
   const handleExitFullscreen = useCallback(() => {
     navigate('/dashboard');
   }, [navigate]);
@@ -88,7 +91,7 @@ export const MonitoreoFullscreenPage = () => {
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             className="flex-1 min-h-0 h-full flex flex-col"
           >
-            <MonitoreoEtapasCarousel etapas={etapas} rutaAsignadaAt={lineaActual?.rutaAsignadaAt ?? null} />
+            <MonitoreoEtapasCarousel etapas={etapas} rutaAsignadaAt={lineaActual?.rutaAsignadaAt ?? null} ahora={ahora} />
           </motion.div>
         </AnimatePresence>
       </div>

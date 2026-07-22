@@ -8,6 +8,7 @@ describe('MonitoreoUI Components', () => {
     it('renders with the new DashboardLineaResumen shape', () => {
       const resumen = {
         conectado: true,
+        tiempoDesdeRuta: 3600000,
         pasadaEnCurso: {
           id: 1,
           horaInicio: new Date().toISOString(),

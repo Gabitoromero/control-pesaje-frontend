@@ -22,6 +22,9 @@ export const MonitoreoPage = () => {
     onLineaChange,
   } = useMonitoreoLineas();
 
+  // x2: Calculate the exact current timestamp outside of the child's render logic
+  const ahora = new Date().toISOString();
+
   const handleFullscreen = useCallback(() => {
     navigate('/dashboard/monitoreo/fullscreen');
   }, [navigate]);
@@ -84,7 +87,7 @@ export const MonitoreoPage = () => {
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             className="flex-1 min-h-0 h-full flex flex-col"
           >
-            <MonitoreoEtapasCarousel etapas={etapas} rutaAsignadaAt={lineaActual?.rutaAsignadaAt ?? null} />
+            <MonitoreoEtapasCarousel etapas={etapas} rutaAsignadaAt={lineaActual?.rutaAsignadaAt ?? null} ahora={ahora} />
           </motion.div>
         </AnimatePresence>
       </div>

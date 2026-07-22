@@ -53,6 +53,9 @@ export interface DashboardEtapa {
   pesoMaximo: number;
   ultimoPeso: number;
   porcentajeConforme: number;
+  muestrasConformes: number;
+  muestrasFueraRango: number;
+  muestrasTotales: number;
   timeSeries: DashboardEtapaMuestra[];
 }
 

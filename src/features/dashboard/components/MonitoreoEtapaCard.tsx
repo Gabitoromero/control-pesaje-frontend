@@ -3,15 +3,17 @@ import type { DashboardEtapa } from '../../../api/dashboard';
 interface MonitoreoEtapaCardProps {
   etapa: DashboardEtapa;
   rutaAsignadaAt: string | null;
+  ahora: string;
 }
 
-export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt }: MonitoreoEtapaCardProps) {
+export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEtapaCardProps) {
   const isUltimoOk = etapa.ultimoPeso >= etapa.pesoMinimo && etapa.ultimoPeso <= etapa.pesoMaximo;
   const estadoColor = isUltimoOk ? 'text-success' : 'text-destructive';
 
-  // Use estadoValidacion from backend — single source of truth, no re-calculation.
-  const muestrasOk = etapa.timeSeries.filter(m => m.estadoValidacion === 'ok').length;
-  const muestrasFuera = etapa.timeSeries.length - muestrasOk;
+  // Use precalculated counts from the backend response
+  const muestrasTotales = etapa.muestrasTotales;
+  const muestrasOk = etapa.muestrasConformes;
+  const muestrasFuera = etapa.muestrasFueraRango;
 
   const x1 = (() => {
     if (rutaAsignadaAt) {
@@ -20,12 +22,14 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt }: MonitoreoEtapaCard
     if (etapa.timeSeries.length > 0) {
       return new Date(etapa.timeSeries[0].time).getTime();
     }
-    return Date.now() - 3600000;
+    // Calculate fallback relative to 'ahora' instead of impure Date.now()
+    const fallbackBase = new Date(ahora).getTime();
+    return fallbackBase - 3600000;
   })();
 
   const x2 = (() => {
-    const now = Date.now();
-    return now > x1 + 1000 ? now : x1 + 1001;
+    const nowLimit = new Date(ahora).getTime();
+    return nowLimit > x1 + 1000 ? nowLimit : x1 + 1001;
   })();
 
   return (
@@ -42,7 +46,9 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt }: MonitoreoEtapaCard
         <div className="text-right">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ÚLTIMO PESO</p>
           <p className={`text-2xl font-bold font-mono ${estadoColor}`}>
-            {etapa.ultimoPeso?.toFixed(1) ?? '—'}
+            {etapa.ultimoPeso > 0 || etapa.timeSeries.length > 0
+              ? (etapa.ultimoPeso > 0 ? etapa.ultimoPeso : Number(etapa.timeSeries[etapa.timeSeries.length - 1]?.peso)).toFixed(1)
+              : '—'}
             <span className="text-sm font-normal text-muted-foreground"> g</span>
           </p>
           <p className={`text-xs font-semibold font-mono ${estadoColor}`}>
@@ -77,14 +83,14 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt }: MonitoreoEtapaCard
             const normY = range > 0 ? 75 - (((muestra.peso - etapa.pesoMinimo) / range) * 50) : 50;
             const isOk = muestra.estadoValidacion === 'ok';
             const isLibre = muestra.pasadaId === null;
-            // Pasada samples: filled circle. Free samples: smaller, dimmed, diamond shape.
+            // Pasada samples: filled circle. Free samples: smaller, dimmed, diamond shape (rotate-45 + no border-radius/rounded).
             const colorClass = isOk ? 'bg-success border-card' : 'bg-destructive border-card';
-            const sizeClass = isLibre ? 'w-2.5 h-2.5 opacity-60 rotate-45' : 'w-3.5 h-3.5';
+            const shapeClass = isLibre ? 'w-2.5 h-2.5 opacity-60 rotate-45' : 'w-3.5 h-3.5 rounded-full';
             const label = `${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}${isLibre ? ' · muestra libre' : ''}`;
             return (
               <div
                 key={i}
-                className={`absolute border-2 rounded-full ${colorClass} ${sizeClass}`}
+                className={`absolute border-2 ${colorClass} ${shapeClass}`}
                 style={{ left: `${normX}%`, top: `${Math.max(2, Math.min(98, normY))}%`, transform: 'translate(-50%, -50%)' }}
                 title={label}
               />
@@ -105,7 +111,7 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt }: MonitoreoEtapaCard
 
       {/* Footer stats */}
       <div className="flex justify-between items-center pt-3 border-t border-border">
-        <span className="text-xs text-muted-foreground font-mono">{etapa.timeSeries.length} muestras desde el inicio</span>
+        <span className="text-xs text-muted-foreground font-mono">{muestrasTotales} muestras desde el inicio</span>
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono">
             <span className="text-success">● </span>

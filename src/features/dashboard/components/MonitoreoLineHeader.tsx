@@ -35,19 +35,7 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
     return () => clearInterval(timer);
   }, [rutaInitialSeconds]);
 
-  // Secondary timer: time since the current pasada started.
-  // Resets every time a new pasada begins.
-  const pasadaInitialSeconds = resumen.pasadaEnCurso?.tiempoTranscurrido != null
-    ? Math.floor(resumen.pasadaEnCurso.tiempoTranscurrido / 1000)
-    : null;
-  const [elapsedPasada, setElapsedPasada] = useState(pasadaInitialSeconds ?? 0);
 
-  useEffect(() => {
-    if (pasadaInitialSeconds === null) return;
-    setElapsedPasada(pasadaInitialSeconds);
-    const timer = setInterval(() => setElapsedPasada((prev) => prev + 1), 1000);
-    return () => clearInterval(timer);
-  }, [pasadaInitialSeconds]);
 
   const handlePrev = useCallback(() => onLineaChange(-1), [onLineaChange]);
   const handleNext = useCallback(() => onLineaChange(1), [onLineaChange]);
@@ -89,8 +77,8 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
         <Maximize2 size={16} />
       </button>
 
-      {/* Live badge + timers */}
-      <div className="flex flex-col items-end gap-1 flex-shrink-0 min-w-[140px]">
+      {/* Live badge + timer */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 min-w-[120px]">
         <div className="flex items-center gap-2">
           {resumen.conectado && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-semibold">
@@ -101,20 +89,10 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
         </div>
         {/* Primary: line timer since x1 */}
         <div className="flex flex-col items-end">
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-0.5">En ruta</span>
           <span className="text-xl font-bold text-foreground font-mono tabular-nums leading-none">
             {rutaInitialSeconds !== null ? formatElapsed(elapsedRuta) : '--:--:--'}
           </span>
         </div>
-        {/* Secondary: current pasada timer (only when a pasada is active) */}
-        {resumen.pasadaEnCurso && (
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/70 leading-none mb-0.5">Pasada actual</span>
-            <span className="text-sm font-semibold text-muted-foreground font-mono tabular-nums leading-none">
-              {formatElapsed(elapsedPasada)}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
