@@ -114,7 +114,12 @@ export const LineasPage = () => {
     mutationFn: async (data: LineaCreate & { activo?: boolean, dispositivoHardwareId?: string }) => {
       const linea = await createLinea(data);
       if (data.dispositivoHardwareId && linea.id) {
-        await saveDeviceMutation.mutateAsync({ id: linea.id, hardwareId: data.dispositivoHardwareId });
+        try {
+          await saveDeviceMutation.mutateAsync({ id: linea.id, hardwareId: data.dispositivoHardwareId });
+        } catch (err) {
+          (err as Record<string, unknown>).__deviceError = true;
+          throw err;
+        }
       }
       return linea;
     },
@@ -125,6 +130,7 @@ export const LineasPage = () => {
       notifyOutcome('creada', variables.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
+      if ((err as Record<string, unknown>)?.__deviceError) return;
       toast.error('No se pudo crear la línea', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
@@ -142,7 +148,15 @@ export const LineasPage = () => {
       
       const originalHardwareId = editingLinea?.dispositivo?.hardwareId || '';
       if (hardwareId !== undefined && hardwareId !== originalHardwareId) {
-        await saveDeviceMutation.mutateAsync({ id, hardwareId: hardwareId === '' ? null : hardwareId });
+        try {
+          await saveDeviceMutation.mutateAsync({ id, hardwareId: hardwareId === '' ? null : hardwareId });
+        } catch (err) {
+          // saveDeviceMutation.onError already shows its own toast.
+          // Mark the error so updateMutation.onError doesn't duplicate it.
+          const marked = err instanceof Error ? err : new Error(String(err));
+          (marked as Record<string, unknown>).__deviceError = true;
+          throw marked;
+        }
       }
       return linea;
     },
@@ -153,6 +167,8 @@ export const LineasPage = () => {
       notifyOutcome(variables.accion, variables.data.rutaPasadaActiva);
     },
     onError: (err: unknown) => {
+      // saveDeviceMutation already handles its own errors with a toast
+      if ((err as Record<string, unknown>)?.__deviceError) return;
       toast.error('No se pudo guardar la línea', {
         description: getApiErrorMessage(err, 'Ocurrió un error inesperado al guardar la línea.'),
       });
