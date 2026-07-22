@@ -185,12 +185,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       spaNavigateOrHardReload(target);
     };
 
-    // Pre-expiry warning (T-30s). Non-blocking toast — the operator keeps
-    // working; only the subsequent sesion-cerrada (reason: inactivity)
-    // actually logs them out.
+    // Pre-expiry warning (T-30s). Non-blocking toast + audible alert — the
+    // operator keeps working; only the subsequent sesion-cerrada (reason:
+    // inactivity) actually logs them out.
     const onSesionExpirando = (payload: { lineaProduccionId?: number } = {}) => {
       if (payload.lineaProduccionId !== activeLineaId) return;
       toast.warning('Tu sesión expirará por inactividad en 30 segundos.');
+
+      // Audible alert: short double-beep via Web Audio API
+      try {
+        const ctx = new AudioContext();
+        const playBeep = (freq: number, start: number, duration: number) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.3, start);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + duration);
+        };
+        const now = ctx.currentTime;
+        playBeep(880, now, 0.15);
+        playBeep(880, now + 0.2, 0.15);
+      } catch { /* AudioContext unavailable (jsdom, etc.) */ }
     };
 
     socket.on('sesion-cerrada', onSesionCerrada);
