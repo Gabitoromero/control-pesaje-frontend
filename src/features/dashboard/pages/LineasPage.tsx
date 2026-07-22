@@ -154,7 +154,7 @@ export const LineasPage = () => {
           // saveDeviceMutation.onError already shows its own toast.
           // Mark the error so updateMutation.onError doesn't duplicate it.
           const marked = err instanceof Error ? err : new Error(String(err));
-          (marked as Record<string, unknown>).__deviceError = true;
+          (marked as unknown as Record<string, unknown>).__deviceError = true;
           throw marked;
         }
       }

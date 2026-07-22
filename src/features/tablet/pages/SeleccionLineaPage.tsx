@@ -12,7 +12,7 @@ import type { Linea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
 
 export const SeleccionLineaPage: React.FC = () => {
-  const { isAuthenticated, user, logout, openLineSession, activeLineaId } = useAuth();
+  const { isAuthenticated, user, logout, openLineSession } = useAuth();
   const navigate = useNavigate();
   const [activatingId, setActivatingId] = React.useState<number | null>(null);
 

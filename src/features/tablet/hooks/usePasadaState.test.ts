@@ -595,11 +595,11 @@ describe('usePasadaState', () => {
       expect(result.current.etapaActiva?.etapa.id).toBe(20);
     });
 
-    it('clears completedEtapaIds when pasadaId becomes null', () => {
+    it('clears completedEtapaIds when pasadaId becomes undefined', () => {
       store['pasada_301_completed'] = JSON.stringify([10]);
 
       const { result, rerender } = renderHook(
-        ({ pasadaId }: { pasadaId: number | null }) =>
+        ({ pasadaId }: { pasadaId?: number }) =>
           usePasadaState({
             pasadaId,
             usuarioId: 3,
@@ -607,14 +607,14 @@ describe('usePasadaState', () => {
             etapas: mockEtapas,
             initialMuestras: [],
           }),
-        { initialProps: { pasadaId: 301 } }
+        { initialProps: { pasadaId: 301 as number | undefined } }
       );
 
       // Stage 1 completed → stage 2 active
       expect(result.current.etapaActiva?.etapa.id).toBe(20);
 
       // Clear pasada (e.g., navigating away)
-      rerender({ pasadaId: null });
+      rerender({ pasadaId: undefined });
 
       // completedEtapaIds should be empty — no pasada means no progress persisted
       // etapaActiva resets to first stage since there's no completion data

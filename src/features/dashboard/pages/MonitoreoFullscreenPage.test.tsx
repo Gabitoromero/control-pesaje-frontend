@@ -24,9 +24,9 @@ describe('MonitoreoFullscreenPage', () => {
   it('passes lineaNombre and rutaActivaNombre to the header (previously missing)', () => {
     vi.mocked(useMonitoreoLineas).mockReturnValue({
       ...baseHookResult,
-      lineas: [{ id: 1, nombre: 'Linea Fullscreen', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta Fullscreen' }, dispositivo: { id: 5 } }],
-      lineaActual: { id: 1, nombre: 'Linea Fullscreen', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta Fullscreen' }, dispositivo: { id: 5 } },
-      resumen: { conectado: false, pasadaEnCurso: null },
+      lineas: [{ id: 1, nombre: 'Linea Fullscreen', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta Fullscreen' }, dispositivo: { id: '5' } }],
+      lineaActual: { id: 1, nombre: 'Linea Fullscreen', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta Fullscreen' }, dispositivo: { id: '5' } },
+      resumen: { conectado: false, pasadaEnCurso: null, tiempoDesdeRuta: null },
       kpis: { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, pasadasEnCurso: 0 },
     });
 

@@ -32,9 +32,9 @@ describe('MonitoreoPage', () => {
   it('shows the "Sin dispositivo" badge when the línea activa has no dispositivo', () => {
     vi.mocked(useMonitoreoLineas).mockReturnValue({
       ...baseHookResult,
-      lineas: [{ id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: null }],
-      lineaActual: { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: null },
-      resumen: { conectado: false, pasadaEnCurso: null },
+      lineas: [{ id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: null }],
+      lineaActual: { id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: null },
+      resumen: { conectado: false, pasadaEnCurso: null, tiempoDesdeRuta: null },
       kpis: { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, pasadasEnCurso: 0 },
     });
 
@@ -46,9 +46,9 @@ describe('MonitoreoPage', () => {
   it('does not show the badge when the línea activa has a dispositivo', () => {
     vi.mocked(useMonitoreoLineas).mockReturnValue({
       ...baseHookResult,
-      lineas: [{ id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: 5 } }],
-      lineaActual: { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: 5 } },
-      resumen: { conectado: false, pasadaEnCurso: null },
+      lineas: [{ id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: '5' } }],
+      lineaActual: { id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: '5' } },
+      resumen: { conectado: false, pasadaEnCurso: null, tiempoDesdeRuta: null },
       kpis: { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, pasadasEnCurso: 0 },
     });
 
