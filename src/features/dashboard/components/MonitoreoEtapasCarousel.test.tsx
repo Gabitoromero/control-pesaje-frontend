@@ -33,4 +33,19 @@ describe('MonitoreoEtapasCarousel', () => {
     expect(screen.getAllByText('Etapa Uno').length).toBeGreaterThan(0);
     expect(screen.getByText('Etapa Dos')).toBeInTheDocument();
   });
+
+  it('enforces items-start alignment on the stepper container', () => {
+    const etapas = [makeEtapa(1, 'Etapa Uno'), makeEtapa(2, 'Etapa Dos')];
+
+    render(
+      <MonitoreoEtapasCarousel
+        etapas={etapas}
+        rutaAsignadaAt="2026-07-22T09:00:00.000Z"
+        ahora="2026-07-22T10:00:00.000Z"
+      />
+    );
+
+    const stepper = screen.getByTestId('stepper-container');
+    expect(stepper).toHaveClass('items-start');
+  });
 });

@@ -41,7 +41,7 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
   const handleNext = useCallback(() => onLineaChange(1), [onLineaChange]);
 
   return (
-    <div className="bg-card border border-border rounded-2xl px-5 py-3 flex items-center gap-4 flex-shrink-0">
+    <div className="bg-card border border-border rounded-2xl px-5 py-3 flex flex-wrap md:flex-nowrap items-center gap-4 flex-shrink-0">
       {/* Left nav */}
       <button onClick={handlePrev} className="p-1 text-muted-foreground hover:text-foreground flex-shrink-0" aria-label="Línea anterior">
         <ChevronLeft size={22} />
@@ -78,7 +78,7 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
       </button>
 
       {/* Live badge + timer */}
-      <div className="flex flex-col items-end gap-1 flex-shrink-0 min-w-[120px]">
+      <div className="flex flex-row md:flex-col justify-between md:justify-end items-center md:items-end gap-1 flex-shrink-0 w-full md:w-auto md:min-w-[120px] mt-2 md:mt-0 pt-2 md:pt-0 border-t border-border md:border-none">
         <div className="flex items-center gap-2">
           {resumen.conectado && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-semibold">

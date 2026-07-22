@@ -66,7 +66,7 @@ export function MonitoreoEtapasCarousel({ etapas, rutaAsignadaAt, ahora }: Monit
         </AnimatePresence>
 
         {/* Story-style stage indicators */}
-        <div className="mt-auto flex items-center justify-center gap-2 max-w-sm w-full mx-auto">
+        <div data-testid="stepper-container" className="mt-auto flex items-start justify-center gap-2 max-w-sm w-full mx-auto">
           {etapas.map((e, i) => (
             <div key={e.etapa.id} className="flex-1 flex flex-col gap-1.5 cursor-pointer group" onClick={() => setIndex(i)}>
               <div className="h-1.5 w-full bg-muted-foreground/30 rounded-full overflow-hidden relative">
