@@ -543,4 +543,83 @@ describe('usePasadaState', () => {
       expect(result.current.muestras[0].observacion).toBe('original');
     });
   });
+
+  describe('completedEtapaIds reset on pasadaId change', () => {
+    it('resets to empty when switching to a new pasada with no completed stages', () => {
+      // Simulate localStorage: pasada 101 has completed stages
+      store['pasada_101_completed'] = JSON.stringify([10, 20]);
+
+      const { result, rerender } = renderHook(
+        ({ pasadaId }) =>
+          usePasadaState({
+            pasadaId,
+            usuarioId: 3,
+            lineaProduccionId: 1,
+            etapas: mockEtapas,
+            initialMuestras: [],
+          }),
+        { initialProps: { pasadaId: 101 } }
+      );
+
+      // Pasada 101: both stages completed → no active stage
+      expect(result.current.etapaActiva).toBeNull();
+
+      // Switch to pasada 102 — no completed stages in localStorage
+      rerender({ pasadaId: 102 });
+
+      // Should reset: first stage becomes active
+      expect(result.current.etapaActiva?.etapa.id).toBe(10);
+    });
+
+    it('loads completed stages from localStorage when switching to a pasada that has them', () => {
+      store['pasada_201_completed'] = JSON.stringify([10]);
+
+      const { result, rerender } = renderHook(
+        ({ pasadaId }) =>
+          usePasadaState({
+            pasadaId,
+            usuarioId: 3,
+            lineaProduccionId: 1,
+            etapas: mockEtapas,
+            initialMuestras: [],
+          }),
+        { initialProps: { pasadaId: 200 } }
+      );
+
+      // Pasada 200: no completed stages → first stage active
+      expect(result.current.etapaActiva?.etapa.id).toBe(10);
+
+      // Switch to pasada 201 that has stage 10 already completed
+      rerender({ pasadaId: 201 });
+
+      // Stage 1 completed → stage 2 should be active
+      expect(result.current.etapaActiva?.etapa.id).toBe(20);
+    });
+
+    it('clears completedEtapaIds when pasadaId becomes null', () => {
+      store['pasada_301_completed'] = JSON.stringify([10]);
+
+      const { result, rerender } = renderHook(
+        ({ pasadaId }: { pasadaId: number | null }) =>
+          usePasadaState({
+            pasadaId,
+            usuarioId: 3,
+            lineaProduccionId: 1,
+            etapas: mockEtapas,
+            initialMuestras: [],
+          }),
+        { initialProps: { pasadaId: 301 } }
+      );
+
+      // Stage 1 completed → stage 2 active
+      expect(result.current.etapaActiva?.etapa.id).toBe(20);
+
+      // Clear pasada (e.g., navigating away)
+      rerender({ pasadaId: null });
+
+      // completedEtapaIds should be empty — no pasada means no progress persisted
+      // etapaActiva resets to first stage since there's no completion data
+      expect(result.current.etapaActiva?.etapa.id).toBe(10);
+    });
+  });
 });
