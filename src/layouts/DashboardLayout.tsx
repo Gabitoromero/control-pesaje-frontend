@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Sidebar } from '../components/ui/Sidebar';
 import { UsuarioRol } from '../shared/types';
 import { UnassignedDeviceBanner } from '../features/dashboard/components/UnassignedDeviceBanner';
@@ -70,15 +70,6 @@ export const DashboardLayout: React.FC = () => {
       >
         <div className="flex-1 overflow-hidden relative">
           <Sidebar onNavClick={closeDrawer} />
-          {/* Close Button overlayed inside the drawer if needed, though Sidebar handles it. 
-              Let's add a close button inside the drawer just in case */}
-          <button
-            onClick={closeDrawer}
-            className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-            aria-label="Cerrar menú"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
       </dialog>
 

@@ -39,7 +39,7 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ETAPA</p>
           <h3 className="text-lg font-bold text-foreground">{etapa.etapa.nombre}</h3>
-          <p className="text-[11px] text-muted-foreground font-mono">
+          <p className="text-[11px] text-muted-foreground font-mono hidden md:block">
             rango {etapa.pesoMinimo}–{etapa.pesoMaximo} g · ideal {etapa.pesoIdeal} g
           </p>
         </div>

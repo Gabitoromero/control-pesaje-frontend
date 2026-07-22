@@ -54,7 +54,7 @@ export const MonitoreoPage = () => {
   }
 
   return (
-    <div className="absolute inset-0 p-4 md:p-8 flex flex-col gap-3 bg-background">
+    <div className="relative min-h-full overflow-y-auto p-4 md:p-8 flex flex-col gap-3 bg-background">
       {/* 60s Global Progress Bar */}
       {lineas.length > 1 && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-accent/30 overflow-hidden z-50">
