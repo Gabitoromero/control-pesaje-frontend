@@ -60,6 +60,22 @@ export function usePasadaState({
     }
   });
 
+  // Reset completedEtapaIds when pasadaId changes — useState initializer
+  // only runs on mount, so without this a new pasada inherits the previous
+  // one's completed stages, pushing the active stage forward incorrectly.
+  useEffect(() => {
+    if (!pasadaId) {
+      setCompletedEtapaIds([]);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(`pasada_${pasadaId}_completed`);
+      setCompletedEtapaIds(saved ? JSON.parse(saved) : []);
+    } catch {
+      setCompletedEtapaIds([]);
+    }
+  }, [pasadaId]);
+
   const finalizarEtapaActual = useCallback(() => {
     setCompletedEtapaIds((prev) => {
       // Find the current active stage
