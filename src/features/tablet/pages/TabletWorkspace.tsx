@@ -47,20 +47,6 @@ export const TabletWorkspace: React.FC = () => {
     refetchInterval: 5000,
   });
 
-  // Redirect back to the pasadas list when this run has been aborted externally
-  useEffect(() => {
-    if (pasada?.estado === 'abortada') {
-      const showWarningAndRedirect = async () => {
-        await alertWarning({
-          title: 'Pasada abortada',
-          description: 'Esta pasada fue abortada por un administrador.',
-        });
-        navigate('/tablet/pasadas', { replace: true });
-      };
-      showWarningAndRedirect();
-    }
-  }, [pasada?.estado, navigate, alertWarning]);
-
   // Load production line details to get the route and stages
   const targetLineaId = pasada?.lineaProduccionId ?? activeLineaId ?? 0;
   const {
@@ -98,7 +84,6 @@ export const TabletWorkspace: React.FC = () => {
     enabled: !!pasadaId,
   });
 
-  // Hook up hook with API integration and client-side derived active stage calculation
   const {
     muestras,
     etapaActiva,
@@ -106,6 +91,7 @@ export const TabletWorkspace: React.FC = () => {
     addSample,
     updateSample,
     removeSample,
+    clearPasada,
     finalizarEtapaActual,
   } = usePasadaState({
     pasadaId,
@@ -114,10 +100,33 @@ export const TabletWorkspace: React.FC = () => {
     etapas,
     initialMuestras: muestrasList,
     onApiError: (_err: unknown) => {
-      // Errors are handled silently at the UI level —
+      // Errors handled silently at the UI level —
       // the page remains accessible even when API calls fail.
     },
   });
+
+  // Cleanup localStorage on unmount — prevents etapa state leaking
+  // across pasadas when pasadaId is reused (bug: etapas fantasmas).
+  useEffect(() => {
+    return () => {
+      clearPasada();
+    };
+  }, [clearPasada]);
+
+  // Redirect back to the pasadas list when this run has been aborted externally
+  useEffect(() => {
+    if (pasada?.estado === 'abortada') {
+      const showWarningAndRedirect = async () => {
+        await alertWarning({
+          title: 'Pasada abortada',
+          description: 'Esta pasada fue abortada por un administrador.',
+        });
+        clearPasada();
+        navigate('/tablet/pasadas', { replace: true });
+      };
+      showWarningAndRedirect();
+    }
+  }, [pasada?.estado, navigate, alertWarning, clearPasada]);
 
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
@@ -176,6 +185,7 @@ export const TabletWorkspace: React.FC = () => {
   const handleFinalizarPasada = async () => {
     try {
       await completarPasada(pasadaId);
+      clearPasada();
       navigate('/tablet/pasadas');
     } catch {
       // Error handled silently — page remains accessible.
@@ -251,7 +261,7 @@ export const TabletWorkspace: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate('/tablet/pasadas')}
+            onClick={() => { clearPasada(); navigate('/tablet/pasadas'); }}
             aria-label="Volver"
             className="flex items-center justify-center gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold transition-colors
               p-3 rounded-full min-[490px]:px-4 min-[490px]:py-2 min-[490px]:rounded-lg"
