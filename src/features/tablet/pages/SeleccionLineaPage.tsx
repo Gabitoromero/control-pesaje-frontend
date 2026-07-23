@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../auth/context/AuthContext';
@@ -10,11 +10,29 @@ import { getApiErrorMessage } from '../../../utils/errors';
 import { abrirSesionLinea } from '../../../api/auth';
 import type { Linea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { getSocket } from '../../../services/websocket';
 
 export const SeleccionLineaPage: React.FC = () => {
   const { isAuthenticated, user, logout, openLineSession } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activatingId, setActivatingId] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    const socket = getSocket();
+    socket.connect();
+
+    const onLineasUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['lineas-produccion'] });
+    };
+
+    socket.on('estado-lineas-actualizado', onLineasUpdate);
+
+    return () => {
+      socket.off('estado-lineas-actualizado', onLineasUpdate);
+    };
+  }, [isAuthenticated, queryClient]);
 
   const { data: lineas = [], isLoading: loading, error, refetch } = useQuery<Linea[]>({
     queryKey: ['lineas-produccion'],

@@ -7,6 +7,19 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { handlers } from '../../../test/handlers';
 
+const mockSocketOn = vi.fn();
+const mockSocketOff = vi.fn();
+
+vi.mock('../../../services/websocket', () => ({
+  getSocket: vi.fn(() => ({
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    on: mockSocketOn,
+    off: mockSocketOff,
+    emit: vi.fn(),
+  })),
+}));
+
 const BASE = 'http://localhost:3000/api';
 
 const navigateMock = vi.fn();
@@ -42,6 +55,8 @@ const jefeUser: User = {
 describe('SeleccionLineaPage', () => {
   beforeEach(() => {
     navigateMock.mockClear();
+    mockSocketOn.mockClear();
+    mockSocketOff.mockClear();
   });
 
   it('redirige a /login si no está autenticado', () => {
@@ -164,5 +179,40 @@ describe('SeleccionLineaPage', () => {
       expect(within(liveRegion as HTMLElement).getByText('Error al activar la línea')).toBeInTheDocument();
     });
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('refetches lines when receiving estado-lineas-actualizado via websocket', async () => {
+    let socketCallback: (() => void) | undefined;
+    mockSocketOn.mockImplementation((event: string, cb: () => void) => {
+      if (event === 'estado-lineas-actualizado') {
+        socketCallback = cb;
+      }
+    });
+
+    renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+    
+    // Wait for initial render and lines fetch
+    expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
+    
+    // Server setup to respond with new line name
+    server.use(
+      http.get(`${BASE}/lineas-produccion`, () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            { id: 1, nombre: 'Línea 1 — Refetched', estado: 'disponible', rutaPasadaActiva: null }
+          ]
+        })
+      )
+    );
+
+    // Trigger websocket event
+    expect(socketCallback).toBeDefined();
+    if (socketCallback) {
+      socketCallback();
+    }
+
+    // Wait for the new line name to appear, indicating a refetch
+    expect(await screen.findByText('Línea 1 — Refetched')).toBeInTheDocument();
   });
 });
