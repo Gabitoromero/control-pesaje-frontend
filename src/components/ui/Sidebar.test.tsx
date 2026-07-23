@@ -65,13 +65,13 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /artículos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /rutas/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
 
     // Administración tiene sus propios sub-items
     const administracionToggle = screen.getByRole('button', { name: /administración/i });
     await userEventSetup.click(administracionToggle);
 
     expect(screen.getByRole('link', { name: /sesiones activas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /pasadas activas/i })).toBeInTheDocument();
   });
 
@@ -84,12 +84,15 @@ describe('Sidebar', () => {
     // Administración es visible para jefe, pero sus sub-items admin-only se ocultan
     expect(screen.getByRole('button', { name: /administración/i })).toBeInTheDocument();
 
+    const catalogoToggle = screen.getByRole('button', { name: /parametrización/i });
+    await userEventSetup.click(catalogoToggle);
+    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
+
     const administracionToggle = screen.getByRole('button', { name: /administración/i });
     await userEventSetup.click(administracionToggle);
 
-    // Pasadas Activas y Dispositivos visibles para jefe
+    // Pasadas Activas visible para jefe
     expect(screen.getByRole('link', { name: /pasadas activas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
     // Sesiones Activas es admin-only — el jefe NO la ve
     expect(screen.queryByRole('link', { name: /sesiones activas/i })).not.toBeInTheDocument();
   });

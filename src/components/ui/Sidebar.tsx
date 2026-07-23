@@ -20,12 +20,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const { theme, toggleTheme } = useTheme();
 
   const [isCatalogoOpen, setIsCatalogoOpen] = useState(() => {
-    return ['/usuarios', '/articulos', '/etapas', '/lineas', '/rutas']
+    return ['/usuarios', '/articulos', '/etapas', '/lineas', '/rutas', '/dispositivos-conectados']
       .some(path => location.pathname.includes(path));
   });
 
   const [isAdministracionOpen, setIsAdministracionOpen] = useState(() => {
-    return ['/sesiones-activas', '/dispositivos-conectados', '/pasadas-activas']
+    return ['/sesiones-activas', '/pasadas-activas']
       .some(path => location.pathname.includes(path));
   });
 
@@ -127,6 +127,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                   <RouteIcon className="w-5 h-5 mr-3" />
                   Rutas
                 </NavLink>
+                <NavLink to="/dashboard/dispositivos-conectados" className={navClass} onClick={handleLinkClick}>
+                  <Cpu className="w-5 h-5 mr-3" />
+                  Dispositivos
+                </NavLink>
               </div>
             )}
           </div>
@@ -157,10 +161,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                     Sesiones Activas
                   </NavLink>
                 )}
-                <NavLink to="/dashboard/dispositivos-conectados" className={navClass} onClick={handleLinkClick}>
-                  <Cpu className="w-5 h-5 mr-3" />
-                  Dispositivos
-                </NavLink>
               </div>
             )}
           </div>

@@ -77,6 +77,7 @@ describe('DashboardLayout — visibilidad del menú por rol', () => {
     // Parametrización visible right away without clicking (includes Usuarios)
     expect(screen.getByRole('link', { name: /artículos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
     // Administración stays collapsed — the route doesn't match any of its sub-items
     expect(screen.queryByRole('link', { name: /pasadas activas/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /sesiones activas/i })).not.toBeInTheDocument();
@@ -86,10 +87,10 @@ describe('DashboardLayout — visibilidad del menú por rol', () => {
     renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard/pasadas-activas'] });
     // Administración auto-expande — Pasadas Activas visible
     expect(screen.getByRole('link', { name: /pasadas activas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dispositivos/i })).toBeInTheDocument();
     // Parametrización stays collapsed — the route doesn't match any of its sub-items
     expect(screen.queryByRole('link', { name: /usuarios/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /artículos/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /dispositivos/i })).not.toBeInTheDocument();
   });
 
   it('visualizacion solo ve Monitoreo', () => {

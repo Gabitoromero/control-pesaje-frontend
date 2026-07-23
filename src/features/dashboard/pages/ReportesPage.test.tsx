@@ -3,27 +3,18 @@ import { renderWithProviders } from '../../../test/render';
 import { ReportesPage } from './ReportesPage';
 
 describe('ReportesPage', () => {
-  it('renders both report cards with title and description', () => {
+  it('renders the report card with title and description', () => {
     renderWithProviders(<ReportesPage />);
 
-    expect(screen.getByText('Listado de Pasadas por Ruta')).toBeInTheDocument();
-    expect(screen.getByText('Listado de pasadas por ruta.')).toBeInTheDocument();
-
-    expect(screen.getByText('Muestras por Ruta y Fecha')).toBeInTheDocument();
-    expect(screen.getByText('Historial de muestras por ruta y fecha.')).toBeInTheDocument();
+    expect(screen.getByText('Reporte de Pasadas y Muestras')).toBeInTheDocument();
+    expect(screen.getByText('Reporte de pasadas y muestras consolidado.')).toBeInTheDocument();
   });
 
-  it('renders both download buttons as disabled (backend not implemented yet)', () => {
+  it('renders the download button', () => {
     renderWithProviders(<ReportesPage />);
 
-    const buttons = screen.getAllByRole('button', { name: /descargar \.xlsx/i });
-    expect(buttons).toHaveLength(2);
-    buttons.forEach((button) => expect(button).toBeDisabled());
-  });
-
-  it('shows a "Disponible próximamente" hint for each report', () => {
-    renderWithProviders(<ReportesPage />);
-
-    expect(screen.getAllByText('Disponible próximamente')).toHaveLength(2);
+    const button = screen.getByRole('button', { name: /descargar/i });
+    expect(button).toBeInTheDocument();
+    expect(button).not.toBeDisabled();
   });
 });
