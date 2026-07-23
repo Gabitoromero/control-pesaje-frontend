@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import Cookies from 'js-cookie';
 
-const URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const URL = import.meta.env.VITE_SOCKET_URL || '';
 
 let socket: Socket | null = null;
 
