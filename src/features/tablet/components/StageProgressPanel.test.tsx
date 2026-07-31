@@ -101,4 +101,67 @@ describe('StageProgressPanel', () => {
       expect(scrollIntoViewSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('advance signal transitions (state, not animation frames)', () => {
+    const makeEtapas = (activeId: number): EtapaConEstado[] => [
+      {
+        etapa: { id: 1, orden: 1, pesoMinimo: 0, pesoIdeal: 0, pesoMaximo: 0, cantidadMuestrasRequeridas: 2, etapa: { id: 10, nombre: 'Stage 1' } },
+        estado: activeId === 10 ? 'actual' : activeId > 10 ? 'completada' : 'pendiente',
+        muestrasOk: activeId >= 10 ? 2 : 0,
+        muestrasRequeridas: 2,
+      },
+      {
+        etapa: { id: 2, orden: 2, pesoMinimo: 0, pesoIdeal: 0, pesoMaximo: 0, cantidadMuestrasRequeridas: 3, etapa: { id: 20, nombre: 'Stage 2' } },
+        estado: activeId === 20 ? 'actual' : activeId > 20 ? 'completada' : 'pendiente',
+        muestrasOk: activeId >= 20 ? 1 : 0,
+        muestrasRequeridas: 3,
+      },
+    ];
+
+    it('marks the completada circle with a data-estado="completada" testid after a forward transition', () => {
+      const { rerender } = render(
+        <StageProgressPanel etapasConEstado={makeEtapas(10)} advanceSignal={{ kind: 'none' }} />
+      );
+
+      rerender(
+        <StageProgressPanel
+          etapasConEstado={makeEtapas(20)}
+          advanceSignal={{ kind: 'forward', etapaId: 20, nombre: 'Stage 2' }}
+        />
+      );
+
+      expect(screen.getByTestId('stage-circle-10')).toHaveAttribute('data-estado', 'completada');
+      expect(screen.getByTestId('stage-circle-20')).toHaveAttribute('data-estado', 'actual');
+    });
+
+    it('renders a ring-pulse testid on the incoming actual circle only on a forward advance', () => {
+      render(
+        <StageProgressPanel
+          etapasConEstado={makeEtapas(20)}
+          advanceSignal={{ kind: 'forward', etapaId: 20, nombre: 'Stage 2' }}
+        />
+      );
+
+      expect(screen.getByTestId('stage-circle-20-ring-pulse')).toBeInTheDocument();
+    });
+
+    it('does NOT render the ring-pulse testid on a backward (regression) transition', () => {
+      render(
+        <StageProgressPanel
+          etapasConEstado={makeEtapas(10)}
+          advanceSignal={{ kind: 'backward', etapaId: 10, nombre: 'Stage 1' }}
+        />
+      );
+
+      expect(screen.queryByTestId('stage-circle-10-ring-pulse')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render the ring-pulse testid when there is no advance signal', () => {
+      render(
+        <StageProgressPanel etapasConEstado={makeEtapas(20)} advanceSignal={{ kind: 'none' }} />
+      );
+
+      expect(screen.queryByTestId('stage-circle-20-ring-pulse')).not.toBeInTheDocument();
+    });
+  });
 });

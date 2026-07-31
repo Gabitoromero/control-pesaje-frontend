@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'motion/react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { usePasadaState} from '../hooks/usePasadaState';
 //import  type { EtapaConEstado } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
+import { useStageAdvanceSignal } from '../hooks/useStageAdvanceSignal';
 import { StageProgressPanel } from '../components/StageProgressPanel';
+import { StageAdvanceFlash } from '../components/StageAdvanceFlash';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { getPasada, completarPasada } from '../../../api/pasadas';
@@ -104,6 +107,12 @@ export const TabletWorkspace: React.FC = () => {
       // the page remains accessible even when API calls fail.
     },
   });
+
+  // Single source of truth for the forward/backward/none classification of
+  // the derived active-etapa transition — shared by the stepper's ring pulse,
+  // the samples panel swap and the one-shot flash overlay so all three stay
+  // in phase (design Decision 8).
+  const advanceSignal = useStageAdvanceSignal(etapasConEstado);
 
   // Cleanup local muestras state on unmount — prevents stale samples leaking
   // across pasadas when pasadaId is reused. Stage state is now purely
@@ -273,7 +282,7 @@ export const TabletWorkspace: React.FC = () => {
       </div>
 
       <div className="flex-shrink-0">
-        <StageProgressPanel etapasConEstado={etapasConEstado} />
+        <StageProgressPanel etapasConEstado={etapasConEstado} advanceSignal={advanceSignal} />
       </div>
 
       {/* Main Content Area */}
@@ -329,7 +338,7 @@ export const TabletWorkspace: React.FC = () => {
         </div>
 
         {/* Muestras List */}
-        <div className="bg-card rounded-xl shadow-sm border border-border flex flex-col min-h-0 max-h-[70vh] lg:max-h-none">
+        <div className="relative bg-card rounded-xl shadow-sm border border-border flex flex-col min-h-0 max-h-[70vh] lg:max-h-none">
           <div className="p-3 border-b border-border flex justify-between items-center bg-muted rounded-t-xl flex-shrink-0">
             <h3 className="text-lg font-bold text-foreground">Muestras Registradas</h3>
             <div className="flex flex-col items-end">
@@ -339,35 +348,47 @@ export const TabletWorkspace: React.FC = () => {
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
-            {muestrasDeEtapaActiva.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                <p>No hay muestras en esta etapa.</p>
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {muestrasDeEtapaActiva.map(({ muestra, originalIndex }, displayIndex) => (
-                  <li
-                    key={muestra.id ?? originalIndex}
-                    onClick={() => setSelectedSampleIndex(originalIndex)}
-                    className="flex justify-between items-center p-4 bg-muted hover:bg-accent rounded-xl border border-border cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-secondary-foreground text-sm">
-                        {displayIndex + 1}
-                      </span>
-                      <span className="text-xl font-bold tabular-nums text-foreground">
-                        {muestra.pesoNeto.toFixed(3)} kg
-                      </span>
-                    </div>
-                    {muestra.estadoValidacion === 'ok'
-                      ? <span className="text-success font-medium">En Rango</span>
-                      : <span className="text-danger font-medium">Fuera de Rango</span>
-                    }
-                  </li>
-                ))}
-              </ul>
-            )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStageId ?? 'sin-etapa'}
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+              >
+                {muestrasDeEtapaActiva.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                    <p>No hay muestras en esta etapa.</p>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {muestrasDeEtapaActiva.map(({ muestra, originalIndex }, displayIndex) => (
+                      <li
+                        key={muestra.id ?? originalIndex}
+                        onClick={() => setSelectedSampleIndex(originalIndex)}
+                        className="flex justify-between items-center p-4 bg-muted hover:bg-accent rounded-xl border border-border cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-secondary-foreground text-sm">
+                            {displayIndex + 1}
+                          </span>
+                          <span className="text-xl font-bold tabular-nums text-foreground">
+                            {muestra.pesoNeto.toFixed(3)} kg
+                          </span>
+                        </div>
+                        {muestra.estadoValidacion === 'ok'
+                          ? <span className="text-success font-medium">En Rango</span>
+                          : <span className="text-danger font-medium">Fuera de Rango</span>
+                        }
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
+
+          <StageAdvanceFlash signal={advanceSignal} />
 
           {/* Task 3.6: Explicit "Finalizar Pasada" action. Stage advance
               between etapas is fully automatic/derived (spec: "Derived

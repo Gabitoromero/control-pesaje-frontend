@@ -661,6 +661,91 @@ describe('TabletWorkspace', () => {
     });
   });
 
+  // ── Stage-advance flash overlay (forward-only, silent on regression) ────────
+
+  it('muestra el overlay StageAdvanceFlash al completar una etapa y avanzar automáticamente a la siguiente', async () => {
+    // Etapa 1 (Amasado, requires 2) starts with 1 OK sample already registered.
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
+              { id: 1, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z' },
+            ],
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
+    // No flash on initial mount — there is no prior active etapa to compare against.
+    expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
+
+    // Registering the 2nd OK sample satisfies etapa 1 while the operator is on
+    // screen — this is a live forward transition, so the flash must appear.
+    const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
+    await userEvent.click(btnRegistrar);
+
+    expect(await screen.findByTestId('stage-advance-flash')).toBeInTheDocument();
+    expect(await screen.findAllByText('Horneado')).not.toHaveLength(0);
+  });
+
+  it('NO muestra el overlay StageAdvanceFlash cuando un delete reduce el conteo pero la etapa activa no cambia', async () => {
+    // Delete is UI-scoped to the current active etapa's own samples (spec:
+    // "Delete scope stays limited to current stage"), so the only regression
+    // reachable through this flow is a same-stage count drop — the active
+    // etapa id itself does not change, so useStageAdvanceSignal must report
+    // 'none' and the flash must never appear.
+    let currentMuestras = [
+      { id: 50, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z', observacion: '' },
+    ];
+
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({ success: true, data: currentMuestras });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+      http.delete(`${BASE}/muestras/:id`, ({ params }) => {
+        currentMuestras = currentMuestras.filter((m) => m.id !== Number(params.id));
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
+    expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
+
+    const row = (await screen.findAllByText('15.000 kg')).map((el) => el.closest('li')).find(Boolean)!;
+    await userEvent.click(row);
+    await screen.findByText(/Muestra #1/);
+    await userEvent.click(screen.getByRole('button', { name: /eliminar muestra/i }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
+  });
+
   it('muestra una alerta y redirige a /tablet/pasadas cuando la pasada es abortada por un admin', async () => {
     server.use(
       http.get(`${BASE}/pasadas/101`, () => {
