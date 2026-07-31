@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getLineas,
@@ -11,6 +12,8 @@ import {
   type LineaCreate,
 } from '../../../api/lineas';
 import { getRutas } from '../../../api/rutas';
+import { getBalanzas } from '../../../api/balanzas';
+import { getArticulos } from '../../../api/articulos';
 import { dispositivosApi } from '../../../api/dispositivos';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
@@ -28,7 +31,13 @@ import {
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
 
 
-const EMPTY_FORM = { nombre: '', rutaPasadaActiva: '', dispositivoHardwareId: '' };
+const EMPTY_FORM = {
+  nombre: '',
+  rutaPasadaActiva: '',
+  dispositivoHardwareId: '',
+  idBalanza: '',
+  articuloId: '',
+};
 
 const LINEA_FIELDS: SearchField[] = [
   { value: 'nombre', label: 'Nombre' },
@@ -76,6 +85,16 @@ export const LineasPage = () => {
   const { data: dispositivos = [] } = useQuery({
     queryKey: ['dispositivos'],
     queryFn: dispositivosApi.getConectados,
+  });
+
+  const { data: balanzas = [] } = useQuery({
+    queryKey: ['balanzas'],
+    queryFn: getBalanzas,
+  });
+
+  const { data: articulos = [] } = useQuery({
+    queryKey: ['articulos'],
+    queryFn: getArticulos,
   });
 
   const isLoading = loadingActivas || loadingInactivas;
@@ -196,6 +215,8 @@ export const LineasPage = () => {
         nombre: linea.nombre,
         rutaPasadaActiva: linea.rutaPasadaActiva?.id?.toString() || '',
         dispositivoHardwareId: linea.dispositivo?.hardwareId || '',
+        idBalanza: linea.idBalanza?.toString() || '',
+        articuloId: linea.articuloId?.toString() || '',
       });
     } else {
       setEditingLinea(null);
@@ -210,8 +231,12 @@ export const LineasPage = () => {
     setFormData(EMPTY_FORM);
   };
 
+  const canSubmit = Boolean(formData.idBalanza) && Boolean(formData.articuloId);
+
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!canSubmit) return;
 
     if (editingLinea?.id) {
       updateMutation.mutate({
@@ -219,6 +244,8 @@ export const LineasPage = () => {
         data: {
           nombre: formData.nombre,
           rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
+          idBalanza: Number(formData.idBalanza),
+          articuloId: Number(formData.articuloId),
         },
         hardwareId: formData.dispositivoHardwareId,
         accion: 'actualizada',
@@ -229,6 +256,8 @@ export const LineasPage = () => {
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : undefined,
         activo: true,
         dispositivoHardwareId: formData.dispositivoHardwareId,
+        idBalanza: Number(formData.idBalanza),
+        articuloId: Number(formData.articuloId),
       });
     }
   };
@@ -254,6 +283,8 @@ export const LineasPage = () => {
         nombre: formData.nombre,
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         activo: true,
+        idBalanza: formData.idBalanza ? Number(formData.idBalanza) : undefined,
+        articuloId: formData.articuloId ? Number(formData.articuloId) : undefined,
       },
       hardwareId: formData.dispositivoHardwareId,
       accion: 'activada',
@@ -368,6 +399,33 @@ export const LineasPage = () => {
                 />
               </div>
               <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-foreground mb-1">Balanza</label>
+                {balanzas.length === 0 ? (
+                  <div className="rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm text-foreground">
+                    <p>No hay balanzas activas disponibles.</p>
+                    <Link to="/dashboard/balanzas" className="text-primary underline hover:no-underline">
+                      Ir al catálogo de balanzas
+                    </Link>
+                  </div>
+                ) : (
+                  <SearchableCombobox
+                    value={formData.idBalanza ? Number(formData.idBalanza) : null}
+                    onChange={(val) => setFormData({ ...formData, idBalanza: val ? String(val) : '' })}
+                    options={balanzas.map((b) => ({ id: b.id, nombre: b.nombre }))}
+                    placeholder="Buscar balanza..."
+                  />
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-foreground mb-1">Artículo</label>
+                <SearchableCombobox
+                  value={formData.articuloId ? Number(formData.articuloId) : null}
+                  onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
+                  options={articulos.map((a) => ({ id: a.id, nombre: a.codigo || a.nombre }))}
+                  placeholder="Buscar artículo..."
+                />
+              </div>
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-foreground mb-1">Dispositivo <span className="text-muted-foreground font-normal">(opcional)</span></label>
                 <SearchableCombobox
                   value={formData.dispositivoHardwareId}
@@ -404,7 +462,7 @@ export const LineasPage = () => {
               <button type="button" onClick={closeModal} className="px-4 py-2 border border-border rounded-md text-foreground hover:bg-accent">
                 Cancelar
               </button>
-              <button type="submit" disabled={isBusy} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
+              <button type="submit" disabled={isBusy || !canSubmit} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
                 {isBusy ? 'Guardando...' : 'Guardar'}
               </button>
             </DialogFooter>

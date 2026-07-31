@@ -13,6 +13,18 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
+// With the new required Balanza/Articulo selectors added ahead of Dispositivo and
+// Ruta Activa in the create/edit form, a *new* línea (empty form) renders four
+// unselected SearchableCombobox triggers in this order: Balanza, Articulo,
+// Dispositivo, Ruta Activa. When editing an existing línea (which already has
+// idBalanza/articuloId from the mock), only Dispositivo and Ruta Activa remain
+// unselected, so their "Seleccione..." index stays stable at [0] and [1].
+const selectComboboxOption = async (index: number, optionName: string) => {
+  const trigger = screen.getAllByRole('button', { name: 'Seleccione...' })[index];
+  await userEvent.click(trigger);
+  await userEvent.click(screen.getByRole('option', { name: optionName }));
+};
+
 describe('LineasPage', () => {
   it('default mount shows only activos', async () => {
     renderWithProviders(<LineasPage />);
@@ -181,12 +193,10 @@ describe('LineasPage', () => {
     const lineaRow = lineaText.closest('tr')!;
     await userEvent.click(within(lineaRow).getByTitle('Editar'));
 
-    // Assign a ruta activa before activating so this hits the "success" branch,
-    // not the "no ruta" warning branch — isolates the accion-copy bug.
-    // SearchableCombobox: click the trigger button to open popover, then select the option
-    const rutaTrigger = screen.getAllByRole('button', { name: 'Seleccione...' })[1];
-    await userEvent.click(rutaTrigger);
-    await userEvent.click(screen.getByRole('option', { name: 'Ruta Alpha' }));
+    // Línea 4 already has idBalanza/articuloId from the mock, so only Dispositivo
+    // and Ruta Activa remain unselected. Assign a ruta activa before activating so
+    // this hits the "success" branch, not the "no ruta" warning branch.
+    await selectComboboxOption(1, 'Ruta Alpha');
 
     await userEvent.click(screen.getByRole('button', { name: 'Activar Línea' }));
 
@@ -210,7 +220,7 @@ describe('LineasPage', () => {
         HttpResponse.json({
           success: true,
           data: [
-            { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: 1 },
+            { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: 1, idBalanza: 1, articuloId: 1 },
             ...lineasMock.slice(1),
           ],
         })
@@ -251,8 +261,8 @@ describe('LineasPage', () => {
         HttpResponse.json({
           success: true,
           data: [
-            { id: 4, nombre: 'Línea 4 — Inactiva A', activo: false, numeroBalanza: 4, rutaPasadaActiva: 1 },
-            { id: 5, nombre: 'Línea 5 — Inactiva B', activo: false, numeroBalanza: 5 },
+            { id: 4, nombre: 'Línea 4 — Inactiva A', activo: false, numeroBalanza: 4, rutaPasadaActiva: 1, idBalanza: 1, articuloId: 1 },
+            { id: 5, nombre: 'Línea 5 — Inactiva B', activo: false, numeroBalanza: 5, idBalanza: 2, articuloId: 2 },
           ],
         })
       )
@@ -384,6 +394,8 @@ describe('LineasPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      await selectComboboxOption(0, 'Balanza 1');
+      await selectComboboxOption(0, 'Harina 000');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByText('No se pudo crear la línea');
@@ -452,10 +464,10 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
 
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      // SearchableCombobox: click trigger to open popover, then select the option
-      const rutaTrigger = screen.getAllByRole('button', { name: 'Seleccione...' })[1];
-      await userEvent.click(rutaTrigger);
-      await userEvent.click(screen.getByRole('option', { name: 'Ruta Alpha' }));
+      await selectComboboxOption(0, 'Balanza 1');
+      await selectComboboxOption(0, 'Harina 000');
+      // Ruta Activa is now the last unselected combobox (Dispositivo before it stays empty)
+      await selectComboboxOption(1, 'Ruta Alpha');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -476,6 +488,8 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
 
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Ruta');
+      await selectComboboxOption(0, 'Balanza 1');
+      await selectComboboxOption(0, 'Harina 000');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByRole('alertdialog');
@@ -493,7 +507,7 @@ describe('LineasPage', () => {
           HttpResponse.json({
             success: true,
             data: [
-              { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: { id: 1, nombre: 'Ruta Alpha' } },
+              { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: { id: 1, nombre: 'Ruta Alpha' }, idBalanza: 1, articuloId: 1 },
               ...lineasMock.slice(1),
             ],
           })
@@ -514,6 +528,152 @@ describe('LineasPage', () => {
 
       const dialog = await screen.findByRole('alertdialog');
       expect(within(dialog).getByText('Línea actualizada exitosamente')).toBeInTheDocument();
+    });
+  });
+
+  describe('required Balanza + Articulo selectors (Phase 3)', () => {
+    it('renders Balanza and Articulo selectors in the create form', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+
+      expect(screen.getByText('Balanza')).toBeInTheDocument();
+      expect(screen.getByText('Artículo')).toBeInTheDocument();
+    });
+
+    it('Guardar is disabled when balanza is not selected', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      // Index 1 is Articulo while Balanza (index 0) is still unselected.
+      await selectComboboxOption(1, 'Harina 000');
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+    });
+
+    it('Guardar is disabled when articulo is not selected', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      await selectComboboxOption(0, 'Balanza 1');
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+    });
+
+    it('Guardar is enabled once both balanza and articulo are selected', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+
+      await selectComboboxOption(0, 'Balanza 1');
+      await selectComboboxOption(0, 'Harina 000');
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled();
+    });
+
+    it('creating a línea sends idBalanza and articuloId in the payload', async () => {
+      let requestPayload: unknown = null;
+      server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', async ({ request }) => {
+          requestPayload = await request.json();
+          return HttpResponse.json({ success: true, data: { id: 99, ...(requestPayload as object) } }, { status: 201 });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      await selectComboboxOption(0, 'Balanza 2');
+      await selectComboboxOption(0, 'Azúcar');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      await waitFor(() => {
+        expect((requestPayload as Record<string, unknown>).idBalanza).toBe(2);
+        expect((requestPayload as Record<string, unknown>).articuloId).toBe(2);
+      });
+    });
+
+    it('editing a línea sends the updated idBalanza and articuloId in the payload', async () => {
+      let requestPayload: unknown = null;
+      server.use(
+        http.put('http://localhost:3000/api/lineas-produccion/:id', async ({ request }) => {
+          requestPayload = await request.json();
+          return HttpResponse.json({ success: true, data: { id: 1, ...(requestPayload as object) } });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      // Línea 1 starts with Balanza 1 / Harina 000 (id 1) from the mock; change the balanza.
+      await userEvent.click(screen.getByRole('button', { name: 'Balanza 1' }));
+      await userEvent.click(screen.getByRole('option', { name: 'Balanza 2' }));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      await waitFor(() => {
+        expect((requestPayload as Record<string, unknown>).idBalanza).toBe(2);
+        expect((requestPayload as Record<string, unknown>).articuloId).toBe(1);
+      });
+    });
+
+    it('empty balanza catalog shows an empty state with a link to the Balanza catalog page and blocks submission', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/balanzas', () =>
+          HttpResponse.json({ success: true, data: [] })
+        )
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/no hay balanzas activas/i)).toBeInTheDocument();
+      });
+
+      const link = screen.getByRole('link', { name: /ir al catálogo de balanzas/i });
+      expect(link).toHaveAttribute('href', '/dashboard/balanzas');
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
     });
   });
 });

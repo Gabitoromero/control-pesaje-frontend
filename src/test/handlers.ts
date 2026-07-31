@@ -67,14 +67,14 @@ export const sesionesActivasMock = [
 ];
 
 export const lineasMock = [
-  { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible' as const, activo: true, numeroBalanza: 1 },
-  { id: 2, nombre: 'Línea 2 — Envasado B', estado: 'ocupada' as const,    activo: true, numeroBalanza: 2 },
-  { id: 3, nombre: 'Línea 3 — Fraccionado', estado: 'disponible' as const, activo: true, numeroBalanza: 3 },
+  { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible' as const, activo: true, numeroBalanza: 1, idBalanza: 1, articuloId: 1 },
+  { id: 2, nombre: 'Línea 2 — Envasado B', estado: 'ocupada' as const,    activo: true, numeroBalanza: 2, idBalanza: 2, articuloId: 2 },
+  { id: 3, nombre: 'Línea 3 — Fraccionado', estado: 'disponible' as const, activo: true, numeroBalanza: 3, idBalanza: 1, articuloId: 3 },
 ];
 
 export const lineasMockInactivos = [
-  { id: 4, nombre: 'Línea 4 — Inactiva A', activo: false, numeroBalanza: 4 },
-  { id: 5, nombre: 'Línea 5 — Inactiva B', activo: false, numeroBalanza: 5 },
+  { id: 4, nombre: 'Línea 4 — Inactiva A', activo: false, numeroBalanza: 4, idBalanza: 1, articuloId: 1 },
+  { id: 5, nombre: 'Línea 5 — Inactiva B', activo: false, numeroBalanza: 5, idBalanza: 2, articuloId: 2 },
 ];
 
 export const rutasMock = [
