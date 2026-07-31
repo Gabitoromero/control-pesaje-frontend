@@ -14,10 +14,14 @@ export interface Linea {
   rutaPasadaActiva?: Ruta | null;
   activo?: boolean;
   estado?: 'disponible' | 'ocupada';
+  idBalanza?: number;
+  articuloId?: number;
 }
 
 export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva' | 'dispositivo'> {
   rutaPasadaActiva?: number | null;
+  idBalanza: number;
+  articuloId: number;
 }
 
 interface ApiEnvelope<T> {

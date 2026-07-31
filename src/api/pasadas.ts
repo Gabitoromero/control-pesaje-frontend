@@ -23,7 +23,7 @@ export const getPasada = async (id: number): Promise<Pasada> => {
   return response.data.data;
 };
 
-export const iniciarPasada = async (data: { lineaProduccionId: number; articuloId: number }): Promise<Pasada> => {
+export const iniciarPasada = async (data: { lineaProduccionId: number; idBalanza: number }): Promise<Pasada> => {
   const response = await api.post<ApiEnvelope<Pasada>>('/pasadas', data);
   return response.data.data;
 };
