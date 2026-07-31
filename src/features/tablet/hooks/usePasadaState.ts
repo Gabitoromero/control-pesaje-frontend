@@ -2,15 +2,11 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { registrarMuestra, deleteMuestra, updateMuestra } from '../../../api/muestras';
 import { normalizeMuestra } from '../utils/muestra.utils';
-
-export type EstadoEtapa = 'completada' | 'actual' | 'pendiente';
-
-export interface EtapaConEstado {
-  etapa: RutaPasadaEtapa;
-  estado: EstadoEtapa;
-  muestrasOk: number;
-  muestrasRequeridas: number;
-}
+import { deriveEtapasConEstado } from '../utils/stageProgress';
+// Re-exported for back-compat with existing consumers importing these types
+// from this module (e.g. StageProgressPanel). The single source of truth
+// for both the type shapes and the derivation logic is `stageProgress.ts`.
+export type { EstadoEtapa, EtapaConEstado } from '../utils/stageProgress';
 
 interface UsePasadaStateProps {
   pasadaId: number | undefined;
@@ -48,95 +44,16 @@ export function usePasadaState({
 
 
 
-  const [completedEtapaIds, setCompletedEtapaIds] = useState<number[]>(() => {
-    if (!pasadaId) return [];
-    try {
-      const saved = localStorage.getItem(`pasada_${pasadaId}_completed`);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // etapasConEstado/etapaActiva are pure functions of (etapas, muestras) —
+  // no independent client-side pointer is kept. Every recompute (e.g. after
+  // a delete-driven refetch reseeds `muestras`) re-derives from the current
+  // OK-sample counts, so regression to an earlier stage happens naturally.
+  const etapasConEstado = useMemo(
+    () => deriveEtapasConEstado(etapas ?? [], muestras),
+    [etapas, muestras]
+  );
 
-  // Reset completedEtapaIds when pasadaId changes — useState initializer
-  // only runs on mount, so without this a new pasada inherits the previous
-  // one's completed stages, pushing the active stage forward incorrectly.
-  useEffect(() => {
-    if (!pasadaId) {
-      setCompletedEtapaIds([]);
-      return;
-    }
-    try {
-      const saved = localStorage.getItem(`pasada_${pasadaId}_completed`);
-      setCompletedEtapaIds(saved ? JSON.parse(saved) : []);
-    } catch {
-      setCompletedEtapaIds([]);
-    }
-  }, [pasadaId]);
-
-  const finalizarEtapaActual = useCallback(() => {
-    setCompletedEtapaIds((prev) => {
-      // Find the current active stage
-      if (!etapas || etapas.length === 0) return prev;
-      const sortedEtapas = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-      let activeStageId: number | undefined;
-      for (const wrapper of sortedEtapas) {
-        if (!prev.includes(wrapper.etapa.id!)) {
-          activeStageId = wrapper.etapa.id;
-          break;
-        }
-      }
-      
-      if (activeStageId !== undefined && !prev.includes(activeStageId)) {
-        const next = [...prev, activeStageId];
-        localStorage.setItem(`pasada_${pasadaId}_completed`, JSON.stringify(next));
-        return next;
-      }
-      return prev;
-    });
-  }, [etapas, pasadaId]);
-
-  const etapasConEstado = useMemo(() => {
-    if (!etapas || etapas.length === 0) return [];
-    
-    const sortedEtapas = [...etapas].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-    
-    let isActualFound = false;
-    
-    return sortedEtapas.map((etapaWrapper): EtapaConEstado => {
-      const stageId = etapaWrapper.etapa.id;
-      const muestrasRequeridas = etapaWrapper.cantidadMuestrasRequeridas;
-      
-      const muestrasOk = muestras.filter((m) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mEtapaId = m.etapaId ?? (m as any).etapa_id;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mEstado = m.estadoValidacion ?? (m as any).estado_validacion;
-        return mEtapaId === stageId && mEstado === 'ok';
-      }).length;
-      
-      const isMarcadaComoCompleta = stageId !== undefined && completedEtapaIds.includes(stageId);
-      let estado: EstadoEtapa;
-      
-      if (isMarcadaComoCompleta) {
-        estado = 'completada';
-      } else if (!isActualFound) {
-        estado = 'actual';
-        isActualFound = true;
-      } else {
-        estado = 'pendiente';
-      }
-      
-      return {
-        etapa: etapaWrapper,
-        estado,
-        muestrasOk,
-        muestrasRequeridas,
-      };
-    });
-  }, [etapas, muestras, completedEtapaIds]);
-
-  const etapaActiva = etapasConEstado.find(e => e.estado === 'actual')?.etapa ?? null;
+  const etapaActiva = etapasConEstado.find((e) => e.estado === 'actual')?.etapa ?? null;
 
   const addSample = useCallback(async (pesoNeto: number) => {
     if (!pasadaId) {
@@ -220,9 +137,12 @@ export function usePasadaState({
       return;
     }
 
+    // Refetch-driven, not optimistic: only call the API here. The caller
+    // (TabletWorkspace) invalidates the muestras query on success; the
+    // subsequent refetch reseeds `initialMuestras`, which recomputes
+    // `muestras` and, transitively, `etapasConEstado`/`etapaActiva`.
     try {
       await deleteMuestra(sampleId);
-      setMuestras((prev) => prev.filter((_, i) => i !== index));
     } catch (error) {
       console.error('Error deleting sample:', error);
       if (onApiError) {
@@ -234,11 +154,7 @@ export function usePasadaState({
 
   const clearPasada = useCallback(() => {
     setMuestras([]);
-    setCompletedEtapaIds([]);
-    if (pasadaId) {
-      localStorage.removeItem(`pasada_${pasadaId}_completed`);
-    }
-  }, [pasadaId]);
+  }, []);
 
   return {
     muestras,
@@ -248,7 +164,6 @@ export function usePasadaState({
     updateSample,
     removeSample,
     clearPasada,
-    finalizarEtapaActual,
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveStageProgress } from './stageProgress';
+import { deriveStageProgress, deriveEtapasConEstado } from './stageProgress';
 import type { RutaPasadaEtapa, Muestra } from '../../../shared/types/domain';
 
 function makeEtapa(id: number, orden: number, cantidadMuestrasRequeridas: number): RutaPasadaEtapa {
@@ -99,5 +99,43 @@ describe('deriveStageProgress', () => {
     expect(result.current).toEqual(etapas[0]);
     expect(result.currentIndex).toBe(2);
     expect(result.total).toBe(2);
+  });
+});
+
+describe('deriveEtapasConEstado', () => {
+  it('returns an empty array when there are no etapas', () => {
+    expect(deriveEtapasConEstado([], [])).toEqual([]);
+  });
+
+  it('marks the first etapa as actual and the rest as pendiente when there are zero muestras', () => {
+    const etapas = [makeEtapa(1, 1, 2), makeEtapa(2, 2, 1), makeEtapa(3, 3, 1)];
+
+    const result = deriveEtapasConEstado(etapas, []);
+
+    expect(result.map((e) => e.estado)).toEqual(['actual', 'pendiente', 'pendiente']);
+    expect(result[0]).toMatchObject({ muestrasOk: 0, muestrasRequeridas: 2 });
+  });
+
+  it('marks a satisfied leading etapa as completada and the next unsatisfied one as actual', () => {
+    const etapas = [makeEtapa(1, 1, 2), makeEtapa(2, 2, 1)];
+    const muestras = [makeMuestra(1), makeMuestra(1)];
+
+    const result = deriveEtapasConEstado(etapas, muestras);
+
+    expect(result[0]).toMatchObject({ estado: 'completada', muestrasOk: 2, muestrasRequeridas: 2 });
+    expect(result[1]).toMatchObject({ estado: 'actual', muestrasOk: 0, muestrasRequeridas: 1 });
+  });
+
+  it('regresses a previously completada etapa back to actual and invalidates later etapas when its OK count drops below the requirement', () => {
+    const etapas = [makeEtapa(1, 1, 3), makeEtapa(2, 2, 1)];
+    // Etapa 1 previously had 3 OK samples (completada); now only 2 remain
+    // after a delete, and etapa 2 independently has 1 OK sample recorded —
+    // it MUST still be invalidated back to pendiente per spec.
+    const muestras = [makeMuestra(1), makeMuestra(1), makeMuestra(2)];
+
+    const result = deriveEtapasConEstado(etapas, muestras);
+
+    expect(result[0]).toMatchObject({ estado: 'actual', muestrasOk: 2, muestrasRequeridas: 3 });
+    expect(result[1]).toMatchObject({ estado: 'pendiente', muestrasOk: 1, muestrasRequeridas: 1 });
   });
 });

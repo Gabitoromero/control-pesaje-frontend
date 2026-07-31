@@ -30,22 +30,8 @@ const mockEtapas: RutaPasadaEtapa[] = [
 ];
 
 describe('usePasadaState', () => {
-  const store: Record<string, string> = {};
-  
-  beforeAll(() => {
-    Object.defineProperty(window, 'localStorage', {
-      value: {
-        getItem: vi.fn((key) => store[key] || null),
-        setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
-        clear: vi.fn(() => { for (const key in store) delete store[key]; }),
-      },
-      writable: true
-    });
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
   });
 
   it('determines the active stage based on samples count', () => {
@@ -64,7 +50,8 @@ describe('usePasadaState', () => {
     expect(result.current.muestras.length).toBe(0);
   });
 
-  it('advances to the next stage when finalizarEtapaActual is called', () => {
+  it('auto-advances to the next stage once stage 1 has enough OK samples', () => {
+    // Stage 1 (mockEtapas[0]) requires 2 OK samples.
     const initialMuestras = [
       {
         id: 1,
@@ -75,54 +62,50 @@ describe('usePasadaState', () => {
         lineaProduccionId: 1,
         timestamp: new Date(),
       },
+      {
+        id: 2,
+        pesoNeto: 15,
+        estadoValidacion: 'ok' as const,
+        usuarioId: 3,
+        etapaId: 10,
+        lineaProduccionId: 1,
+        timestamp: new Date(),
+      },
     ];
 
-    const { result } = renderHook(
-      ({ samples }) =>
-        usePasadaState({
-          pasadaId: 101,
-          usuarioId: 3,
-          lineaProduccionId: 1,
-          etapas: mockEtapas,
-          initialMuestras: samples,
-        }),
-      {
-        initialProps: { samples: initialMuestras },
-      }
-    );
-
-    // Initial state: Stage 1 is active
-    expect(result.current.etapaActiva?.etapa.id).toBe(10);
-
-    // Call manual advance
-    act(() => {
-      result.current.finalizarEtapaActual();
-    });
-
-    // Now Stage 1 is complete, it should advance to Stage 2
-    expect(result.current.etapaActiva?.etapa.id).toBe(20);
-  });
-
-  it('returns null when all stages are completed', () => {
     const { result } = renderHook(() =>
       usePasadaState({
         pasadaId: 101,
         usuarioId: 3,
         lineaProduccionId: 1,
         etapas: mockEtapas,
-        initialMuestras: [],
+        initialMuestras,
       })
     );
 
-    act(() => {
-      result.current.finalizarEtapaActual(); // complete stage 1
-    });
-    
-    act(() => {
-      result.current.finalizarEtapaActual(); // complete stage 2
-    });
+    // Stage 1 already satisfied on mount → derived state jumps straight to Stage 2.
+    expect(result.current.etapaActiva?.etapa.id).toBe(20);
+  });
 
-    // All stages manually completed, active stage is null
+  it('returns null when every stage already has enough OK samples', () => {
+    // Stage 1 needs 2, Stage 2 needs 1.
+    const initialMuestras = [
+      { id: 1, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+      { id: 2, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+      { id: 3, pesoNeto: 35, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 20, lineaProduccionId: 1, timestamp: new Date() },
+    ];
+
+    const { result } = renderHook(() =>
+      usePasadaState({
+        pasadaId: 101,
+        usuarioId: 3,
+        lineaProduccionId: 1,
+        etapas: mockEtapas,
+        initialMuestras,
+      })
+    );
+
+    // All stages derived as satisfied, active stage is null.
     expect(result.current.etapaActiva).toBeNull();
   });
 
@@ -167,7 +150,11 @@ describe('usePasadaState', () => {
     expect(result.current.muestras[0].id).toBe(50);
   });
 
-  it('deletes a sample calling api and updates local list', async () => {
+  it('deletes a sample by calling the API, without optimistically filtering the local list', async () => {
+    // Delete is refetch-driven, not optimistic: removeSample only calls the
+    // API. The caller (TabletWorkspace) invalidates the muestras query on
+    // success, and the subsequent refetch reseeds `initialMuestras`, which
+    // is what actually shrinks `muestras`.
     const initialMuestras = [
       {
         id: 100,
@@ -199,7 +186,8 @@ describe('usePasadaState', () => {
     });
 
     expect(deleteMuestra).toHaveBeenCalledWith(100);
-    expect(result.current.muestras.length).toBe(0);
+    // No optimistic filter: the sample is still present until a refetch reseeds it.
+    expect(result.current.muestras.length).toBe(1);
   });
 
   it('handles api error via onApiError callback', async () => {
@@ -308,43 +296,39 @@ describe('usePasadaState', () => {
       expect(estados[2].estado).toBe('pendiente');
     });
 
-    it('Stage 1 manually completed -> stage 1 completada, stage 2 actual', () => {
+    it('stage 1 satisfied by OK count -> stage 1 completada, stage 2 actual', () => {
       const { result } = renderHook(() =>
         usePasadaState({
           pasadaId: 101,
           usuarioId: 3,
           lineaProduccionId: 1,
-          etapas: mockEtapas,
-          initialMuestras: [],
+          etapas: mockEtapas, // Stage 1 requires 2 OK samples
+          initialMuestras: [
+            { id: 1, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+            { id: 2, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+          ],
         })
       );
-
-      act(() => {
-        result.current.finalizarEtapaActual();
-      });
 
       const estados = result.current.etapasConEstado;
       expect(estados[0].estado).toBe('completada');
       expect(estados[1].estado).toBe('actual');
     });
 
-    it('All stages manually complete -> array has all completada, none actual', () => {
+    it('all stages satisfied by OK count -> array has all completada, none actual', () => {
       const { result } = renderHook(() =>
         usePasadaState({
           pasadaId: 101,
           usuarioId: 3,
           lineaProduccionId: 1,
-          etapas: mockEtapas,
-          initialMuestras: [],
+          etapas: mockEtapas, // Stage 1 requires 2, Stage 2 requires 1
+          initialMuestras: [
+            { id: 1, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+            { id: 2, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+            { id: 3, pesoNeto: 35, estadoValidacion: 'ok', usuarioId: 3, etapaId: 20, lineaProduccionId: 1, timestamp: new Date() },
+          ],
         })
       );
-
-      act(() => {
-        result.current.finalizarEtapaActual();
-      });
-      act(() => {
-        result.current.finalizarEtapaActual();
-      });
 
       const estados = result.current.etapasConEstado;
       expect(estados.every(e => e.estado === 'completada')).toBe(true);
@@ -543,81 +527,95 @@ describe('usePasadaState', () => {
     });
   });
 
-  describe('completedEtapaIds reset on pasadaId change', () => {
-    it('resets to empty when switching to a new pasada with no completed stages', () => {
-      // Simulate localStorage: pasada 101 has completed stages
-      store['pasada_101_completed'] = JSON.stringify([10, 20]);
+  describe('derived state re-computation (no client-side pointer)', () => {
+    it('switching pasadaId re-derives the active stage from the newly loaded muestras, not from the previous pasada', () => {
+      const pasada101Muestras = [
+        { id: 1, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+        { id: 2, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+        { id: 3, pesoNeto: 35, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 20, lineaProduccionId: 1, timestamp: new Date() },
+      ];
 
       const { result, rerender } = renderHook(
-        ({ pasadaId }) =>
+        ({ pasadaId, samples }) =>
           usePasadaState({
             pasadaId,
             usuarioId: 3,
             lineaProduccionId: 1,
             etapas: mockEtapas,
-            initialMuestras: [],
+            initialMuestras: samples,
           }),
-        { initialProps: { pasadaId: 101 } }
+        { initialProps: { pasadaId: 101, samples: pasada101Muestras } }
       );
 
-      // Pasada 101: both stages completed → no active stage
+      // Pasada 101: every stage satisfied → no active stage
       expect(result.current.etapaActiva).toBeNull();
 
-      // Switch to pasada 102 — no completed stages in localStorage
-      rerender({ pasadaId: 102 });
+      // Switch to a fresh pasada with zero muestras — no imperative pointer
+      // to reset, the derivation just recomputes from the new prop.
+      rerender({ pasadaId: 102, samples: [] });
 
-      // Should reset: first stage becomes active
       expect(result.current.etapaActiva?.etapa.id).toBe(10);
     });
 
-    it('loads completed stages from localStorage when switching to a pasada that has them', () => {
-      store['pasada_201_completed'] = JSON.stringify([10]);
-
+    it('a satisfied-count auto-advance happens purely from muestras, without any manual-advance call', () => {
       const { result, rerender } = renderHook(
-        ({ pasadaId }) =>
+        ({ samples }) =>
           usePasadaState({
-            pasadaId,
+            pasadaId: 101,
             usuarioId: 3,
             lineaProduccionId: 1,
             etapas: mockEtapas,
-            initialMuestras: [],
+            initialMuestras: samples,
           }),
-        { initialProps: { pasadaId: 200 } }
+        { initialProps: { samples: [] as Muestra[] } }
       );
 
-      // Pasada 200: no completed stages → first stage active
       expect(result.current.etapaActiva?.etapa.id).toBe(10);
 
-      // Switch to pasada 201 that has stage 10 already completed
-      rerender({ pasadaId: 201 });
+      rerender({
+        samples: [
+          { id: 1, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+          { id: 2, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+        ] as unknown as Muestra[],
+      });
 
-      // Stage 1 completed → stage 2 should be active
       expect(result.current.etapaActiva?.etapa.id).toBe(20);
     });
 
-    it('clears completedEtapaIds when pasadaId becomes undefined', () => {
-      store['pasada_301_completed'] = JSON.stringify([10]);
+    it('deleting a sample that drops a completed stage below its requirement regresses the active stage after the caller reseeds muestras', async () => {
+      // Stage 1 (requires 2) starts satisfied with 2 OK samples, Stage 2 is active.
+      const initialMuestras = [
+        { id: 1, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+        { id: 2, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 10, lineaProduccionId: 1, timestamp: new Date() },
+      ];
+      vi.mocked(deleteMuestra).mockResolvedValue(undefined);
 
       const { result, rerender } = renderHook(
-        ({ pasadaId }: { pasadaId?: number }) =>
+        ({ samples }) =>
           usePasadaState({
-            pasadaId,
+            pasadaId: 101,
             usuarioId: 3,
             lineaProduccionId: 1,
             etapas: mockEtapas,
-            initialMuestras: [],
+            initialMuestras: samples,
           }),
-        { initialProps: { pasadaId: 301 as number | undefined } }
+        { initialProps: { samples: initialMuestras } }
       );
 
-      // Stage 1 completed → stage 2 active
       expect(result.current.etapaActiva?.etapa.id).toBe(20);
 
-      // Clear pasada (e.g., navigating away)
-      rerender({ pasadaId: undefined });
+      // Delete one of Stage 1's OK samples via the hook's removeSample
+      // (no optimistic local filter — muestras stays server-driven).
+      await act(async () => {
+        await result.current.removeSample(0);
+      });
+      expect(deleteMuestra).toHaveBeenCalledWith(1);
 
-      // completedEtapaIds should be empty — no pasada means no progress persisted
-      // etapaActiva resets to first stage since there's no completion data
+      // The caller (TabletWorkspace) invalidates + refetches on delete success;
+      // simulate that refetch reseeding initialMuestras with the sample gone.
+      rerender({ samples: [initialMuestras[1]] });
+
+      // Stage 1 falls back below its requirement → silently regresses to actual.
       expect(result.current.etapaActiva?.etapa.id).toBe(10);
     });
   });

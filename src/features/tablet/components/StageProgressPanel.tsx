@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Check } from 'lucide-react';
-import type { EtapaConEstado } from '../hooks/usePasadaState';
+import type { EtapaConEstado } from '../utils/stageProgress';
 
 interface StageProgressPanelProps {
   etapasConEstado: EtapaConEstado[];

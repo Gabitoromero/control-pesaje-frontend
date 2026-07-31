@@ -131,18 +131,6 @@ describe('TabletWorkspace', () => {
       pesoNeto: 15.0,
       isConnected: true,
     });
-    
-    // Mock localStorage
-    const store: Record<string, string> = {};
-    Object.defineProperty(window, 'localStorage', {
-      value: {
-        getItem: vi.fn((key) => store[key] || null),
-        setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
-        removeItem: vi.fn((key) => { delete store[key]; }),
-        clear: vi.fn(() => { for (const key in store) delete store[key]; }),
-      },
-      writable: true
-    });
   });
 
   it('navega a /tablet/pasadas sin cerrar sesión al hacer click en Volver', async () => {
@@ -206,8 +194,26 @@ describe('TabletWorkspace', () => {
     expect(screen.getByText('Fuera de Rango')).toBeInTheDocument();
   });
 
-  it('muestra "Listo para finalizar" cuando todas las etapas están completadas', async () => {
-    window.localStorage.setItem('pasada_101_completed', JSON.stringify([1, 2]));
+  it('muestra "Listo para finalizar" cuando todas las etapas están derivadas como completadas por el conteo de muestras OK', async () => {
+    // Etapa 1 (Amasado) requires 2 OK samples, etapa 2 (Horneado) requires 1 —
+    // both satisfied purely from the muestras returned by GET /muestras, no
+    // client-side pointer involved.
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
+              { id: 1, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z' },
+              { id: 2, pesoNeto: 16, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:05:00Z' },
+              { id: 3, pesoNeto: 35, estadoValidacion: 'ok', usuarioId: 3, etapaId: 2, lineaProduccionId: 1, timestamp: '2026-06-23T19:10:00Z' },
+            ],
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      })
+    );
 
     renderWithAuth(<TabletWorkspace />, {
       user: operarioUser,
@@ -288,8 +294,41 @@ describe('TabletWorkspace', () => {
     expect(screen.queryByText('Error de Conexión')).not.toBeInTheDocument();
   });
 
+  it('no expone un botón manual "Siguiente Etapa" — el avance de etapa es automático y derivado', async () => {
+    // Only etapa 1 (Amasado, requires 2) is satisfied; etapa 2 is not yet
+    // touched. Auto-advance moves straight to etapa 2 with no button click.
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
+              { id: 1, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z' },
+              { id: 2, pesoNeto: 16, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:05:00Z' },
+            ],
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    // Derived active stage is already Horneado (etapa 2) — no manual click needed.
+    expect((await screen.findAllByText('Horneado'))[0]).toBeInTheDocument();
+    expect(screen.getByText('0 / 1 muestras OK')).toBeInTheDocument();
+
+    expect(screen.queryByRole('button', { name: /siguiente etapa/i })).not.toBeInTheDocument();
+  });
+
   it('completa la pasada y redirige a gestion al presionar Finalizar Pasada', async () => {
-    // Return a pasada that already has all samples registered
+    // Return a pasada that already has all samples registered — both stages
+    // derived as completada, so "Finalizar Pasada" is available immediately.
     server.use(
       http.get(`${BASE}/pasadas/101`, () => {
         return HttpResponse.json({
@@ -351,11 +390,8 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    // Advance first stage (Amasado)
-    expect(await screen.findByRole('button', { name: /siguiente etapa/i })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /siguiente etapa/i }));
-
-    // Advance second stage (Horneado) which makes it ready to finalize
+    // Both stages already derived as completada — Finalizar Pasada is
+    // available directly, no intermediate manual-advance click.
     expect(await screen.findByRole('button', { name: /finalizar pasada/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /finalizar pasada/i }));
 
@@ -577,6 +613,52 @@ describe('TabletWorkspace', () => {
     // '15.000 kg' also matches the tolerance params row (IDEAL=15 for Amasado) — use findAllByText.
     expect((await screen.findAllByText('15.000 kg')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /descartar muestra/i })).not.toBeInTheDocument();
+  });
+
+  // ── Delete regresses the derived stage (refetch-driven, no optimistic filter) ──
+
+  it('al eliminar una muestra se invalida la query de muestras y el conteo se recalcula tras el refetch', async () => {
+    let currentMuestras = [
+      { id: 50, pesoNeto: 15, estadoValidacion: 'ok' as const, usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z', observacion: '' },
+    ];
+
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({ success: true, data: currentMuestras });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      }),
+      http.delete(`${BASE}/muestras/:id`, ({ params }) => {
+        currentMuestras = currentMuestras.filter((m) => m.id !== Number(params.id));
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    // Stage 1 (Amasado, requires 2) starts with 1 OK sample.
+    expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
+
+    // Open the sample popup and delete the sample.
+    const row = (await screen.findAllByText('15.000 kg')).map((el) => el.closest('li')).find(Boolean)!;
+    await userEvent.click(row);
+    await screen.findByText(/Muestra #1/);
+    await userEvent.click(screen.getByRole('button', { name: /eliminar muestra/i }));
+
+    const confirmDialog = await screen.findByRole('alertdialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+    // Deletion is refetch-driven, not optimistic: the query is invalidated
+    // and the count comes back from the server's post-delete truth.
+    await waitFor(() => {
+      expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
+    });
   });
 
   it('muestra una alerta y redirige a /tablet/pasadas cuando la pasada es abortada por un admin', async () => {

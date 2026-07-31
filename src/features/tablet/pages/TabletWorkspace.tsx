@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { usePasadaState} from '../hooks/usePasadaState';
@@ -23,6 +23,7 @@ export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
   const { alertWarning } = useDialog();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const pasadaIdString = searchParams.get('pasadaId');
   const pasadaId = pasadaIdString ? parseInt(pasadaIdString, 10) : undefined;
@@ -92,7 +93,6 @@ export const TabletWorkspace: React.FC = () => {
     updateSample,
     removeSample,
     clearPasada,
-    finalizarEtapaActual,
   } = usePasadaState({
     pasadaId,
     usuarioId: user?.id ?? 0,
@@ -105,8 +105,10 @@ export const TabletWorkspace: React.FC = () => {
     },
   });
 
-  // Cleanup localStorage on unmount — prevents etapa state leaking
-  // across pasadas when pasadaId is reused (bug: etapas fantasmas).
+  // Cleanup local muestras state on unmount — prevents stale samples leaking
+  // across pasadas when pasadaId is reused. Stage state is now purely
+  // derived from (etapas, muestras), so there is no separate pointer to
+  // reset (the "etapa fantasma" bug class this used to guard against).
   useEffect(() => {
     return () => {
       clearPasada();
@@ -164,10 +166,15 @@ export const TabletWorkspace: React.FC = () => {
     }
   };
 
-  // Task 3.5: Bind delete sample (removeSample) action to call deleteMuestra API
+  // Task 3.5: Bind delete sample (removeSample) action to call deleteMuestra API.
+  // Delete is refetch-driven, not optimistic: removeSample only calls the API,
+  // so this invalidates the muestras query on success to trigger a refetch —
+  // stage state then re-derives from the post-delete truth (spec:
+  // "Refetch-driven recomputation").
   const handleRemoveSample = async (index: number) => {
     try {
       await removeSample(index);
+      await queryClient.invalidateQueries({ queryKey: ['muestras', pasadaId] });
       setSelectedSampleIndex(null);
     } catch {
       // usePasadaState already triggers onApiError
@@ -195,18 +202,11 @@ export const TabletWorkspace: React.FC = () => {
   // Helper variables for UI
   const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapa.id;
 
-  // Only count 'ok' samples for progress, but show all samples of the active stage in the list
-  const samplesForActiveStage = muestras.filter(
-    (m) => m.etapaId === currentStageId && m.estadoValidacion === 'ok'
-  );
-
   // Muestras list scoped to the active stage, keeping original indices for removal
   const muestrasDeEtapaActiva = muestras
     .map((muestra, originalIndex) => ({ muestra, originalIndex }))
     .filter(({ muestra }) => muestra.etapaId === currentStageId);
 
-  const activeStageRequired = etapaActiva?.cantidadMuestrasRequeridas ?? etapaActiva?.cantidadMuestrasRequeridas ?? 0;
-  
   // Phase 4: Tolerance bar + OK/Fuera-de-Rango badge (only meaningful with an active stage)
   // Note: `etapaActiva` (from usePasadaState) is the RutaPasadaEtapa wrapper itself —
   // pesoMinimo/pesoIdeal/pesoMaximo live directly on it, NOT nested under `.etapa`
@@ -369,28 +369,14 @@ export const TabletWorkspace: React.FC = () => {
             )}
           </div>
 
-          {/* Task 3.6: Manual Stage / Pasada progression button */}
-          <div className="p-4 border-t border-border flex-shrink-0">
-            {etapaActiva !== null ? (() => {
-              const isActiveStageComplete = samplesForActiveStage.length >= activeStageRequired;
-              const isLastStage = etapasConEstado.length > 0 &&
-                                  etapasConEstado[etapasConEstado.length - 1].etapa.etapa.id === etapaActiva.etapa.id;
-
-              return (
-                <button
-                  onClick={isLastStage ? handleFinalizarPasada : finalizarEtapaActual}
-                  disabled={!isActiveStageComplete}
-                  className={`w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all
-                    ${isActiveStageComplete
-                      ? 'bg-success hover:bg-success/90 text-white shadow-lg active:scale-95'
-                      : 'bg-muted text-muted-foreground cursor-not-allowed'
-                    }`}
-                >
-                  <CheckCircle2 className="w-6 h-6" />
-                  {isLastStage ? 'Finalizar Pasada' : 'Siguiente Etapa'}
-                </button>
-              );
-            })() : etapas.length > 0 ? (
+          {/* Task 3.6: Explicit "Finalizar Pasada" action. Stage advance
+              between etapas is fully automatic/derived (spec: "Derived
+              current-stage computation") — there is no manual per-stage
+              button anymore. Finalizing the whole pasada stays an explicit,
+              persisted server transition and is only offered once every
+              etapa is derived as completada (etapaActiva === null). */}
+          {etapaActiva === null && etapas.length > 0 && (
+            <div className="p-4 border-t border-border flex-shrink-0">
               <button
                 onClick={handleFinalizarPasada}
                 className="w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all bg-success hover:bg-success/90 text-white shadow-lg active:scale-95"
@@ -398,8 +384,8 @@ export const TabletWorkspace: React.FC = () => {
                 <CheckCircle2 className="w-6 h-6" />
                 Finalizar Pasada
               </button>
-            ) : null}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
