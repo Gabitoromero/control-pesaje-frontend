@@ -5,9 +5,9 @@ import type { User } from '../../../shared/types/auth';
 import { GestionPasadasPage } from './GestionPasadasPage';
 import { vi } from 'vitest';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
-import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
+import { getBalanzas } from '../../../api/balanzas';
 import { getLinea, type Linea } from '../../../api/lineas';
-import type { Pasada } from '../../../shared/types/domain';
+import type { Pasada, Balanza } from '../../../shared/types/domain';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -23,8 +23,8 @@ vi.mock('../../../api/pasadas', () => ({
   iniciarPasada: vi.fn(),
 }));
 
-vi.mock('../../../api/rutas-pasadas-articulos', () => ({
-  getArticulosPorRuta: vi.fn(),
+vi.mock('../../../api/balanzas', () => ({
+  getBalanzas: vi.fn(),
 }));
 
 vi.mock('../../../api/lineas', () => ({
@@ -52,10 +52,9 @@ const mockPasadas: Partial<Pasada>[] = [
   { id: 102, estado: 'en_curso', usuarioId: 3, articuloId: 2, createdAt: '', updatedAt: '' },
 ];
 
-const mockArticulos = [
-  { id: 1, nombre: 'Articulo A', marca: 'Marca X', activo: true },
-  { id: 2, nombre: 'Articulo B', marca: 'Marca Y', activo: true },
-  { id: 3, nombre: 'Ácido Cítrico', marca: 'Marca Z', activo: true },
+const mockBalanzas: Balanza[] = [
+  { id: 1, nombre: 'Balanza 1', activo: true },
+  { id: 2, nombre: 'Balanza 2', activo: true },
 ];
 
 const lineaConRuta = {
@@ -64,6 +63,7 @@ const lineaConRuta = {
   rutaPasadaActiva: { id: 10, nombre: 'Ruta A', etapas: [] },
   dispositivo: { id: 1, hardwareId: 'rpi-linea-a-001' },
   activo: true,
+  idBalanza: 1,
 } as unknown as Linea;
 
 const lineaSinRuta = {
@@ -71,6 +71,7 @@ const lineaSinRuta = {
   nombre: 'Línea 1',
   rutaPasadaActiva: null,
   activo: true,
+  idBalanza: 1,
 } as unknown as Linea;
 
 describe('GestionPasadasPage', () => {
@@ -78,12 +79,12 @@ describe('GestionPasadasPage', () => {
     navigateMock.mockClear();
     vi.mocked(getPasadas).mockReset();
     vi.mocked(iniciarPasada).mockReset();
-    vi.mocked(getArticulosPorRuta).mockReset();
+    vi.mocked(getBalanzas).mockReset();
     vi.mocked(getLinea).mockReset();
 
     // Default mocks: line with route assigned
     vi.mocked(getPasadas).mockResolvedValue(mockPasadas as Pasada[]);
-    vi.mocked(getArticulosPorRuta).mockResolvedValue(mockArticulos);
+    vi.mocked(getBalanzas).mockResolvedValue(mockBalanzas);
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
   });
 
@@ -171,95 +172,125 @@ describe('GestionPasadasPage', () => {
     expect(scrollRegion?.contains(pasada)).toBe(true);
   });
 
-  it('muestra el modal y permite iniciar una pasada', async () => {
+  // ── Task 4.1: balanza picker replacing the obsolete article picker ────────
+
+  it('muestra el modal con la balanza de la línea preseleccionada y permite iniciar una pasada sin cambiarla', async () => {
     vi.mocked(iniciarPasada).mockResolvedValue({ id: 200 } as Pasada);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
-    // Wait for linea to load so the button is enabled
     const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
     expect(btnNuevaPasada).not.toBeDisabled();
     await userEvent.click(btnNuevaPasada);
 
-    // Modal should show articles
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
-    expect(screen.getByText('Articulo A')).toBeInTheDocument();
+    // Both balanzas are listed as options
+    expect(screen.getByText('Balanza 1')).toBeInTheDocument();
+    expect(screen.getByText('Balanza 2')).toBeInTheDocument();
 
-    // Select article
-    await userEvent.click(screen.getByText('Articulo A'));
-
-    // Click Iniciar Pasada
+    // The línea's assigned balanza (id 1 → "Balanza 1") is preselected — the
+    // confirm button is enabled without any interaction with the list.
     const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
+    expect(btnIniciar).not.toBeDisabled();
+
     await userEvent.click(btnIniciar);
 
-    // Verify API call and navigation
-    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, articuloId: 1 });
+    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
+    expect(iniciarPasada).not.toHaveBeenCalledWith(expect.objectContaining({ articuloId: expect.anything() }));
     expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=200');
   });
 
-  it('muestra el empty state cuando getArticulosPorRuta retorna vacío', async () => {
-    vi.mocked(getArticulosPorRuta).mockResolvedValue([]);
+  it('permite anular la balanza por defecto seleccionando otra balanza activa antes de confirmar', async () => {
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 201 } as Pasada);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
     const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
-    expect(btnNuevaPasada).not.toBeDisabled();
     await userEvent.click(btnNuevaPasada);
 
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
-    expect(screen.getByText('No hay artículos asignados a esta ruta')).toBeInTheDocument();
+
+    // Override: pick "Balanza 2" instead of the default "Balanza 1"
+    await userEvent.click(screen.getByText('Balanza 2'));
+
+    const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
+    await userEvent.click(btnIniciar);
+
+    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 2 });
   });
 
-  // ── ux-polish Task 3: article search in the Nueva Pasada modal ─────────────
-
-  it('filtra los artículos por nombre sin distinguir mayúsculas ni acentos (acido → Ácido Cítrico)', async () => {
+  it('solo lista balanzas activas (según lo que retorna getBalanzas)', async () => {
+    vi.mocked(getBalanzas).mockResolvedValue([{ id: 1, nombre: 'Balanza 1', activo: true }]);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
     const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
     await userEvent.click(btnNuevaPasada);
 
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
-    // All three articles visible initially.
-    expect(screen.getByText('Articulo A')).toBeInTheDocument();
-    expect(screen.getByText('Articulo B')).toBeInTheDocument();
-    expect(screen.getByText('Ácido Cítrico')).toBeInTheDocument();
-
-    // Type "acido" — accent/case-insensitive substring match should keep only Ácido Cítrico.
-    const searchInput = screen.getByPlaceholderText(/buscar artículo/i);
-    await userEvent.type(searchInput, 'acido');
-
-    expect(screen.queryByText('Articulo A')).not.toBeInTheDocument();
-    expect(screen.queryByText('Articulo B')).not.toBeInTheDocument();
-    expect(screen.getByText('Ácido Cítrico')).toBeInTheDocument();
+    expect(screen.getByText('Balanza 1')).toBeInTheDocument();
+    expect(screen.queryByText('Balanza 2')).not.toBeInTheDocument();
   });
 
-  it('filtra los artículos por marca sin distinguir mayúsculas ni acentos', async () => {
+  it('muestra el error 422 del backend en el cuadro de error existente del modal', async () => {
+    vi.mocked(iniciarPasada).mockRejectedValue({
+      response: { data: { error: { message: 'La balanza seleccionada no está activa' } } },
+    });
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
     const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
     await userEvent.click(btnNuevaPasada);
 
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
+    await userEvent.click(btnIniciar);
 
-    const searchInput = screen.getByPlaceholderText(/buscar artículo/i);
-    await userEvent.type(searchInput, 'marca x');
-
-    expect(screen.queryByText('Articulo B')).not.toBeInTheDocument();
-    expect(screen.queryByText('Ácido Cítrico')).not.toBeInTheDocument();
-    expect(screen.getByText('Articulo A')).toBeInTheDocument();
+    expect(await screen.findByText('La balanza seleccionada no está activa')).toBeInTheDocument();
   });
 
-  it('muestra el empty state "Sin resultados" cuando la búsqueda no coincide con ningún artículo', async () => {
+  it('muestra el empty state cuando getBalanzas retorna vacío y bloquea la confirmación', async () => {
+    vi.mocked(getBalanzas).mockResolvedValue([]);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
     const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
     await userEvent.click(btnNuevaPasada);
 
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    expect(screen.getByText(/no hay balanzas activas/i)).toBeInTheDocument();
 
-    const searchInput = screen.getByPlaceholderText(/buscar artículo/i);
-    await userEvent.type(searchInput, 'inexistente');
+    const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
+    expect(btnIniciar).toBeDisabled();
+    expect(iniciarPasada).not.toHaveBeenCalled();
+  });
 
-    expect(screen.getByText(/sin resultados/i)).toBeInTheDocument();
-    expect(screen.queryByText('Articulo A')).not.toBeInTheDocument();
+  it('resetea la selección de balanza al cerrar y reabrir el modal (vuelve a preseleccionar la de la línea)', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    await userEvent.click(btnNuevaPasada);
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    // Override to Balanza 2, then close via the X button without confirming
+    await userEvent.click(screen.getByText('Balanza 2'));
+    const btnCerrarModal = screen.getByRole('button', { name: 'Cerrar modal' });
+    await userEvent.click(btnCerrarModal);
+    expect(screen.queryByText('Iniciar Nueva Pasada')).not.toBeInTheDocument();
+
+    // Re-open — the default (línea's balanza, id 1) must be preselected again
+    await userEvent.click(screen.getByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 202 } as Pasada);
+    await userEvent.click(screen.getByRole('button', { name: /iniciar pasada/i }));
+    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
+  });
+
+  it('no contiene ningún rastro del selector de artículo obsoleto', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    const btnNuevaPasada = await screen.findByRole('button', { name: /nueva pasada/i });
+    await userEvent.click(btnNuevaPasada);
+
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/buscar artículo/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/seleccione el artículo/i)).not.toBeInTheDocument();
   });
 
   describe('cuando la línea no tiene ruta asignada', () => {

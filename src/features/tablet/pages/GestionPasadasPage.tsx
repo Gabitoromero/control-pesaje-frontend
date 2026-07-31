@@ -5,14 +5,12 @@ import { LogOut, Plus, Loader2, X, AlertTriangle, FlaskConical } from 'lucide-re
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
-import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
-import type { Pasada } from '../../../shared/types/domain';
-import type { Articulo } from '../../../api/articulos';
+import { getBalanzas } from '../../../api/balanzas';
+import type { Pasada, Balanza } from '../../../shared/types/domain';
 import { PasadaCard } from '../components/PasadaCard';
 import { resetSocket } from '../../../services/websocket';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { CONFIRM_LOGOUT_MESSAGE } from '../constants/logoutGuard';
-import { normalizeForSearch } from '../../../utils/normalize';
 
 
 export const GestionPasadasPage: React.FC = () => {
@@ -20,11 +18,9 @@ export const GestionPasadasPage: React.FC = () => {
   const navigate = useNavigate();
   const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [selectedArticuloId, setSelectedArticuloId] = React.useState<number | null>(null);
+  const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
-  // ux-polish Task 3: article search term in the Nueva Pasada modal.
-  const [articuloSearch, setArticuloSearch] = React.useState('');
 
   // Task 3.9: guard against accidental tab close / page reload while a line
   // session is active. When activeLineaId is set the browser will prompt the
@@ -64,34 +60,35 @@ export const GestionPasadasPage: React.FC = () => {
   });
 
   const sinRutaAsignada = linea !== undefined && !linea.rutaPasadaActiva;
-  // Block production actions when the line has no hardware device (balanza) assigned
+  // Block production actions when the line has no hardware device (tablet
+  // pairing) assigned. This is DISTINCT from the balanza picker below —
+  // dispositivo is the paired tablet, balanza is the scale used for weighing.
   const sinDispositivo = linea !== undefined && !linea.dispositivo;
   const bloqueado = sinRutaAsignada || sinDispositivo;
   const etapasRuta = linea?.rutaPasadaActiva?.etapas ?? [];
 
-  // Query articles for the "Nueva Pasada" modal
-  const rutaPasadaId = linea?.rutaPasadaActiva?.id;
+  // Query active balanzas for the "Nueva Pasada" modal's balanza picker.
   const {
-    data: articulos = [],
-    isLoading: loadingArticulos,
-    error: errorArticulos
-  } = useQuery<Articulo[]>({
-    queryKey: ['articulos-ruta', rutaPasadaId],
-    queryFn: () => getArticulosPorRuta(rutaPasadaId!),
-    enabled: isModalOpen && !!rutaPasadaId,
+    data: balanzas = [],
+    isLoading: loadingBalanzas,
+    error: errorBalanzas
+  } = useQuery<Balanza[]>({
+    queryKey: ['balanzas-activas'],
+    queryFn: () => getBalanzas(),
+    enabled: isModalOpen,
   });
 
-  // ux-polish Task 3: accent- and case-insensitive substring filtering of the
-  // article list by the search term typed in the modal.
-  const normalizedSearch = normalizeForSearch(articuloSearch);
-  const articulosFiltrados =
-    normalizedSearch === ''
-      ? articulos
-      : articulos.filter(
-          (a) =>
-            normalizeForSearch(a.nombre).includes(normalizedSearch) ||
-            normalizeForSearch(a.marca ?? '').includes(normalizedSearch),
-        );
+  // Seed the balanza selection from the línea's assigned balanza every time
+  // the modal opens, and clear it when the modal closes so the next open
+  // re-seeds from the (possibly refetched) línea instead of a stale override.
+  React.useEffect(() => {
+    if (isModalOpen) {
+      setSelectedBalanzaId(linea?.idBalanza ?? null);
+      setErrorIniciar(null);
+    } else {
+      setSelectedBalanzaId(null);
+    }
+  }, [isModalOpen, linea?.idBalanza]);
 
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
@@ -135,19 +132,18 @@ export const GestionPasadasPage: React.FC = () => {
     }
   };
 
-  // Task 2.3: Iniciar nueva pasada
+  // Task 2.3 / 4.2: Iniciar nueva pasada — the articulo is frozen server-side
+  // from the línea's assignment; only the balanza is selected here.
   const handleIniciarPasada = async () => {
-    if (!activeLineaId || !selectedArticuloId) return;
+    if (!activeLineaId || !selectedBalanzaId) return;
     try {
       setIniciando(true);
       setErrorIniciar(null);
       const newPasada = await iniciarPasada({
         lineaProduccionId: activeLineaId,
-        articuloId: selectedArticuloId,
+        idBalanza: selectedBalanzaId,
       });
       setIsModalOpen(false);
-      setSelectedArticuloId(null);
-      setArticuloSearch('');
       navigate(`/tablet?pasadaId=${newPasada.id}`);
     } catch (err: unknown) {
       console.error('Error starting pasada:', err);
@@ -277,19 +273,15 @@ export const GestionPasadasPage: React.FC = () => {
         </div>
       </main>
 
-      {/* Modern Glassmorphic Article Selection Modal */}
+      {/* Modern Glassmorphic Balanza Selection Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-border rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
             <div className="flex justify-between items-center p-5 border-b border-border">
               <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
               <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setSelectedArticuloId(null);
-                  setErrorIniciar(null);
-                  setArticuloSearch('');
-                }}
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Cerrar modal"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X size={20} />
@@ -303,74 +295,48 @@ export const GestionPasadasPage: React.FC = () => {
                 </div>
               )}
 
-              <p className="text-muted-foreground text-sm mb-4">Seleccione el artículo a pesar en esta pasada:</p>
+              <p className="text-muted-foreground text-sm mb-4">Seleccione la balanza a utilizar en esta pasada:</p>
 
-              {loadingArticulos ? (
+              {loadingBalanzas ? (
                 <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
                   <Loader2 className="animate-spin text-primary" size={28} />
-                  <p className="text-xs">Cargando artículos...</p>
+                  <p className="text-xs">Cargando balanzas...</p>
                 </div>
-              ) : errorArticulos ? (
-                <p className="text-sm text-destructive text-center py-4">Error al cargar los artículos.</p>
-              ) : articulos.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No hay artículos asignados a esta ruta</p>
+              ) : errorBalanzas ? (
+                <p className="text-sm text-destructive text-center py-4">Error al cargar las balanzas.</p>
+              ) : balanzas.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No hay balanzas activas disponibles</p>
               ) : (
-                <>
-                  {/* ux-polish Task 3: accent-insensitive article search */}
-                  <input
-                    type="text"
-                    value={articuloSearch}
-                    onChange={(e) => setArticuloSearch(e.target.value)}
-                    placeholder="Buscar artículo..."
-                    aria-label="Buscar artículo"
-                    className="w-full mb-3 px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  />
-
-                  {articulosFiltrados.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Sin resultados</p>
-                  ) : (
-                    <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
-                      {articulosFiltrados.map((articulo) => {
-                        const isSelected = selectedArticuloId === articulo.id;
-                        return (
-                          <button
-                            key={articulo.id}
-                            onClick={() => setSelectedArticuloId(articulo.id ?? null)}
-                            className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
-                              ${isSelected
-                                ? 'bg-primary/25 border-primary text-foreground shadow-md shadow-primary/5'
-                                : 'bg-muted border-border hover:bg-muted/70 text-foreground'
-                              }`}
-                          >
-                            <div>
-                              <p className="font-semibold text-sm">
-                                {articulo.nombre}
-                              </p>
-                              {articulo.marca && (
-                                <p className="text-xs text-muted-foreground mt-0.5">{articulo.marca}</p>
-                              )}
-                            </div>
-                            {isSelected && (
-                              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
+                <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
+                  {balanzas.map((balanza) => {
+                    const isSelected = selectedBalanzaId === balanza.id;
+                    return (
+                      <button
+                        key={balanza.id}
+                        onClick={() => setSelectedBalanzaId(balanza.id ?? null)}
+                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
+                          ${isSelected
+                            ? 'bg-primary/25 border-primary text-foreground shadow-md shadow-primary/5'
+                            : 'bg-muted border-border hover:bg-muted/70 text-foreground'
+                          }`}
+                      >
+                        <p className="font-semibold text-sm">
+                          {balanza.nombre}
+                        </p>
+                        {isSelected && (
+                          <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
             <div className="flex justify-end gap-3 p-5 border-t border-border">
               <button
                 type="button"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setSelectedArticuloId(null);
-                  setErrorIniciar(null);
-                  setArticuloSearch('');
-                }}
+                onClick={() => setIsModalOpen(false)}
                 className="px-4.5 py-2.5 bg-muted hover:bg-muted/70 text-foreground rounded-xl text-sm font-semibold transition-colors"
                 disabled={iniciando}
               >
@@ -379,7 +345,7 @@ export const GestionPasadasPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleIniciarPasada}
-                disabled={!selectedArticuloId || iniciando}
+                disabled={!selectedBalanzaId || balanzas.length === 0 || iniciando}
                 className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
               >
                 {iniciando && <Loader2 size={16} className="animate-spin" />}
