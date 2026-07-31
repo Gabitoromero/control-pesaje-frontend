@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import {
   LayoutDashboard, FileBarChart, LogOut, Package, Users, UserRoundCog, Factory,
-  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar
+  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar, Scale
 } from 'lucide-react';
 import { useTheme } from '../../features/theme/ThemeContext';
 import { UsuarioRol } from '../../shared/types';
@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const { theme, toggleTheme } = useTheme();
 
   const [isCatalogoOpen, setIsCatalogoOpen] = useState(() => {
-    return ['/usuarios', '/articulos', '/etapas', '/lineas', '/rutas', '/dispositivos-conectados']
+    return ['/usuarios', '/articulos', '/balanzas', '/etapas', '/lineas', '/rutas', '/dispositivos-conectados']
       .some(path => location.pathname.includes(path));
   });
 
@@ -118,6 +118,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                 <NavLink to="/dashboard/etapas" className={navClass} onClick={handleLinkClick}>
                   <Layers className="w-5 h-5 mr-3" />
                   Etapas
+                </NavLink>
+                <NavLink to="/dashboard/balanzas" className={navClass} onClick={handleLinkClick}>
+                  <Scale className="w-5 h-5 mr-3" />
+                  Balanzas
                 </NavLink>
                 <NavLink to="/dashboard/lineas" className={navClass} onClick={handleLinkClick}>
                   <SplinePointer className="w-5 h-5 mr-3" />

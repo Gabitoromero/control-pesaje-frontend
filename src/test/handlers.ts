@@ -38,6 +38,15 @@ export const etapasMockInactivos = [
   { id: 5, nombre: 'Corte', descripcion: 'Corte inactivo', activo: false },
 ];
 
+export const balanzasMock = [
+  { id: 1, nombre: 'Balanza 1', activo: true },
+  { id: 2, nombre: 'Balanza 2', activo: true },
+];
+
+export const balanzasMockInactivos = [
+  { id: 3, nombre: 'Balanza Vieja', activo: false },
+];
+
 const BASE = 'http://localhost:3000/api';
 
 function makeFakeJwt(payload: object): string {
@@ -193,6 +202,28 @@ export const handlers = [
   }),
 
   http.delete(`${BASE}/etapas/:id`, () =>
+    new HttpResponse(null, { status: 204 })
+  ),
+
+  http.get(`${BASE}/balanzas`, () =>
+    HttpResponse.json({ success: true, data: balanzasMock })
+  ),
+
+  http.get(`${BASE}/balanzas/inactive`, () =>
+    HttpResponse.json({ success: true, data: balanzasMockInactivos })
+  ),
+
+  http.post(`${BASE}/balanzas`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({ success: true, data: { id: 99, activo: true, ...body } }, { status: 201 });
+  }),
+
+  http.put(`${BASE}/balanzas/:id`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({ success: true, data: { activo: true, ...body } });
+  }),
+
+  http.delete(`${BASE}/balanzas/:id`, () =>
     new HttpResponse(null, { status: 204 })
   ),
 

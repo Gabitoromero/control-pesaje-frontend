@@ -12,6 +12,7 @@ import { MuestrasLibresLayout } from './features/tablet/pages/MuestrasLibresLayo
 import { MuestrasLibresPage } from './features/tablet/pages/MuestrasLibresPage';
 
 import { ArticulosPage } from './features/dashboard/pages/ArticulosPage';
+import { BalanzasPage } from './features/dashboard/pages/BalanzasPage';
 import { UsuariosPage } from './features/dashboard/pages/UsuariosPage';
 import { EtapasPage } from './features/dashboard/pages/EtapasPage';
 import { LineasPage } from './features/dashboard/pages/LineasPage';
@@ -66,6 +67,7 @@ function App() {
           <Route path="pasadas-activas" element={isJefe ? <PasadasActivasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="articulos" element={isJefe ? <ArticulosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="etapas" element={isJefe ? <EtapasPage /> : <Navigate to="/dashboard" replace />} />
+          <Route path="balanzas" element={isJefe ? <BalanzasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="lineas" element={isJefe ? <LineasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="rutas" element={isJefe ? <RutasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="rutas/new" element={isJefe ? <RutaFormPage /> : <Navigate to="/dashboard" replace />} />
