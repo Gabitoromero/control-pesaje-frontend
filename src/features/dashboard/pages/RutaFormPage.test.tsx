@@ -563,7 +563,7 @@ describe('RutaFormPage Component', () => {
 
       // The article combobox shows "Seleccione..." — click it to open, then select "Sal fina"
       await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-      await userEvent.click(screen.getByRole('option', { name: '[MarcaC] Sal fina' }));
+      await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
       await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
 
       const dialog = await screen.findByRole('alertdialog');
@@ -657,9 +657,9 @@ describe('RutaFormPage — Artículos Asignados', () => {
     // Open the SearchableCombobox popover
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     const options = screen.getAllByRole('option').map(o => o.textContent);
-    expect(options).not.toContain('[MarcaA] Harina 000');
-    expect(options).not.toContain('[MarcaB] Azúcar');
-    expect(options).toContain('[MarcaC] Sal fina');
+    expect(options).not.toContain('[Harina 000] MarcaA');
+    expect(options).not.toContain('[Azúcar] MarcaB');
+    expect(options).toContain('[Sal fina] MarcaC');
   });
 
   it('16. edit mode: adding an articulo calls the pivot POST endpoint', async () => {
@@ -683,7 +683,7 @@ describe('RutaFormPage — Artículos Asignados', () => {
 
     // Select Sal fina (id=3, not yet assigned) via SearchableCombobox
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: '[MarcaC] Sal fina' }));
+    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
 
     const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
     await userEvent.click(addBtn);
@@ -738,10 +738,10 @@ describe('RutaFormPage — Artículos Asignados', () => {
     // Wait for articulos options to load from the mock server, then select via SearchableCombobox
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await waitFor(() => {
-      // [MarcaA] Harina 000 (id=1) should be available in the popover
-      expect(screen.getByRole('option', { name: '[MarcaA] Harina 000' })).toBeInTheDocument();
+      // [Harina 000] MarcaA (id=1) should be available in the popover
+      expect(screen.getByRole('option', { name: '[Harina 000] MarcaA' })).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByRole('option', { name: '[MarcaA] Harina 000' }));
+    await userEvent.click(screen.getByRole('option', { name: '[Harina 000] MarcaA' }));
 
     const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
     await userEvent.click(addBtn);

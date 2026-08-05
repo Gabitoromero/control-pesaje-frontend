@@ -37,7 +37,7 @@ const pasadasActivasMock = [
     horaInicio: '2026-07-08T10:00:00.000Z',
     lineaProduccion: { id: 1, nombre: 'Línea 1 — Envasado A' },
     usuario: { id: 3, nombreApellido: 'Pedro Operario', nombreUsuario: 'operario1' },
-    articulo: { id: 1, nombre: 'Harina 000' },
+    articulo: { id: 1, codigo: 'Harina 000' },
   },
 ];
 

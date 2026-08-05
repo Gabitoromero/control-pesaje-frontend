@@ -14,8 +14,8 @@ interface PasadaCardProps {
 
 function getArticuloNombre(pasada: Pasada): string {
   if (pasada.articulo) {
-    const brand = pasada.articulo.marca ? `${pasada.articulo.marca} - ` : '';
-    return `${brand}${pasada.articulo.nombre}`;
+    const brand = pasada.articulo.nombre ? `${pasada.articulo.nombre} - ` : '';
+    return `${brand}${pasada.articulo.codigo}`;
   }
   if (pasada.articuloId !== undefined) {
     return `Artículo #${pasada.articuloId}`;

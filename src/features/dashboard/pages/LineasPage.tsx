@@ -421,7 +421,7 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.articuloId ? Number(formData.articuloId) : null}
                   onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
-                  options={articulos.map((a) => ({ id: a.id, nombre: a.codigo || a.nombre }))}
+                  options={articulos.map((a) => ({ id: a.id, nombre: a.codigo || a.nombre || '' }))}
                   placeholder="Buscar artículo..."
                 />
               </div>

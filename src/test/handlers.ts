@@ -7,14 +7,14 @@ export const loginMock = {
 };
 
 export const articulosMock = [
-  { id: 1, marca: 'MarcaA', nombre: 'Harina 000', descripcion: 'Harina de trigo tipo 000', activo: true },
-  { id: 2, marca: 'MarcaB', nombre: 'Azúcar',     descripcion: 'Azúcar refinada',           activo: true },
-  { id: 3, marca: 'MarcaC', nombre: 'Sal fina',   descripcion: undefined,                   activo: true },
+  { id: 1, nombre: 'MarcaA', codigo: 'Harina 000', descripcion: 'Harina de trigo tipo 000', activo: true },
+  { id: 2, nombre: 'MarcaB', codigo: 'Azúcar',     descripcion: 'Azúcar refinada',           activo: true },
+  { id: 3, nombre: 'MarcaC', codigo: 'Sal fina',   descripcion: undefined,                   activo: true },
 ];
 
 export const articulosMockInactivos = [
-  { id: 4, marca: 'MarcaD', nombre: 'Levadura seca', descripcion: 'Levadura inactiva', activo: false },
-  { id: 5, marca: 'MarcaE', nombre: 'Manteca',       descripcion: undefined,           activo: false },
+  { id: 4, nombre: 'MarcaD', codigo: 'Levadura seca', descripcion: 'Levadura inactiva', activo: false },
+  { id: 5, nombre: 'MarcaE', codigo: 'Manteca',       descripcion: undefined,           activo: false },
 ];
 
 export const usuariosMock = [
@@ -262,10 +262,10 @@ export const handlers = [
     const url = new URL(request.url);
     const rutaPasadaId = Number(url.searchParams.get('rutaPasadaId'));
     // Ruta 1 (Alpha) has Harina 000 and Azucar assigned
-    const pivotsByRuta: Record<number, { id: number; articulo: { id: number; nombre: string; marca?: string } }[]> = {
+    const pivotsByRuta: Record<number, { id: number; articulo: { id: number; codigo: string; nombre?: string } }[]> = {
       1: [
-        { id: 101, articulo: { id: 1, nombre: 'Harina 000', marca: 'MarcaA' } },
-        { id: 102, articulo: { id: 2, nombre: 'Azúcar', marca: 'MarcaB' } },
+        { id: 101, articulo: { id: 1, codigo: 'Harina 000', nombre: 'MarcaA' } },
+        { id: 102, articulo: { id: 2, codigo: 'Azúcar', nombre: 'MarcaB' } },
       ],
     };
     const data = rutaPasadaId ? (pivotsByRuta[rutaPasadaId] ?? []) : [];
@@ -277,7 +277,7 @@ export const handlers = [
     const articuloOption = articulosMock.find(a => a.id === body.articulo);
     const newPivot = {
       id: 999,
-      articulo: { id: body.articulo, nombre: articuloOption?.nombre ?? 'Artículo', marca: articuloOption?.marca },
+      articulo: { id: body.articulo, codigo: articuloOption?.codigo ?? 'Artículo', nombre: articuloOption?.nombre },
     };
     return HttpResponse.json({ success: true, data: newPivot }, { status: 201 });
   }),

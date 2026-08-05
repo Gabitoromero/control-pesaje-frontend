@@ -12,7 +12,7 @@ describe('getArticulosPorRuta', () => {
         data: [
           {
             id: 1,
-            articulo: { id: 10, nombre: 'Art A', marca: 'M' },
+            articulo: { id: 10, codigo: 'Art A', nombre: 'M' },
             rutaPasada: { id: 99 }
           }
         ]
@@ -26,6 +26,6 @@ describe('getArticulosPorRuta', () => {
     expect(api.get).toHaveBeenCalledWith('/rutas-pasadas-articulos', {
       params: { rutaPasadaId: 99 }
     });
-    expect(result).toEqual([{ id: 10, nombre: 'Art A', marca: 'M' }]);
+    expect(result).toEqual([{ id: 10, codigo: 'Art A', nombre: 'M' }]);
   });
 });

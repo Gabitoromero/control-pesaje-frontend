@@ -100,7 +100,11 @@ export const PasadasActivasPage: React.FC = () => {
                     </td>
                     {showArticulo && (
                       <td className="px-3 py-4 whitespace-nowrap text-sm text-foreground">
-                        {pasada.articulo?.nombre ?? '—'}
+                        {pasada.articulo ? (
+                          pasada.articulo.nombre 
+                            ? `[${pasada.articulo.codigo}] ${pasada.articulo.nombre}`
+                            : pasada.articulo.codigo
+                        ) : '—'}
                       </td>
                     )}
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-muted-foreground">

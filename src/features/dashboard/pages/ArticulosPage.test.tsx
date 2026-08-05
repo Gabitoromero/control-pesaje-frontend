@@ -17,7 +17,7 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe('ArticulosPage', () => {
-  it('default mount shows only activos and "Código" column header is NOT present', async () => {
+  it('default mount shows only activos and "Código" column header is present', async () => {
     renderWithProviders(<ArticulosPage />);
 
     await waitFor(() => {
@@ -32,10 +32,10 @@ describe('ArticulosPage', () => {
     expect(screen.queryByText('Levadura seca')).not.toBeInTheDocument();
     expect(screen.queryByText('Manteca')).not.toBeInTheDocument();
 
-    // "Código" column header must NOT appear in the table
+    // "Código" column header must appear in the table
     const headers = screen.getAllByRole('columnheader');
     const headerTexts = headers.map((h) => h.textContent?.toLowerCase() ?? '');
-    expect(headerTexts.some((t) => t.includes('código'))).toBe(false);
+    expect(headerTexts.some((t) => t.includes('código'))).toBe(true);
   });
 
   it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
@@ -263,8 +263,8 @@ describe('ArticulosPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /nuevo artículo/i }));
 
-      await userEvent.type(screen.getByLabelText('Nombre'), 'Repetido');
-      await userEvent.type(screen.getByLabelText('Marca'), 'Marca X');
+      await userEvent.type(screen.getByLabelText('Código'), 'Repetido');
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Marca X');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByRole('alertdialog');

@@ -361,8 +361,8 @@ export const RutaFormPage = () => {
         id: -(Date.now()), // temporary negative ID for local items
         articulo: {
           id: articuloOption.id!,
+          codigo: articuloOption.codigo,
           nombre: articuloOption.nombre,
-          marca: articuloOption.marca,
         },
       };
       setArticulosLocal(prev => [...prev, localItem]);
@@ -580,7 +580,7 @@ export const RutaFormPage = () => {
                 onChange={(val) => setSelectedArticuloId(val)}
                 options={articulosOptions
                   .filter(a => !articulosAsignadosIds.has(a.id!))
-                  .map(a => ({ id: a.id, nombre: a.marca ? `[${a.marca}] ${a.nombre}` : a.nombre }))
+                  .map(a => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo }))
                 } 
                 placeholder="Buscar artículo..." 
               />
@@ -607,9 +607,9 @@ export const RutaFormPage = () => {
                   className="flex items-center justify-between border border-border rounded-lg px-4 py-2 bg-muted"
                 >
                   <span className="text-sm text-foreground">
-                    {item.articulo.marca ? (
-                      <span className="text-muted-foreground mr-1">[{item.articulo.marca}]</span>
-                    ) : null}
+                    <span className="text-muted-foreground mr-1">[</span>
+                    <span className="text-muted-foreground">{item.articulo.codigo}</span>
+                    <span className="text-muted-foreground mr-1">]</span>
                     {item.articulo.nombre}
                   </span>
                   <button

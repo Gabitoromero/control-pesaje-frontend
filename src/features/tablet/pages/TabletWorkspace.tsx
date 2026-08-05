@@ -15,6 +15,7 @@ import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulo } from '../../../api/articulos';
+import type { Articulo } from '../../../api/articulos';
 import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
@@ -69,7 +70,7 @@ export const TabletWorkspace: React.FC = () => {
   // raw FK number under the SAME `articulo` key, not a separate `articuloId`
   // field (which doesn't exist in the real API response). Handle both shapes:
   // a plain number (unpopulated) or an already-populated object.
-  const articuloRelation = pasada?.articulo as unknown as number | { id?: number; nombre?: string } | undefined;
+  const articuloRelation = pasada?.articulo as unknown as number | Articulo | undefined;
   const articuloFromPasada = typeof articuloRelation === 'object' ? articuloRelation : undefined;
   const articuloIdToFetch = typeof articuloRelation === 'number' ? articuloRelation : articuloRelation?.id;
 
@@ -251,7 +252,7 @@ export const TabletWorkspace: React.FC = () => {
           </span>
           <div className="flex flex-col">
             <span className="text-lg font-bold text-foreground">
-              {articulo?.nombre ?? '—'}
+              {articulo ? (articulo.nombre ? `${articulo.nombre} - ${articulo.codigo}` : articulo.codigo) : '—'}
             </span>
             <span className="text-sm text-muted-foreground">
               Ruta: {linea?.rutaPasadaActiva?.nombre ?? '—'}

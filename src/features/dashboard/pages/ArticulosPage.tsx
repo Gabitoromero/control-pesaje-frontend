@@ -21,11 +21,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-const EMPTY_FORM = { nombre: '', descripcion: '', marca: '' };
+const EMPTY_FORM = { codigo: '', descripcion: '', nombre: '' };
 
 const ARTICULO_FIELDS: SearchField[] = [
+  { value: 'codigo', label: 'Código' },
   { value: 'nombre', label: 'Nombre' },
-  { value: 'marca', label: 'Marca' },
   { value: 'descripcion', label: 'Descripción' },
 ];
 
@@ -38,7 +38,7 @@ export const ArticulosPage = () => {
   const { hayActividad } = useActividadGlobal();
 
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('nombre');
+  const [field, setField] = useState('codigo');
   const [query, setQuery] = useState('');
 
   const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
@@ -65,7 +65,7 @@ export const ArticulosPage = () => {
       );
     }
 
-    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return [...result].sort((a, b) => a.codigo.localeCompare(b.codigo));
   }, [activos, inactivos, status, field, query]);
 
   const createMutation = useMutation({
@@ -117,9 +117,9 @@ export const ArticulosPage = () => {
     if (articulo) {
       setEditingArticulo(articulo);
       setFormData({
-        nombre: articulo.nombre,
+        codigo: articulo.codigo,
         descripcion: articulo.descripcion || '',
-        marca: articulo.marca || '',
+        nombre: articulo.nombre || '',
       });
     } else {
       setEditingArticulo(null);
@@ -139,10 +139,10 @@ export const ArticulosPage = () => {
     if (editingArticulo?.id) {
       updateMutation.mutate({
         id: editingArticulo.id,
-        data: { nombre: formData.nombre, marca: formData.marca || undefined, descripcion: formData.descripcion.trim() || null },
+        data: { codigo: formData.codigo, nombre: formData.nombre || undefined, descripcion: formData.descripcion.trim() || null },
       });
     } else {
-      createMutation.mutate({ nombre: formData.nombre, marca: formData.marca || undefined, descripcion: formData.descripcion || undefined, activo: true });
+      createMutation.mutate({ codigo: formData.codigo, nombre: formData.nombre || undefined, descripcion: formData.descripcion || undefined, activo: true });
     }
   };
 
@@ -164,8 +164,8 @@ export const ArticulosPage = () => {
     updateMutation.mutate({
       id: editingArticulo.id,
       data: {
-        nombre: formData.nombre,
-        marca: formData.marca || undefined,
+        codigo: formData.codigo,
+        nombre: formData.nombre || undefined,
         descripcion: formData.descripcion.trim() || null,
         activo: true,
       },
@@ -217,8 +217,8 @@ export const ArticulosPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
+                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Código</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Marca</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
@@ -227,8 +227,8 @@ export const ArticulosPage = () => {
             <tbody className="bg-card divide-y divide-border">
               {articulosFiltrados.map((articulo) => (
                 <tr key={articulo.id} className={`hover:bg-accent even:bg-muted/40 ${articulo.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{articulo.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{articulo.marca || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{articulo.codigo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{articulo.nombre || '-'}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{articulo.descripcion || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${articulo.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
@@ -266,27 +266,27 @@ export const ArticulosPage = () => {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
+                <label htmlFor="articulo-codigo" className="block text-sm font-medium text-foreground">Código</label>
+                <input
+                  id="articulo-codigo"
+                  type="text"
+                  required
+                  placeholder="Ej: Palito bombón"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  value={formData.codigo}
+                  onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                />
+              </div>
+              <div>
                 <label htmlFor="articulo-nombre" className="block text-sm font-medium text-foreground">Nombre</label>
                 <input
                   id="articulo-nombre"
                   type="text"
                   required
-                  placeholder="Ej: Palito bombón"
+                  placeholder="Ej: Arcor"
                   className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="articulo-marca" className="block text-sm font-medium text-foreground">Marca</label>
-                <input
-                  id="articulo-marca"
-                  type="text"
-                  required
-                  placeholder="Ej: Arcor"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
-                  value={formData.marca}
-                  onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
                 />
               </div>
               <div className="sm:col-span-2">

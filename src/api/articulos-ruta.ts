@@ -4,8 +4,8 @@ export interface ArticuloRutaPasadaItem {
   id: number;
   articulo: {
     id: number;
-    nombre: string;
-    marca?: string;
+    codigo: string;
+    nombre?: string;
   };
 }
 

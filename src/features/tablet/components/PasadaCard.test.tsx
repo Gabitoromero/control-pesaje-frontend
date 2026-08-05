@@ -28,7 +28,7 @@ const basePasada: Pasada = {
   id: 101,
   estado: 'en_curso',
   articuloId: 1,
-  articulo: { id: 1, nombre: 'Articulo A', marca: 'Marca X' },
+  articulo: { id: 1, codigo: 'Articulo A', nombre: 'Marca X' },
   horaInicio: '2026-07-07T13:05:00.000Z',
 };
 
@@ -82,7 +82,7 @@ describe('PasadaCard', () => {
   });
 
   it('renders --:-- when horaInicio is missing', async () => {
-    const pasadaSinHora: Pasada = { id: 303, estado: 'en_curso', articuloId: 1, articulo: { id: 1, nombre: 'Articulo A' } };
+    const pasadaSinHora: Pasada = { id: 303, estado: 'en_curso', articuloId: 1, articulo: { id: 1, codigo: 'Articulo A' } };
     renderWithProviders(<PasadaCard pasada={pasadaSinHora} etapas={etapas} />);
 
     expect(await screen.findByText(/Inicio --:--/)).toBeInTheDocument();
