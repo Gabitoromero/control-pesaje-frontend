@@ -84,10 +84,10 @@ describe('MuestrasListPanel', () => {
     expect(screen.getByText('Entrada')).toBeInTheDocument();
   });
 
-  it('shows weight formatted with toFixed(3) and "kg"', () => {
+  it('shows weight formatted with toFixed(4) and "kg"', () => {
     const muestras = [makeMuestra({ pesoNeto: 12.5 })];
     render(<MuestrasListPanel muestras={muestras} onSampleClick={onSampleClick} />);
-    expect(screen.getByText('12.500 kg')).toBeInTheDocument();
+    expect(screen.getByText('12.5000 kg')).toBeInTheDocument();
   });
 
   it('shows estadoValidacion badge text', () => {

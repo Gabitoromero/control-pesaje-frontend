@@ -1,4 +1,5 @@
 import type { DashboardEtapa } from '../../../api/dashboard';
+import { PESO_DECIMALS } from '../../../shared/constants';
 
 interface MonitoreoEtapaCardProps {
   etapa: DashboardEtapa;
@@ -47,7 +48,7 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ÚLTIMO PESO</p>
           <p className={`text-2xl font-bold font-mono ${estadoColor}`}>
             {etapa.ultimoPeso > 0 || etapa.timeSeries.length > 0
-              ? (etapa.ultimoPeso > 0 ? etapa.ultimoPeso : Number(etapa.timeSeries[etapa.timeSeries.length - 1]?.peso)).toFixed(3)
+              ? (etapa.ultimoPeso > 0 ? etapa.ultimoPeso : Number(etapa.timeSeries[etapa.timeSeries.length - 1]?.peso)).toFixed(PESO_DECIMALS)
               : '—'}
             <span className="text-sm font-normal text-muted-foreground"> g</span>
           </p>

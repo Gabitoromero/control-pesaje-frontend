@@ -1,6 +1,7 @@
 import React from 'react';
 import { getToleranceLayout } from '../utils/toleranceRange';
 import { isWithinTolerance } from '../utils/toleranceStatus';
+import { PESO_DECIMALS } from '../../../shared/constants';
 
 export interface ToleranceDisplayProps {
   pesoNeto: number;
@@ -59,15 +60,15 @@ export const ToleranceDisplay: React.FC<ToleranceDisplayProps> = ({
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-card border border-border rounded-lg p-2 text-center">
             <div className="text-xs text-muted-foreground">MINIMO</div>
-            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo.toFixed(3)} kg</div>
+            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo.toFixed(PESO_DECIMALS)} kg</div>
           </div>
           <div className="bg-card border border-border rounded-lg p-2 text-center">
             <div className="text-xs text-muted-foreground">IDEAL</div>
-            <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal.toFixed(3)} kg</div>
+            <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal.toFixed(PESO_DECIMALS)} kg</div>
           </div>
           <div className="bg-card border border-border rounded-lg p-2 text-center">
             <div className="text-xs text-muted-foreground">MAXIMO</div>
-            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMaximo.toFixed(3)} kg</div>
+            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMaximo.toFixed(PESO_DECIMALS)} kg</div>
           </div>
         </div>
       </div>

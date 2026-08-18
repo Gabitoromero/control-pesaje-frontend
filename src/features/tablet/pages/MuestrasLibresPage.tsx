@@ -12,6 +12,7 @@ import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import { isToleranceBlocked } from '../utils/tolerance';
 import { useDialog } from '../../../components/dialogs/useDialog';
+import { PESO_DECIMALS } from '../../../shared/constants';
 
 /**
  * Unified Muestras Libres page: amber-themed topbar (structural duplicate of
@@ -187,7 +188,7 @@ export function MuestrasLibresPage() {
             <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-warning' : 'text-muted-foreground/40'}`} />
             <div className="text-center">
               <span className="text-6xl font-black text-foreground tabular-nums">
-                {pesoNeto.toFixed(3)}
+                {pesoNeto.toFixed(PESO_DECIMALS)}
               </span>
               <span className="text-2xl text-muted-foreground ml-2">kg</span>
             </div>

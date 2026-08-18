@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import type { Muestra } from '../../../shared/types/domain';
 import { useDialog } from '../../../components/dialogs/useDialog';
+import { PESO_DECIMALS } from '../../../shared/constants';
 
 export interface MuestraObservacionPopupProps {
   muestra: Muestra;
@@ -75,7 +76,7 @@ function PopupContent({
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-sm">Peso</span>
               <span className="text-2xl font-black tabular-nums text-foreground">
-                {muestra.pesoNeto.toFixed(3)}
+                {muestra.pesoNeto.toFixed(PESO_DECIMALS)}
               </span>
             </div>
 

@@ -18,6 +18,7 @@ import { getArticulo } from '../../../api/articulos';
 import type { Articulo } from '../../../api/articulos';
 import { getMuestras } from '../../../api/muestras';
 import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
+import { PESO_DECIMALS } from '../../../shared/constants';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import { isToleranceBlocked } from '../utils/tolerance';
@@ -295,7 +296,7 @@ export const TabletWorkspace: React.FC = () => {
             <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
             <div className="text-center">
               <span className="text-6xl font-black text-foreground tabular-nums">
-                {pesoNeto.toFixed(3)}
+                {pesoNeto.toFixed(PESO_DECIMALS)}
               </span>
               <span className="text-2xl text-muted-foreground ml-2">kg</span>
             </div>
@@ -374,7 +375,7 @@ export const TabletWorkspace: React.FC = () => {
                             {displayIndex + 1}
                           </span>
                           <span className="text-xl font-bold tabular-nums text-foreground">
-                            {muestra.pesoNeto.toFixed(3)} kg
+                            {muestra.pesoNeto.toFixed(PESO_DECIMALS)} kg
                           </span>
                         </div>
                         {muestra.estadoValidacion === 'ok'

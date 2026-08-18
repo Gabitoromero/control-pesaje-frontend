@@ -12,6 +12,7 @@ import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
 import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
+import { PESO_DECIMALS } from '../../../shared/constants';
 import { Plus, Trash, ArrowLeft, Save, RefreshCw, GripVertical, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
@@ -20,6 +21,8 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import { CSS } from '@dnd-kit/utilities';
 
 
+
+const pesoStep = (10 ** -PESO_DECIMALS).toFixed(PESO_DECIMALS);
 
 const SortableEtapaItem = ({
   id,
@@ -161,7 +164,7 @@ const SortableEtapaItem = ({
               </div>
               <input
                 type="number"
-                step="0.001"
+                step={pesoStep}
                 {...register(`etapas.${index}.pesoMinimo`, { valueAsNumber: true })}
                 className="w-full bg-background border border-amber-500/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
@@ -174,7 +177,7 @@ const SortableEtapaItem = ({
               </div>
               <input
                 type="number"
-                step="0.001"
+                step={pesoStep}
                 {...register(`etapas.${index}.pesoIdeal`, { valueAsNumber: true })}
                 className="w-full bg-background border border-primary/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
@@ -187,7 +190,7 @@ const SortableEtapaItem = ({
               </div>
               <input
                 type="number"
-                step="0.001"
+                step={pesoStep}
                 {...register(`etapas.${index}.pesoMaximo`, { valueAsNumber: true })}
                 className="w-full bg-background border border-destructive/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-destructive dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />

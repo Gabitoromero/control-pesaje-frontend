@@ -1,4 +1,5 @@
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
+import { PESO_DECIMALS } from '../../../shared/constants';
 
 interface MuestrasListPanelProps {
   muestras: Muestra[];
@@ -32,7 +33,7 @@ export function MuestrasListPanel({
         >
           <span className="text-muted-foreground">#{i + 1}</span>
           {stageName && <span className="text-muted-foreground text-xs truncate max-w-[100px]">{stageName}</span>}
-          <span className="font-medium text-foreground">{m.pesoNeto.toFixed(3)} kg</span>
+          <span className="font-medium text-foreground">{m.pesoNeto.toFixed(PESO_DECIMALS)} kg</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
               m.estadoValidacion === 'ok'
