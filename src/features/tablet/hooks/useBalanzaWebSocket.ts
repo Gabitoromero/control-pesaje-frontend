@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
 import { getSocket } from '../../../services/websocket';
 import { useAuth } from '../../auth/context/AuthContext';
+import type { UnidadPeso } from '../../../shared/types/domain';
 
 export interface BalanzaData {
   pesoNeto: number;
 }
 
+export interface BalanzaStatusPayload {
+  isConnected: boolean;
+  hardwareId?: string;
+  unidad?: UnidadPeso;
+}
+
 export function useBalanzaWebSocket(lineaId: number | null) {
   const [pesoNeto, setPesoNeto] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [hardwareId, setHardwareId] = useState<string | undefined>(undefined);
+  const [unidad, setUnidad] = useState<UnidadPeso | undefined>(undefined);
   const { logout, user } = useAuth();
 
   useEffect(() => {
@@ -28,11 +37,15 @@ export function useBalanzaWebSocket(lineaId: number | null) {
       console.log('[Balanza WebSocket] Disconnected from backend');
       setIsConnected(false);
       setPesoNeto(0);
+      setHardwareId(undefined);
+      setUnidad(undefined);
     };
 
-    const onBalanzaStatus = (data: { isConnected: boolean }) => {
+    const onBalanzaStatus = (data: BalanzaStatusPayload) => {
       console.log(`[Balanza WebSocket] Received 'balanza-status':`, data);
       setIsConnected(data.isConnected);
+      setHardwareId(data.hardwareId);
+      setUnidad(data.unidad);
       if (!data.isConnected) {
         setPesoNeto(0);
       }
@@ -78,5 +91,5 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     };
   }, [lineaId, logout, user]);
 
-  return { pesoNeto, isConnected };
+  return { pesoNeto, isConnected, hardwareId, unidad };
 }

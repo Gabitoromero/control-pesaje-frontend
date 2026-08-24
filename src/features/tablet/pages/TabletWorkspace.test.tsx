@@ -130,6 +130,8 @@ describe('TabletWorkspace', () => {
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 15.0,
       isConnected: true,
+      hardwareId: undefined,
+      unidad: undefined,
     });
   });
 
@@ -182,6 +184,8 @@ describe('TabletWorkspace', () => {
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 5.0,
       isConnected: true,
+      hardwareId: undefined,
+      unidad: undefined,
     });
 
     renderWithAuth(<TabletWorkspace />, {
@@ -248,6 +252,8 @@ describe('TabletWorkspace', () => {
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 0,
       isConnected: false,
+      hardwareId: undefined,
+      unidad: undefined,
     });
 
     renderWithAuth(<TabletWorkspace />, {
@@ -438,6 +444,8 @@ describe('TabletWorkspace', () => {
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 25.0,
       isConnected: true,
+      hardwareId: undefined,
+      unidad: undefined,
     });
 
     let muestraPosted = false;

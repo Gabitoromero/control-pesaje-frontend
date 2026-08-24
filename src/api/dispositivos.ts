@@ -1,4 +1,5 @@
 import api from './axios';
+import type { UnidadPeso } from '../shared/types/domain';
 
 export interface Dispositivo {
   hardwareId: string;
@@ -7,6 +8,7 @@ export interface Dispositivo {
   lineaNombre: string | null;
   estado: 'Conectado' | 'Desconectado';
   ultimaConexionAt: string | null;
+  unidad?: UnidadPeso;
 }
 
 export const dispositivosApi = {
@@ -27,5 +29,13 @@ export const dispositivosApi = {
 
   deleteDispositivo: async (hardwareId: string): Promise<void> => {
     await api.delete(`/dispositivos/${hardwareId}`);
+  },
+
+  updateUnidad: async (hardwareId: string, unidad: UnidadPeso): Promise<Dispositivo> => {
+    const response = await api.patch<{ success: boolean; data: Dispositivo }>(
+      `/dispositivos/${hardwareId}/unidad`,
+      { unidad }
+    );
+    return response.data.data;
   },
 };

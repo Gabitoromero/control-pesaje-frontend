@@ -106,7 +106,7 @@ describe('MuestrasLibresPage', () => {
     updateSampleMock.mockClear();
     setSelectedEtapaIdMock.mockClear();
     vi.mocked(useMuestrasLibresContext).mockReturnValue({ ...baseContextValue });
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 12.345, isConnected: true });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 12.345, isConnected: true, hardwareId: undefined, unidad: undefined });
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta as never);
   });
 
@@ -247,7 +247,7 @@ describe('MuestrasLibresPage', () => {
       selectedEtapaId: 10,
     });
     // Far from ideal: pesoNeto=25 → tolerance=10 > threshold=3 → blocked.
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 25.0, isConnected: true });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 25.0, isConnected: true, hardwareId: undefined, unidad: undefined });
 
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
 
