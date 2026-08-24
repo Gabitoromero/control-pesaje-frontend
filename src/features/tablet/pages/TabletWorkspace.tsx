@@ -12,6 +12,7 @@ import { StageProgressPanel } from '../components/StageProgressPanel';
 import { StageAdvanceFlash } from '../components/StageAdvanceFlash';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
+import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulo } from '../../../api/articulos';
@@ -38,7 +39,7 @@ export const TabletWorkspace: React.FC = () => {
   // Heartbeat para mantener sesión viva en backend
   useActividadHeartbeat(lineaId);
 
-  const { pesoNeto, isConnected } = useBalanzaWebSocket(lineaId);
+  const { pesoNeto, isConnected, hardwareId, unidad } = useBalanzaWebSocket(lineaId);
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
   // Task 3.3: Load the active run using GET /api/pasadas/:id
@@ -323,6 +324,13 @@ export const TabletWorkspace: React.FC = () => {
               {isConnected ? 'Conectado' : 'Sin señal'}
             </span>
           </div>
+
+          <UnidadBalanzaControl
+            hardwareId={hardwareId}
+            unidad={unidad}
+            disabled={!isConnected}
+            variant="primary"
+          />
 
           <button
             onClick={handleRegistrarMuestra}

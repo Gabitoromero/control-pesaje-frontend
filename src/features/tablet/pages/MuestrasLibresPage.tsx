@@ -8,6 +8,7 @@ import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { MuestrasListPanel } from '../components/MuestrasListPanel';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
+import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import { isToleranceBlocked } from '../utils/tolerance';
@@ -31,7 +32,7 @@ export function MuestrasLibresPage() {
   const navigate = useNavigate();
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
-  const { pesoNeto, isConnected } = useBalanzaWebSocket(activeLineaId ?? 0);
+  const { pesoNeto, isConnected, hardwareId, unidad } = useBalanzaWebSocket(activeLineaId ?? 0);
   const {
     muestras,
     etapas,
@@ -210,6 +211,13 @@ export function MuestrasLibresPage() {
               {isConnected ? 'Conectado' : 'Sin señal'}
             </span>
           </div>
+
+          <UnidadBalanzaControl
+            hardwareId={hardwareId}
+            unidad={unidad}
+            disabled={!isConnected}
+            variant="warning"
+          />
 
           <button
             onClick={handleRegistrar}
