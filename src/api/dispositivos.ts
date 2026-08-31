@@ -8,7 +8,7 @@ export interface Dispositivo {
   lineaNombre: string | null;
   estado: 'Conectado' | 'Desconectado';
   ultimaConexionAt: string | null;
-  unidad?: UnidadPeso;
+  unidad: UnidadPeso | null;
 }
 
 export const dispositivosApi = {

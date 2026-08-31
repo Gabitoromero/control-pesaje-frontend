@@ -29,7 +29,7 @@ describe('DispositivosConectadosPage', () => {
     expect(screen.getByText(/cargando dispositivos/i)).toBeInTheDocument();
   });
 
-  it('renders the list of devices with hardwareId, línea nombre, estado and última conexión', async () => {
+  it('renders the list of devices with hardwareId, línea nombre, estado, última conexión and unidad', async () => {
     const mockDevices = [
       {
         id: 1,
@@ -39,6 +39,7 @@ describe('DispositivosConectadosPage', () => {
         lineaNombre: 'Línea A',
         estado: 'Conectado' as const,
         ultimaConexionAt: new Date('2026-01-01T00:00:00Z').toISOString(),
+        unidad: 'kg' as const,
       },
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
@@ -51,9 +52,10 @@ describe('DispositivosConectadosPage', () => {
 
     expect(screen.getByText('Línea A')).toBeInTheDocument();
     expect(screen.getByText('Conectado')).toBeInTheDocument();
+    expect(screen.getByText('kg')).toBeInTheDocument();
   });
 
-  it('renders Desconectado estado and a dash for unpaired devices without a línea nombre', async () => {
+  it('renders Desconectado estado and a dash for unpaired devices without a línea nombre or unidad', async () => {
     const mockDevices = [
       {
         hardwareId: 'rpi-unassigned-002',
@@ -62,6 +64,7 @@ describe('DispositivosConectadosPage', () => {
         lineaNombre: null,
         estado: 'Desconectado' as const,
         ultimaConexionAt: null,
+        unidad: null,
       },
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
@@ -84,6 +87,7 @@ describe('DispositivosConectadosPage', () => {
         lineaNombre: 'Línea A',
         estado: 'Conectado' as const,
         ultimaConexionAt: '2026-07-13T10:00:00Z',
+        unidad: 'kg' as const,
       },
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
@@ -118,6 +122,7 @@ describe('DispositivosConectadosPage', () => {
         lineaNombre: 'Línea A',
         estado: 'Desconectado' as const,
         ultimaConexionAt: null,
+        unidad: null,
       },
     ];
     vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
