@@ -1,29 +1,23 @@
 /**
  * Guard for the "Registrar Muestra" action.
  *
- * Blocks registration when the live weight is far from the ideal AND the
- * admin's configured tolerance range is too tight to absorb that deviation.
+ * Blocks registration when the live weight deviates from pesoIdeal by more
+ * than the allowed tolerance (20% of pesoIdeal), regardless of how the
+ * admin configured pesoMinimo/pesoMaximo for the stage.
  *
  * Formula:
- *   tolerance  = abs(pesoNeto - pesoIdeal)
- *   threshold  = 0.5 * pesoIdeal
- *   rangeWidth = pesoMaximo - pesoMinimo
- *   isBlocked  = tolerance > threshold AND rangeWidth < (2 * threshold)
+ *   threshold  = 0.2 * pesoIdeal
+ *   deviation  = abs(pesoNeto - pesoIdeal)
+ *   isBlocked  = deviation > threshold
  *
- * When `rangeWidth >= 2 * threshold` the admin's custom range already covers
- * the ±50% band, so the guard is unnecessary (the range takes precedence).
- *
- * Boundary semantics are strict (`>` and `<`): exactly 50% deviation or
- * exactly 100% range width do NOT trigger the block.
+ * Boundary semantics are strict (`>`): exactly 20% deviation does NOT
+ * trigger the block.
  */
 export const isToleranceBlocked = (
   pesoNeto: number,
   pesoIdeal: number,
-  pesoMinimo: number,
-  pesoMaximo: number,
 ): boolean => {
-  const threshold = 0.5 * pesoIdeal;
-  const tolerance = Math.abs(pesoNeto - pesoIdeal);
-  const rangeWidth = pesoMaximo - pesoMinimo;
-  return tolerance > threshold && rangeWidth < 2 * threshold;
+  const threshold = 0.2 * pesoIdeal;
+  const deviation = Math.abs(pesoNeto - pesoIdeal);
+  return deviation > threshold;
 };

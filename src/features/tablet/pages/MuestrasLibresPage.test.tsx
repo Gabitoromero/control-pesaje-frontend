@@ -138,9 +138,9 @@ describe('MuestrasLibresPage', () => {
       selectedEtapa: etapaHorneado,
     });
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
-    expect(screen.getByText('30.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('35.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('40.000 kg')).toBeInTheDocument();
+    expect(screen.getByText('30.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('35.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('40.0000 kg')).toBeInTheDocument();
   });
 
   it('filters the samples panel to the currently-selected etapa', () => {
@@ -154,9 +154,9 @@ describe('MuestrasLibresPage', () => {
     });
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
     // Only the 2 samples for etapa 10 (selected) are shown.
-    expect(screen.getByText('1.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('3.000 kg')).toBeInTheDocument();
-    expect(screen.queryByText('2.000 kg')).not.toBeInTheDocument();
+    expect(screen.getByText('1.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('3.0000 kg')).toBeInTheDocument();
+    expect(screen.queryByText('2.0000 kg')).not.toBeInTheDocument();
   });
 
   it('shows the empty-state message when the selected etapa has zero samples', () => {
@@ -184,7 +184,7 @@ describe('MuestrasLibresPage', () => {
 
     // Filtered list for etapa 10 (selected) shows samples #1 (pesoNeto 1) and #2 (pesoNeto 3),
     // whose ORIGINAL indices are 0 and 2 respectively. Click the 2nd filtered row.
-    const row = screen.getByText('3.000 kg').closest('button')!;
+    const row = screen.getByText('3.0000 kg').closest('button')!;
     await userEvent.click(row);
 
     const deleteBtn = await screen.findByRole('button', { name: /eliminar muestra/i });

@@ -99,20 +99,20 @@ export function MuestrasLibresPage() {
   const pesoMaximo = selectedEtapa?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
 
-  // ux-polish Task 1: guard against out-of-tolerance samples when the admin's
-  // configured range is too tight. Button stays clickable (NOT disabled) so
-  // the operator gets an alertWarning popup.
+  // ux-polish Task 1: guard against samples that deviate more than 20% from
+  // pesoIdeal. Button stays clickable (NOT disabled) so the operator gets
+  // an alertWarning popup.
   const isToleranceBlockedFlag =
     hasTolerancia &&
     selectedEtapa !== null &&
-    isToleranceBlocked(pesoNeto, pesoIdeal!, pesoMinimo!, pesoMaximo!);
+    isToleranceBlocked(pesoNeto, pesoIdeal!);
 
   const handleRegistrar = async () => {
     if (isToleranceBlockedFlag) {
       await alertWarning({
         title: 'Muestra fuera de tolerancia',
         description:
-          'El peso se aleja más del 20% del ideal y el rango configurado es muy estrecho. ' +
+          'El peso se aleja más del 20% del ideal. ' +
           'Corregí el peso antes de registrar la muestra.',
       });
       return;

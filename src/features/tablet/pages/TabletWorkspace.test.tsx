@@ -170,9 +170,9 @@ describe('TabletWorkspace', () => {
 
     // Tolerance OK badge + params row (pesoNeto=15 is within [10,20] for Amasado)
     expect(screen.getByText('OK')).toBeInTheDocument();
-    expect(screen.getByText('15.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('10.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('20.000 kg')).toBeInTheDocument();
+    expect(screen.getByText('15.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('10.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('20.0000 kg')).toBeInTheDocument();
 
     // Registrar Muestra button uses success token, not primary
     const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
@@ -242,8 +242,8 @@ describe('TabletWorkspace', () => {
     await userEvent.click(btnRegistrar);
 
     // After clicking register, the sample list should contain the new sample.
-    // Note: '15.000 kg' also matches the tolerance params row (IDEAL=15 for Amasado).
-    expect((await screen.findAllByText('15.000 kg')).length).toBeGreaterThan(0);
+    // Note: '15.0000 kg' also matches the tolerance params row (IDEAL=15 for Amasado).
+    expect((await screen.findAllByText('15.0000 kg')).length).toBeGreaterThan(0);
     expect(screen.getByText('1 / 2 muestras OK')).toBeInTheDocument();
   });
 
@@ -578,10 +578,10 @@ describe('TabletWorkspace', () => {
     });
 
     // Wait for the sample row to render.
-    // Note: '15.000 kg' can also match the tolerance params row (IDEAL=15 for Amasado),
+    // Note: '15.0000 kg' can also match the tolerance params row (IDEAL=15 for Amasado),
     // so scope the query to the element with a <li> ancestor (the sample row itself).
-    await screen.findAllByText('15.000 kg');
-    const row = screen.getAllByText('15.000 kg').map((el) => el.closest('li')).find(Boolean)!;
+    await screen.findAllByText('15.0000 kg');
+    const row = screen.getAllByText('15.0000 kg').map((el) => el.closest('li')).find(Boolean)!;
     await userEvent.click(row);
 
     // Popup should now be open showing the sample number
@@ -618,8 +618,8 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    // '15.000 kg' also matches the tolerance params row (IDEAL=15 for Amasado) — use findAllByText.
-    expect((await screen.findAllByText('15.000 kg')).length).toBeGreaterThan(0);
+    // '15.0000 kg' also matches the tolerance params row (IDEAL=15 for Amasado) — use findAllByText.
+    expect((await screen.findAllByText('15.0000 kg')).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /descartar muestra/i })).not.toBeInTheDocument();
   });
 
@@ -654,7 +654,7 @@ describe('TabletWorkspace', () => {
     expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
 
     // Open the sample popup and delete the sample.
-    const row = (await screen.findAllByText('15.000 kg')).map((el) => el.closest('li')).find(Boolean)!;
+    const row = (await screen.findAllByText('15.0000 kg')).map((el) => el.closest('li')).find(Boolean)!;
     await userEvent.click(row);
     await screen.findByText(/Muestra #1/);
     await userEvent.click(screen.getByRole('button', { name: /eliminar muestra/i }));
@@ -740,7 +740,7 @@ describe('TabletWorkspace', () => {
     expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
     expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
 
-    const row = (await screen.findAllByText('15.000 kg')).map((el) => el.closest('li')).find(Boolean)!;
+    const row = (await screen.findAllByText('15.0000 kg')).map((el) => el.closest('li')).find(Boolean)!;
     await userEvent.click(row);
     await screen.findByText(/Muestra #1/);
     await userEvent.click(screen.getByRole('button', { name: /eliminar muestra/i }));
