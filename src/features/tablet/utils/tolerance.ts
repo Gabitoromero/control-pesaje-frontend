@@ -1,23 +1,28 @@
 /**
  * Guard for the "Registrar Muestra" action.
  *
- * Blocks registration when the live weight deviates from pesoIdeal by more
- * than the allowed tolerance (20% of pesoIdeal), regardless of how the
- * admin configured pesoMinimo/pesoMaximo for the stage.
+ * Blocks registration only when the live weight falls outside the
+ * admin-configured [pesoMinimo, pesoMaximo] range by more than a 20% margin
+ * on each bound — a weight already inside [pesoMinimo, pesoMaximo] is NEVER
+ * blocked, regardless of how far it sits from pesoIdeal. Etapas with a
+ * legitimately wide min/max spread (e.g. min far below ideal, max far
+ * above) must not get blocked just because the value is far from the
+ * midpoint.
  *
  * Formula:
- *   threshold  = 0.2 * pesoIdeal
- *   deviation  = abs(pesoNeto - pesoIdeal)
- *   isBlocked  = deviation > threshold
+ *   lowerBound = pesoMinimo - 0.2 * pesoMinimo  (= 0.8 * pesoMinimo)
+ *   upperBound = pesoMaximo + 0.2 * pesoMaximo  (= 1.2 * pesoMaximo)
+ *   isBlocked  = pesoNeto < lowerBound || pesoNeto > upperBound
  *
- * Boundary semantics are strict (`>`): exactly 20% deviation does NOT
+ * Boundary semantics are strict (`<` / `>`): exactly at a bound does NOT
  * trigger the block.
  */
 export const isToleranceBlocked = (
   pesoNeto: number,
-  pesoIdeal: number,
+  pesoMinimo: number,
+  pesoMaximo: number,
 ): boolean => {
-  const threshold = 0.2 * pesoIdeal;
-  const deviation = Math.abs(pesoNeto - pesoIdeal);
-  return deviation > threshold;
+  const lowerBound = pesoMinimo - 0.2 * pesoMinimo;
+  const upperBound = pesoMaximo + 0.2 * pesoMaximo;
+  return pesoNeto < lowerBound || pesoNeto > upperBound;
 };

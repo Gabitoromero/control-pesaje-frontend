@@ -229,13 +229,14 @@ export const TabletWorkspace: React.FC = () => {
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
-  // ux-polish Task 1: guard against samples that deviate more than 20% from
-  // pesoIdeal. The button stays clickable (NOT disabled) so the operator
-  // gets an alertWarning popup.
+  // ux-polish Task 1: guard against samples outside a 20% margin beyond
+  // pesoMinimo/pesoMaximo. A weight already inside [pesoMinimo, pesoMaximo]
+  // is never blocked, no matter how far from pesoIdeal. The button stays
+  // clickable (NOT disabled) so the operator gets an alertWarning popup.
   const isToleranceBlockedFlag =
     hasTolerancia &&
     etapaActiva !== null &&
-    isToleranceBlocked(pesoNeto, pesoIdeal!);
+    isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!);
 
 
   // Phase 4: PasadaBlock start-time formatting (native Intl, no date library)

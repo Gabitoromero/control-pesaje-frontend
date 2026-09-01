@@ -101,13 +101,14 @@ export function MuestrasLibresPage() {
   const pesoMaximo = selectedEtapa?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
 
-  // ux-polish Task 1: guard against samples that deviate more than 20% from
-  // pesoIdeal. Button stays clickable (NOT disabled) so the operator gets
-  // an alertWarning popup.
+  // ux-polish Task 1: guard against samples outside a 20% margin beyond
+  // pesoMinimo/pesoMaximo. A weight already inside [pesoMinimo, pesoMaximo]
+  // is never blocked, no matter how far from pesoIdeal. Button stays
+  // clickable (NOT disabled) so the operator gets an alertWarning popup.
   const isToleranceBlockedFlag =
     hasTolerancia &&
     selectedEtapa !== null &&
-    isToleranceBlocked(pesoNeto, pesoIdeal!);
+    isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!);
 
   const handleRegistrar = async () => {
     if (isToleranceBlockedFlag) {

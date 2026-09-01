@@ -408,8 +408,8 @@ describe('TabletWorkspace', () => {
 
   // ── Tolerance guard (ux-polish Task 1) ────────────────────────────────────
 
-  it('bloquea el registro y muestra alerta cuando el peso está fuera de tolerancia y el rango es estrecho', async () => {
-    // Override the line with a tight-range etapa (range=2 < 0.4*15=6).
+  it('bloquea el registro y muestra alerta cuando el peso está fuera del rango + margen del 20%', async () => {
+    // pesoMinimo=14, pesoMaximo=16 → bloquea fuera de [14*0.8, 16*1.2] = [11.2, 19.2].
     server.use(
       http.get(`${BASE}/lineas-produccion/1`, () => {
         return HttpResponse.json({
@@ -440,7 +440,7 @@ describe('TabletWorkspace', () => {
       })
     );
 
-    // Far from ideal: pesoNeto=25 → tolerance=10 > threshold=3 → blocked.
+    // pesoNeto=25 > upperBound=19.2 → blocked.
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 25.0,
       isConnected: true,
@@ -481,6 +481,62 @@ describe('TabletWorkspace', () => {
 
     // addSample was NOT called — the guard short-circuited.
     expect(muestraPosted).toBe(false);
+  });
+
+  it('NO bloquea el registro cuando el peso está dentro de [pesoMinimo, pesoMaximo] aunque se aleje mucho del ideal (caso reportado en producción)', async () => {
+    // pesoMinimo=0.003, pesoIdeal=0.004, pesoMaximo=0.0065 — rango admin deliberadamente
+    // ancho (max está 62.5% por encima del ideal). pesoNeto=0.005 está dentro del rango
+    // admin, pero se aleja más del 20% del ideal — con la regla vieja esto bloqueaba
+    // el botón por error.
+    server.use(
+      http.get(`${BASE}/lineas-produccion/1`, () => {
+        return HttpResponse.json({
+          success: true,
+          data: {
+            id: 1,
+            nombre: 'Línea 1 — Envasado A',
+            numeroBalanza: 1,
+            activo: true,
+            rutaPasadaActiva: {
+              id: 1,
+              nombre: 'Ruta 1',
+              activo: true,
+              etapas: [
+                {
+                  id: 10,
+                  etapa: { id: 1, nombre: 'Peso Spray' },
+                  orden: 1,
+                  pesoMinimo: 0.003,
+                  pesoIdeal: 0.004,
+                  pesoMaximo: 0.0065,
+                  cantidadMuestrasRequeridas: 2,
+                },
+              ],
+            },
+          },
+        });
+      })
+    );
+
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+      pesoNeto: 0.005,
+      isConnected: true,
+      hardwareId: undefined,
+      unidad: undefined,
+    });
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect((await screen.findAllByText('Peso Spray'))[0]).toBeInTheDocument();
+
+    const btnRegistrar = screen.getByRole('button', { name: /registrar muestra/i });
+    expect(btnRegistrar).not.toBeDisabled();
+    expect(btnRegistrar.className).toContain('bg-success');
+    expect(btnRegistrar.className).not.toContain('bg-muted');
   });
 
   it('muestra el PasadaBlock (numero de pasada + hora de inicio) en el panel de muestras', async () => {    server.use(
