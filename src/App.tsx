@@ -22,6 +22,7 @@ import { SesionesActivasPage } from './features/dashboard/pages/SesionesActivasP
 import { PasadasActivasPage } from './features/dashboard/pages/PasadasActivasPage';
 import { DispositivosConectadosPage } from './features/dashboard/pages/DispositivosConectadosPage';
 import { ReportesPage } from './features/dashboard/pages/ReportesPage';
+import { SistemaPage } from './features/dashboard/pages/SistemaPage';
 import { MonitoreoPage } from './features/dashboard/pages/MonitoreoPage';
 import { MonitoreoFullscreenPage } from './features/dashboard/pages/MonitoreoFullscreenPage';
 
@@ -76,6 +77,7 @@ function App() {
           <Route path="sesiones-activas" element={isAdmin ? <SesionesActivasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="dispositivos-conectados" element={isJefe ? <DispositivosConectadosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="reportes" element={<ReportesPage />} />
+          <Route path="sistema" element={<SistemaPage />} />
         </Route>
 
         {/* Fullscreen Monitoreo (no sidebar) */}

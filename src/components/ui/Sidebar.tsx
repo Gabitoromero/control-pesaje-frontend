@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import {
   LayoutDashboard, FileBarChart, LogOut, Package, Users, UserRoundCog, Factory,
-  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar, Scale
+  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar, Scale, BookOpen
 } from 'lucide-react';
 import { useTheme } from '../../features/theme/ThemeContext';
 import { UsuarioRol } from '../../shared/types';
@@ -176,6 +176,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
             Reportes
           </NavLink>
         )}
+
+        <NavLink to="/dashboard/sistema" className={navClass} onClick={handleLinkClick}>
+          <BookOpen className="w-5 h-5 mr-3" />
+          Sistema
+        </NavLink>
 
         <button
           onClick={toggleTheme}
