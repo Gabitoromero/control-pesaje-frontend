@@ -159,6 +159,27 @@ describe('MuestrasLibresPage', () => {
     expect(screen.queryByText('2.0000 kg')).not.toBeInTheDocument();
   });
 
+  it('muestra las muestras filtradas con la más reciente arriba', () => {
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({
+      ...baseContextValue,
+      muestras: [
+        makeMuestra({ id: 1, etapaId: 10, pesoNeto: 1 }),
+        makeMuestra({ id: 2, etapaId: 10, pesoNeto: 3 }),
+        makeMuestra({ id: 3, etapaId: 10, pesoNeto: 5 }),
+      ],
+    });
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    // Context returns oldest→newest (1, 3, 5); the panel must show newest (5) first.
+    const masNueva = screen.getByText('5.0000 kg');
+    const media = screen.getByText('3.0000 kg');
+    const masVieja = screen.getByText('1.0000 kg');
+
+    // DOCUMENT_POSITION_FOLLOWING set means the argument node comes AFTER the receiver in the DOM.
+    expect(masNueva.compareDocumentPosition(media) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(media.compareDocumentPosition(masVieja) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('shows the empty-state message when the selected etapa has zero samples', () => {
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
     expect(screen.getByText('Sin muestras registradas para esta etapa')).toBeInTheDocument();

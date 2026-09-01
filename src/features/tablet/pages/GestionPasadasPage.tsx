@@ -78,17 +78,21 @@ export const GestionPasadasPage: React.FC = () => {
     enabled: isModalOpen,
   });
 
-  // Seed the balanza selection from the línea's assigned balanza every time
-  // the modal opens, and clear it when the modal closes so the next open
+  // Seed the balanza selection from the línea's assigned balanza right when
+  // the modal opens, and clear it right when it closes, so the next open
   // re-seeds from the (possibly refetched) línea instead of a stale override.
-  React.useEffect(() => {
-    if (isModalOpen) {
-      setSelectedBalanzaId(linea?.idBalanza ?? null);
-      setErrorIniciar(null);
-    } else {
-      setSelectedBalanzaId(null);
-    }
-  }, [isModalOpen, linea?.idBalanza]);
+  // Done in the handlers themselves (not an effect) to avoid the extra
+  // render pass a setState-in-effect would trigger.
+  const handleOpenModal = () => {
+    setSelectedBalanzaId(linea?.idBalanza ?? null);
+    setErrorIniciar(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedBalanzaId(null);
+  };
 
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
@@ -160,7 +164,7 @@ export const GestionPasadasPage: React.FC = () => {
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">Gestión de Pasadas</h1>
-            <p className="text-muted-foreground text-sm">Línea {activeLineaId} - {user?.nombreUsuario}</p>
+            <p className="text-muted-foreground text-sm">{linea?.nombre ?? `Línea ${activeLineaId}`} - {user?.nombreUsuario}</p>
           </div>
         </div>
         <button
@@ -223,7 +227,7 @@ export const GestionPasadasPage: React.FC = () => {
 
           <aside className="flex flex-col gap-6">
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenModal}
               disabled={bloqueado}
               title={
                 sinDispositivo
@@ -280,7 +284,7 @@ export const GestionPasadasPage: React.FC = () => {
             <div className="flex justify-between items-center p-5 border-b border-border">
               <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseModal}
                 aria-label="Cerrar modal"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -336,7 +340,7 @@ export const GestionPasadasPage: React.FC = () => {
             <div className="flex justify-end gap-3 p-5 border-t border-border">
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseModal}
                 className="px-4.5 py-2.5 bg-muted hover:bg-muted/70 text-foreground rounded-xl text-sm font-semibold transition-colors"
                 disabled={iniciando}
               >

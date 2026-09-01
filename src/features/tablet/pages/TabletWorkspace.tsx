@@ -214,10 +214,12 @@ export const TabletWorkspace: React.FC = () => {
   // Helper variables for UI
   const currentStageId = etapaActiva?.etapa?.id ?? etapaActiva?.etapa.id;
 
-  // Muestras list scoped to the active stage, keeping original indices for removal
+  // Muestras list scoped to the active stage, keeping original indices for removal.
+  // Reversed so the most recently registered sample shows at the top.
   const muestrasDeEtapaActiva = muestras
     .map((muestra, originalIndex) => ({ muestra, originalIndex }))
-    .filter(({ muestra }) => muestra.etapaId === currentStageId);
+    .filter(({ muestra }) => muestra.etapaId === currentStageId)
+    .reverse();
 
   // Phase 4: Tolerance bar + OK/Fuera-de-Rango badge (only meaningful with an active stage)
   // Note: `etapaActiva` (from usePasadaState) is the RutaPasadaEtapa wrapper itself —

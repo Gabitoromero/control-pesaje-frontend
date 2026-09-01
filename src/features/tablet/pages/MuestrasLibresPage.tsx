@@ -56,11 +56,13 @@ export function MuestrasLibresPage() {
 
   // R4.2: samples are session-local client state (never fetched per-etapa),
   // so filtering + index-translation is pure client-side derivation.
+  // Reversed so the most recently registered sample shows at the top.
   const muestrasFiltradas = useMemo(
     () =>
       muestras
         .map((muestra, originalIndex) => ({ muestra, originalIndex }))
-        .filter(({ muestra }) => muestra.etapaId === selectedEtapaId),
+        .filter(({ muestra }) => muestra.etapaId === selectedEtapaId)
+        .reverse(),
     [muestras, selectedEtapaId]
   );
 

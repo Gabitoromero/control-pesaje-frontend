@@ -754,6 +754,46 @@ describe('TabletWorkspace', () => {
     expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
   });
 
+  // ── Sample ordering (most recent first) ─────────────────────────────────
+
+  it('ordena las muestras registradas con la más reciente arriba', async () => {
+    // Amasado requires 2 OK samples to auto-advance; only 1 of these 3 is
+    // 'ok' (13), so the stage stays active and all 3 remain visible together
+    // — otherwise the auto-advance (tested elsewhere) would move the active
+    // stage away before we can check the display order.
+    server.use(
+      http.get(`${BASE}/muestras`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('pasadaId') === '101') {
+          return HttpResponse.json({
+            success: true,
+            data: [
+              { id: 1, pesoNeto: 11, estadoValidacion: 'fuera_de_rango', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z' },
+              { id: 2, pesoNeto: 12, estadoValidacion: 'fuera_de_rango', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:05:00Z' },
+              { id: 3, pesoNeto: 13, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:10:00Z' },
+            ],
+          });
+        }
+        return HttpResponse.json({ success: true, data: [] });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    // API returns oldest→newest (11, 12, 13); the panel must show newest (13) first.
+    const masNueva = await screen.findByText('13.0000 kg');
+    const media = screen.getByText('12.0000 kg');
+    const masVieja = screen.getByText('11.0000 kg');
+
+    // DOCUMENT_POSITION_FOLLOWING set means the argument node comes AFTER the receiver in the DOM.
+    expect(masNueva.compareDocumentPosition(media) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(media.compareDocumentPosition(masVieja) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('muestra una alerta y redirige a /tablet/pasadas cuando la pasada es abortada por un admin', async () => {
     server.use(
       http.get(`${BASE}/pasadas/101`, () => {

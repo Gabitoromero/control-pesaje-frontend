@@ -153,6 +153,28 @@ describe('GestionPasadasPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=101');
   });
 
+  // ── Header: nombre de línea, no el id ────────────────────────────────────
+
+  it('muestra el nombre de la línea (no el id) junto al usuario en el header', async () => {
+    vi.mocked(getLinea).mockResolvedValue({
+      ...lineaConRuta,
+      nombre: 'Línea Envasado Norte',
+    } as Linea);
+
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    expect(await screen.findByText('Línea Envasado Norte - operario1')).toBeInTheDocument();
+    expect(screen.queryByText(/^Línea 1 -/)).not.toBeInTheDocument();
+  });
+
+  it('usa el fallback "Línea {id}" mientras la query de línea todavía no resolvió', () => {
+    vi.mocked(getLinea).mockImplementation(() => new Promise(() => {}));
+
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    expect(screen.getByText('Línea 1 - operario1')).toBeInTheDocument();
+  });
+
   it('redirige si activeLineaId es null', () => {
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: null });
     expect(screen.queryByText('Gestión de Pasadas')).not.toBeInTheDocument();
