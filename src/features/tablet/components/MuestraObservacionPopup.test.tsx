@@ -45,7 +45,7 @@ describe('MuestraObservacionPopup', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('renders sample number, weight (3 decimals), validation badge and textarea when open', () => {
+  it('renders sample number, weight (4 decimals), validation badge and textarea when open', () => {
     renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ pesoNeto: 12.5, estadoValidacion: 'ok' })}
@@ -58,15 +58,15 @@ describe('MuestraObservacionPopup', () => {
     );
     // Sample number (index+1)
     expect(screen.getByText(/#3/)).toBeInTheDocument();
-    // Weight formatted to 3 decimals
-    expect(screen.getByText('12.500')).toBeInTheDocument();
+    // Weight formatted to 4 decimals
+    expect(screen.getByText('12.5000')).toBeInTheDocument();
     // Validation badge
     expect(screen.getByText('ok')).toBeInTheDocument();
     // Observation textarea pre-filled with existing observation
     expect(screen.getByRole('textbox')).toHaveValue('original note');
   });
 
-  it('formats weight to exactly 3 decimal places', () => {
+  it('formats weight to exactly 4 decimal places', () => {
     renderWithProviders(
       <MuestraObservacionPopup
         muestra={makeMuestra({ pesoNeto: 5 })}
@@ -77,7 +77,7 @@ describe('MuestraObservacionPopup', () => {
         onClose={onClose}
       />
     );
-    expect(screen.getByText('5.000')).toBeInTheDocument();
+    expect(screen.getByText('5.0000')).toBeInTheDocument();
   });
 
   it('shows fuera_de_rango validation badge when status is fuera_de_rango', () => {

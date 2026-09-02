@@ -9,9 +9,9 @@ describe('ToleranceDisplay', () => {
     );
 
     expect(screen.getByText('OK')).toBeInTheDocument();
-    expect(screen.getByText('10.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('15.000 kg')).toBeInTheDocument();
-    expect(screen.getByText('20.000 kg')).toBeInTheDocument();
+    expect(screen.getByText('10.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('15.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('20.0000 kg')).toBeInTheDocument();
   });
 
   it('shows the "Fuera de Rango" badge when pesoNeto is outside tolerance', () => {

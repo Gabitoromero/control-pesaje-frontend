@@ -69,10 +69,10 @@ describe('MonitoreoEtapaCard', () => {
     expect(points[1].className).not.toContain('rotate-45');
   });
 
-  it('displays the last weight with three decimal places', () => {
+  it('displays the last weight with four decimal places', () => {
     const etapaPrecision: DashboardEtapa = {
       ...mockEtapa,
-      ultimoPeso: 98.245,
+      ultimoPeso: 98.2451,
     };
 
     render(
@@ -83,7 +83,7 @@ describe('MonitoreoEtapaCard', () => {
       />
     );
 
-    expect(screen.getByText('98.245')).toBeInTheDocument();
+    expect(screen.getByText('98.2451')).toBeInTheDocument();
   });
 
   it('uses last sample weight as fallback when ultimoPeso is 0', () => {
@@ -91,7 +91,7 @@ describe('MonitoreoEtapaCard', () => {
       ...mockEtapa,
       ultimoPeso: 0,
       timeSeries: [
-        { peso: 104.128, time: '2026-07-22T10:05:00.000Z', pasadaId: 1, estadoValidacion: 'ok' }
+        { peso: 104.1283, time: '2026-07-22T10:05:00.000Z', pasadaId: 1, estadoValidacion: 'ok' }
       ]
     };
 
@@ -103,7 +103,7 @@ describe('MonitoreoEtapaCard', () => {
       />
     );
 
-    expect(screen.getByText('104.128')).toBeInTheDocument();
+    expect(screen.getByText('104.1283')).toBeInTheDocument();
   });
 });
 
