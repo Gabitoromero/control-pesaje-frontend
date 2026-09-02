@@ -114,7 +114,7 @@ export const BalanzasPage = () => {
     onError: (err: unknown) => {
       alertError({
         title: 'No se pudo eliminar la balanza',
-        description: `${getApiErrorMessage(err, 'Ocurrió un error inesperado')}\n\nNota de sistema: No podés eliminar una balanza que está asignada a una línea o usada en pasadas. Desactivala en su lugar.`,
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
   });

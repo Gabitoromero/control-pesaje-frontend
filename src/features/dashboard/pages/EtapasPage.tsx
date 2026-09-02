@@ -116,7 +116,7 @@ export const EtapasPage = () => {
     onError: (err: unknown) => {
       alertError({
         title: 'No se pudo eliminar la etapa',
-        description: `${getApiErrorMessage(err, 'Ocurrió un error inesperado')}\n\nNota de sistema: No podés eliminar entidades que ya están asociadas a Rutas en el sistema.`,
+        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
       });
     },
   });
