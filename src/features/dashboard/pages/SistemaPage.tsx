@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BookOpen, Construction } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 
 function Nota({ children, clave = false }: { children: ReactNode; clave?: boolean }) {
@@ -117,15 +117,375 @@ export function SistemaPage() {
         </p>
       </div>
 
-      <CollapsibleSection title="Manual del sistema" count={0}>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground py-2">
-          <Construction className="w-5 h-5 flex-shrink-0" />
-          En construcción — próximamente vas a encontrar acá la documentación funcional del
-          sistema (flujos de pesaje, roles, reportes, etc.).
-        </div>
+      <CollapsibleSection title="Manual — Rol Operario" count={7} defaultOpen>
+        <p className="text-sm text-muted-foreground mb-5">
+          Uso diario de la tablet asignada a cada línea de producción: ingreso, selección de
+          línea, registro de muestras de una pasada y muestras libres de calidad.
+        </p>
+
+        <Nota>
+          Las <strong>etapas</strong> que ves en la tablet (por ejemplo "Peso Cono", "Peso Mix",
+          "Altura Crema", "Temperatura") <strong>no son fijas</strong>: dependen de la{' '}
+          <strong>ruta</strong> configurada para tu línea, y esa ruta cambia según el artículo o
+          proceso que se esté pesando. La cantidad de muestras requeridas y el rango de peso de
+          cada etapa también se definen por ruta, no son iguales en todas las líneas.
+        </Nota>
+
+        <Sub title="1. Ingreso al sistema">
+          <p>
+            El ingreso a la tablet <strong>no usa usuario y contraseña</strong>: se hace con tu{' '}
+            <strong>legajo</strong> (numérico) y tu <strong>PIN</strong> (4 a 6 dígitos), usando
+            un teclado numérico táctil en pantalla (dígitos del 0 al 9 y una tecla de borrar).
+          </p>
+          <p>
+            El ingreso tiene dos pasos, marcados con un indicador visual (ícono de usuario y
+            luego candado): primero "Ingresá tu legajo", después "Ingresá tu PIN". Si alguno de
+            los dos datos es incorrecto, el sistema muestra el error "PIN o legajo incorrecto" y
+            hay que volver a intentar.
+          </p>
+        </Sub>
+
+        <Sub title="2. Selección de línea de producción">
+          <p>
+            Después de ingresar, se muestra la pantalla "Seleccionar Línea de Producción" con
+            todas las líneas disponibles. Cada línea aparece marcada como{' '}
+            <strong>"Disponible"</strong> u <strong>"Ocupada"</strong>: una línea ocupada por otro
+            operario queda deshabilitada y no se puede seleccionar. Este estado se actualiza en
+            vivo (por WebSocket) a medida que otros operarios entran o salen de una línea.
+          </p>
+          <p>
+            Al elegir una línea se abre una <strong>sesión de línea exclusiva</strong> para vos:
+            mientras la tengas abierta, ningún otro operario puede tomarla. Si dos operarios
+            intentan tomar la misma línea casi al mismo tiempo, el segundo recibe un aviso de
+            "Línea ocupada" y no puede continuar.
+          </p>
+        </Sub>
+
+        <Sub title="3. Espacio de trabajo (registro de muestras)">
+          <Nota clave>
+            No existe un botón para "avanzar de etapa". El paso de una etapa a la siguiente es{' '}
+            <strong>automático</strong>: se calcula solo, comparando cuántas muestras "OK"
+            llevás registradas contra la cantidad requerida para esa etapa en la ruta activa.
+          </Nota>
+          <p>
+            El peso se recibe <strong>en vivo desde la balanza</strong>, por WebSocket — nunca se
+            escribe a mano. Mientras la etapa activa está en curso, el botón principal es{' '}
+            <strong>"Registrar Muestra"</strong>, que toma el peso que la balanza está mostrando
+            en ese instante.
+          </p>
+          <p>
+            Hay un control de <strong>unidad de balanza (gramos / kilogramos)</strong> que se
+            puede cambiar en vivo desde la misma pantalla, con una confirmación antes de
+            aplicarlo.
+          </p>
+          <p>
+            Si el peso registrado se aleja más de un <strong>20% del rango mínimo o máximo</strong>{' '}
+            configurado para esa etapa, el registro queda <strong>bloqueado</strong> y aparece un
+            aviso visual de tolerancia excedida — hay que corregir el peso (o consultar a tu
+            Jefe) antes de poder seguir.
+          </p>
+          <p>
+            Cuando ya no queda ninguna etapa activa (todas completaron su cantidad de muestras
+            requeridas), el botón "Registrar Muestra" es reemplazado por{' '}
+            <strong>"Finalizar Pasada"</strong>, que cierra la pasada.
+          </p>
+          <p>
+            Si un Jefe o Administrador aborta tu pasada mientras la tenés abierta (ver sección
+            "Pasadas Activas" del manual de Jefe), te aparece un diálogo de aviso en la tablet y
+            volvés forzado al listado de pasadas.
+          </p>
+        </Sub>
+
+        <Sub title="4. Iniciar una pasada nueva">
+          <Nota clave>
+            El operario <strong>no elige el artículo</strong> de la pasada. El artículo que se
+            pesa queda fijado por la configuración de la línea (la arma tu Jefe o Administrador
+            desde Parametrización → Líneas).
+          </Nota>
+          <p>
+            Desde la pantalla de Gestión de Pasadas, al iniciar una pasada nueva solo se piden dos
+            datos: la <strong>balanza</strong> a usar (obligatorio) y una{' '}
+            <strong>observación opcional</strong> — el sistema sugiere copiar la observación ya
+            cargada en la línea, si existe.
+          </p>
+          <p>
+            Si la línea no tiene una ruta asignada, o no tiene un dispositivo/balanza vinculados,
+            el botón "Nueva Pasada" aparece deshabilitado, con un mensaje que explica qué falta
+            configurar (esa parte la resuelve tu Jefe o Administrador, no vos).
+          </p>
+        </Sub>
+
+        <Sub title="5. Gestión de pasadas propias">
+          <p>
+            En esta pantalla ves únicamente las pasadas <strong>en curso</strong> que iniciaste
+            vos en la línea activa. Podés continuar una pasada que ya habías empezado, pero{' '}
+            <strong>no podés abortarla ni eliminarla</strong> — esa acción es exclusiva de Jefe y
+            Administrador, y en el sistema se llama "abortar" (con motivo obligatorio), no
+            "eliminar".
+          </p>
+        </Sub>
+
+        <Sub title="6. Cierre de sesión por inactividad">
+          <Nota clave>
+            No existe una pantalla de "bloqueo" que se destrabe con el PIN. Lo que hay es un{' '}
+            <strong>cierre de sesión completo</strong>: al vencer el tiempo de inactividad, la
+            sesión se cierra del todo y hay que volver a ingresar legajo y PIN desde cero.
+          </Nota>
+          <p>
+            30 segundos antes del cierre, aparece un aviso en pantalla ("Tu sesión expirará por
+            inactividad en 30 segundos") acompañado de un doble sonido. Si no hay actividad en ese
+            lapso, la sesión se cierra, se limpia el acceso y la tablet vuelve a la pantalla de
+            ingreso.
+          </p>
+          <p>
+            Lo mismo ocurre si un Administrador fuerza el cierre de sesión de esa línea desde
+            "Sesiones Activas": el flujo es igual, solo cambia el mensaje mostrado. Mientras estás
+            activo en la tablet, un chequeo periódico ("heartbeat") mantiene la sesión viva.
+          </p>
+        </Sub>
+
+        <Sub title="7. Muestras libres">
+          <p>
+            Es una toma de muestras de calidad <strong>fuera de una pasada normal</strong>, visible
+            solo si tu usuario tiene habilitado el permiso{' '}
+            <strong>"Puede tomar muestras libres"</strong> — ese permiso lo activa un Administrador
+            al crear o editar tu usuario, el Jefe no puede otorgarlo.
+          </p>
+          <p>
+            Se accede desde el botón "Tomar Muestras Libres" en la sección "Muestras de Calidad
+            Libre" de Gestión de Pasadas (visible solo si tenés el permiso, y la línea tiene ruta
+            y dispositivo asignados). A diferencia de una pasada, acá{' '}
+            <strong>no se pide artículo</strong>.
+          </p>
+          <p>
+            Elegís la etapa desde una fila de opciones con la ruta activa de la línea: cualquier
+            etapa se puede tocar en cualquier momento, sin un orden obligatorio (a diferencia de
+            la pasada normal, donde las etapas se completan una detrás de otra). El peso se toma
+            en vivo por WebSocket, igual que en el espacio de trabajo normal. La observación de
+            cada muestra se agrega o edita <strong>después</strong>, tocando la muestra ya
+            registrada.
+          </p>
+          <p>
+            Hay un límite duro de <strong>20 muestras por sesión</strong>. El botón final es{' '}
+            <strong>"Finalizar Muestras"</strong> (no pide confirmación), limpia la sesión local y
+            vuelve al listado de pasadas.
+          </p>
+        </Sub>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Infraestructura — Raspberry Pi y sincronización" count={6} defaultOpen>
+      <CollapsibleSection title="Manual — Rol Jefe" count={9}>
+        <p className="text-sm text-muted-foreground mb-5">
+          Supervisión de planta y configuración de líneas, rutas, artículos y etapas desde el
+          navegador. El Jefe ve todo esto además de poder entrar a la tablet como Operario.
+        </p>
+
+        <Sub title="1. Monitoreo (Dashboard)">
+          <p>
+            Es la pantalla de inicio del panel web. No cambia según el rol: Jefe, Administrador y
+            Visualización ven exactamente la misma pantalla de Monitoreo.
+          </p>
+          <p>
+            Muestra un selector de línea, KPIs (muestras totales, muestras fuera de rango, pasadas
+            finalizadas, pasadas en curso), un banner con la observación cargada en la línea, y un
+            carrusel con el progreso de cada etapa de la ruta activa.
+          </p>
+          <p>
+            Tiene un botón de pantalla completa (sin menú lateral) pensado para dejar el dashboard
+            fijo en una pantalla de TV de planta.
+          </p>
+        </Sub>
+
+        <Sub title="2. Pasadas Activas">
+          <p>
+            Pantalla exclusiva de Jefe y Administrador (grupo de menú "Administración"). Lista
+            todas las pasadas en curso de todas las líneas: línea, operario, artículo, hora de
+            inicio y estado.
+          </p>
+          <Nota clave>
+            La única acción disponible es <strong>"Abortar Pasada"</strong> (botón destructivo),
+            que pide un motivo obligatorio antes de confirmar. No existe una opción para
+            "reasignar" una pasada a otra línea.
+          </Nota>
+        </Sub>
+
+        <Sub title="3. Parametrización — Artículos">
+          <p>
+            Campos del formulario: código (obligatorio), nombre (obligatorio) y descripción
+            (opcional).
+          </p>
+          <p>
+            No hay "bloqueo" de artículo: la acción es <strong>eliminar</strong> (borrado lógico,
+            no borra el historial de pasadas ya hechas con ese artículo) con el botón "Eliminar
+            Artículo" más confirmación, y "Activar Artículo" para reactivar uno eliminado. El
+            alta, la edición y la eliminación se bloquean mientras el artículo tiene actividad
+            (pasadas o sesiones en curso).
+          </p>
+        </Sub>
+
+        <Sub title="4. Parametrización — Etapas">
+          <p>
+            El catálogo de Etapas es simple: solo <strong>nombre</strong>, <strong>descripción</strong>{' '}
+            y estado activo/inactivo.
+          </p>
+          <Nota clave>
+            La cantidad de muestras requeridas y el rango de peso (mínimo / ideal / máximo) de una
+            etapa <strong>no se configuran acá</strong>: se definen dentro de cada Ruta, al
+            asignarle esa etapa (ver "Parametrización — Rutas" más abajo).
+          </Nota>
+          <p>
+            Mismo patrón que Artículos: eliminar (borrado lógico) / activar, con bloqueo mientras
+            hay actividad asociada.
+          </p>
+        </Sub>
+
+        <Sub title="5. Parametrización — Balanzas">
+          <p>
+            Catálogo simple, con un único campo: <strong>nombre</strong>. Mismo patrón de eliminar
+            / activar que los catálogos anteriores. Si una balanza está asignada a una línea o
+            tiene pasadas registradas, no se puede eliminar y el sistema muestra un mensaje de
+            error específico.
+          </p>
+        </Sub>
+
+        <Sub title="6. Parametrización — Líneas">
+          <p>Campos del formulario de una línea de producción:</p>
+          <Tabla
+            headers={['Campo', 'Obligatorio', 'Uso']}
+            rows={[
+              ['Nombre', 'Sí', 'Identifica la línea en todo el sistema'],
+              ['Balanza', 'Sí', 'Balanza física asociada a esta línea'],
+              ['Artículo', 'Sí', 'Fija qué artículo se pesa en esta línea (el operario no lo elige)'],
+              ['Dispositivo', 'No', 'Vincula la Raspberry Pi a esta línea'],
+              ['Ruta Activa', 'No', 'Ruta de etapas que va a seguir el operario en esta línea'],
+              ['Observación', 'No', 'Texto libre, visible en Monitoreo y sugerido al operario'],
+            ]}
+          />
+          <p>
+            Si se guarda una línea sin Ruta Activa, el sistema no muestra la confirmación simple
+            de éxito habitual, sino un aviso: <strong>"Línea guardada sin ruta activa"</strong>.
+          </p>
+        </Sub>
+
+        <Sub title="7. Parametrización — Rutas">
+          <p>
+            Una ruta define un nombre, una descripción, y una lista{' '}
+            <strong>ordenable (arrastrar y soltar)</strong> de etapas. Cada etapa dentro de la
+            ruta tiene tres datos propios, además de la etapa del catálogo que representa:
+          </p>
+          <Tabla
+            headers={['Dato de la etapa en la ruta', 'Detalle']}
+            rows={[
+              ['Cantidad de muestras requeridas', 'Mínimo 1 — define cuándo esa etapa se da por completa'],
+              ['Peso mínimo (kg)', 'Límite inferior del rango de tolerancia'],
+              ['Peso ideal (kg)', 'Valor objetivo de referencia'],
+              ['Peso máximo (kg)', 'Límite superior del rango de tolerancia'],
+            ]}
+          />
+          <p>
+            Además, cada ruta tiene una sección separada, "Artículos Asignados", donde se arma
+            una relación de muchos a muchos: <strong>una ruta puede aplicarse a varios artículos</strong>,
+            y un artículo puede tener más de una ruta posible. Los artículos se asignan a la ruta
+            desde esta pantalla, no al revés.
+          </p>
+        </Sub>
+
+        <Sub title="8. Dispositivos Conectados">
+          <p>
+            Vive dentro del grupo Parametrización, con el título en pantalla "Dispositivos
+            Conectados (Raspberry Pi)". Tabla con nombre, identificador de hardware, línea de
+            producción asociada, estado de conexión, última conexión y unidad configurada.
+          </p>
+          <Nota clave>
+            Desde acá solo se puede editar el <strong>nombre</strong> del dispositivo y{' '}
+            <strong>eliminarlo</strong>. No hay un asistente de "vincular dispositivo nuevo" en
+            esta pantalla — esa vinculación (dispositivo ↔ línea) se hace desde el formulario de
+            Líneas (ver sección 6).
+          </Nota>
+        </Sub>
+
+        <Sub title="9. Reportes">
+          <p>
+            Hoy hay un único reporte implementado: <strong>"Reporte de Pasadas y Muestras"</strong>,
+            con filtro de rango de fechas (Desde / Hasta). El rango máximo permitido es de{' '}
+            <strong>5 días</strong>; un rango mayor no se puede descargar.
+          </p>
+          <p>
+            El botón "Descargar .xlsx" está deshabilitado con la leyenda{' '}
+            <strong>"Disponible próximamente"</strong> — todavía no es una función operativa.
+          </p>
+        </Sub>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Manual — Rol Administrador" count={3}>
+        <p className="text-sm text-muted-foreground mb-5">
+          El Administrador ve y puede hacer todo lo que puede hacer un Jefe (Monitoreo, Pasadas
+          Activas y toda la Parametrización descripta arriba), más dos secciones exclusivas:
+          gestión de usuarios y sesiones activas.
+        </p>
+
+        <Sub title="1. Todo lo de Jefe">
+          <p>
+            Monitoreo, Pasadas Activas y el grupo completo de Parametrización (Artículos, Etapas,
+            Balanzas, Líneas, Rutas, Dispositivos Conectados) y Reportes funcionan exactamente
+            igual que para el rol Jefe — ver "Manual — Rol Jefe" arriba.
+          </p>
+        </Sub>
+
+        <Sub title="2. Usuarios">
+          <p>Pantalla exclusiva de Administrador, dentro del grupo "Administración". Campos:</p>
+          <Tabla
+            headers={['Campo', 'Obligatorio', 'Detalle']}
+            rows={[
+              ['Legajo', 'Sí', 'Número que usa el operario para ingresar a la tablet'],
+              ['Nombre y apellido', 'Sí', '—'],
+              ['Nombre de usuario', 'Sí', '—'],
+              ['Rol', 'Sí', 'Administrador / Jefe / Operario / Visualización'],
+              ['PIN', 'Sí al crear', 'Al editar es opcional: dejarlo vacío significa "no cambiarlo"'],
+              ['Puede tomar muestras libres', 'No', 'Checkbox, en la práctica solo aplica a Operario'],
+            ]}
+          />
+          <p>
+            Alta, edición, eliminación (borrado lógico) y reactivación. A diferencia de los
+            catálogos de Parametrización, la gestión de usuarios{' '}
+            <strong>no se bloquea por actividad</strong> en curso.
+          </p>
+        </Sub>
+
+        <Sub title="3. Sesiones Activas">
+          <p>
+            Pantalla exclusiva de Administrador. Tabla con línea, usuario, legajo, inicio de
+            sesión, expiración aproximada y estado.
+          </p>
+          <p>
+            La única acción es cerrar sesión (con confirmación). El cierre es{' '}
+            <strong>por línea</strong>, no por usuario aislado: fuerza el logout del operario que
+            en ese momento tenga esa línea abierta (ver "Cierre de sesión por inactividad" en el
+            manual de Operario, mismo flujo, mensaje distinto).
+          </p>
+        </Sub>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Manual — Rol Visualización" count={1}>
+        <p className="text-sm text-muted-foreground mb-5">
+          Pensado para quedar fijo en una pantalla o TV de planta, sin un operador activo
+          manejándola.
+        </p>
+
+        <Sub title="1. Qué ve y qué no ve">
+          <p>
+            Solo tiene acceso a <strong>Monitoreo</strong> (el mismo dashboard de KPIs que ven
+            Jefe y Administrador, con la opción de pantalla completa) y a la sección{' '}
+            <strong>Sistema</strong>, donde vive este mismo manual. El ítem "Reportes" no aparece
+            en su menú.
+          </p>
+          <p>
+            No tiene acceso a Parametrización, Administración, Pasadas Activas, Usuarios, ni a la
+            tablet de operario.
+          </p>
+        </Sub>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Infraestructura — Raspberry Pi y sincronización" count={6}>
         <p className="text-sm text-muted-foreground mb-5">
           Qué hace la Raspberry Pi de cada línea de producción y cómo se sincroniza con el
           servidor central. Documento de referencia técnica, preparado originalmente para el
