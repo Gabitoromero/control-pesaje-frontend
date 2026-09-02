@@ -1,13 +1,14 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Plus, Loader2, X, AlertTriangle, FlaskConical } from 'lucide-react';
+import { LogOut, Plus, Loader2, X, Check, AlertTriangle, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getBalanzas } from '../../../api/balanzas';
 import type { Pasada, Balanza } from '../../../shared/types/domain';
 import { PasadaCard } from '../components/PasadaCard';
+import { LineaObservacionBanner } from '../components/LineaObservacionBanner';
 import { resetSocket } from '../../../services/websocket';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { CONFIRM_LOGOUT_MESSAGE } from '../constants/logoutGuard';
@@ -20,6 +21,7 @@ export const GestionPasadasPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
   const [observacionIniciar, setObservacionIniciar] = React.useState('');
+  const [sugerenciaObservacionVista, setSugerenciaObservacionVista] = React.useState(false);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
 
@@ -87,6 +89,7 @@ export const GestionPasadasPage: React.FC = () => {
   const handleOpenModal = () => {
     setSelectedBalanzaId(linea?.idBalanza ?? null);
     setObservacionIniciar('');
+    setSugerenciaObservacionVista(false);
     setErrorIniciar(null);
     setIsModalOpen(true);
   };
@@ -95,6 +98,19 @@ export const GestionPasadasPage: React.FC = () => {
     setIsModalOpen(false);
     setSelectedBalanzaId(null);
     setObservacionIniciar('');
+  };
+
+  // Proposes copying the línea's own observación into the new pasada's
+  // observación — the línea's is never exported in the Excel report, so
+  // operators likely want it preserved on the pasada. Appends rather than
+  // overwrites in case the operator already typed something.
+  const handleAceptarSugerenciaObservacion = () => {
+    if (!linea?.observacion) return;
+    setObservacionIniciar((prev) => {
+      const prevTrimmed = prev.trim();
+      return prevTrimmed ? `${prevTrimmed}\n${linea.observacion}` : linea.observacion!;
+    });
+    setSugerenciaObservacionVista(true);
   };
 
   if (!activeLineaId) {
@@ -183,6 +199,12 @@ export const GestionPasadasPage: React.FC = () => {
       </header>
 
       <main data-testid="tablet-page-scroll" className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
+        {linea?.observacion && (
+          <div className="mb-6">
+            <LineaObservacionBanner observacion={linea.observacion} />
+          </div>
+        )}
+
         {/* Warning: line has no route assigned */}
         {sinRutaAsignada && (
           <div className="flex items-start gap-3 bg-warning/10 border border-warning/50 rounded-2xl p-5 mb-6">
@@ -341,9 +363,38 @@ export const GestionPasadasPage: React.FC = () => {
                 </div>
               )}
 
+              {linea?.observacion && !sugerenciaObservacionVista && (
+                <div className="mt-4 flex flex-col gap-3 bg-primary/5 border border-primary/30 rounded-xl p-3">
+                  <div className="text-sm text-foreground">
+                    <p>
+                      La línea tiene una observación: <span className="italic text-muted-foreground">"{linea.observacion}"</span>
+                    </p>
+                    <p className="mt-0.5">¿Querés agregarla a la observación de la nueva pasada?</p>
+                  </div>
+                  <div className="flex items-center justify-center gap-8">
+                    <button
+                      type="button"
+                      onClick={handleAceptarSugerenciaObservacion}
+                      aria-label="Agregar observación de la línea"
+                      className="p-1.5 rounded-lg text-success hover:bg-success/10 transition-colors"
+                    >
+                      <Check size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSugerenciaObservacionVista(true)}
+                      aria-label="Descartar sugerencia"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-4">
                 <label htmlFor="pasada-observacion" className="block text-sm font-medium text-foreground mb-1">
-                  Observación <span className="text-muted-foreground font-normal">(opcional)</span>
+                  Observación de la pasada <span className="text-muted-foreground font-normal">(opcional)</span>
                 </label>
                 <textarea
                   id="pasada-observacion"

@@ -11,6 +11,7 @@ import { useStageAdvanceSignal } from '../hooks/useStageAdvanceSignal';
 import { StageProgressPanel } from '../components/StageProgressPanel';
 import { StageAdvanceFlash } from '../components/StageAdvanceFlash';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
+import { LineaObservacionBanner } from '../components/LineaObservacionBanner';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { getPasada, completarPasada } from '../../../api/pasadas';
@@ -286,6 +287,12 @@ export const TabletWorkspace: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {linea?.observacion && (
+        <div className="flex-shrink-0">
+          <LineaObservacionBanner observacion={linea.observacion} />
+        </div>
+      )}
 
       <div className="flex-shrink-0">
         <StageProgressPanel etapasConEstado={etapasConEstado} advanceSignal={advanceSignal} />

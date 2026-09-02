@@ -316,4 +316,25 @@ describe('MuestrasLibresPage', () => {
     expect(btnRegistrar.className).toContain('bg-warning');
     expect(btnRegistrar.className).not.toContain('bg-muted');
   });
+
+  // ── línea observación banner ───────────────────────────────────────────
+
+  it('muestra el banner informativo de observación de la línea cuando la línea tiene una', async () => {
+    vi.mocked(getLinea).mockResolvedValue({
+      ...lineaConRuta,
+      observacion: 'Línea reservada para producción de temporada',
+    } as never);
+
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    expect(await screen.findByText('Observación de la línea')).toBeInTheDocument();
+    expect(screen.getByText('Línea reservada para producción de temporada')).toBeInTheDocument();
+  });
+
+  it('no muestra el banner de observación cuando la línea no tiene observación', async () => {
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await screen.findByText('MUESTRAS LIBRES');
+    expect(screen.queryByText('Observación de la línea')).not.toBeInTheDocument();
+  });
 });

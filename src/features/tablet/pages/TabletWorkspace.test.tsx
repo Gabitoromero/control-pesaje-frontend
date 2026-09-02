@@ -887,4 +887,50 @@ describe('TabletWorkspace', () => {
 
     expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas', { replace: true });
   });
+
+  // ── línea observación banner ───────────────────────────────────────────
+
+  it('muestra el banner informativo de observación de la línea cuando la línea tiene una', async () => {
+    server.use(
+      http.get(`${BASE}/lineas-produccion/1`, () => {
+        return HttpResponse.json({
+          success: true,
+          data: {
+            id: 1,
+            nombre: 'Línea 1 — Envasado A',
+            activo: true,
+            observacion: 'Línea reservada para producción de temporada',
+            rutaPasadaActiva: {
+              id: 1,
+              nombre: 'Ruta 1',
+              activo: true,
+              etapas: [
+                { id: 10, etapa: { id: 1, nombre: 'Amasado' }, orden: 1, pesoMinimo: 10, pesoIdeal: 15, pesoMaximo: 20, cantidadMuestrasRequeridas: 2 },
+              ],
+            },
+          },
+        });
+      })
+    );
+
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    expect(await screen.findByText('Observación de la línea')).toBeInTheDocument();
+    expect(screen.getByText('Línea reservada para producción de temporada')).toBeInTheDocument();
+  });
+
+  it('no muestra el banner de observación cuando la línea no tiene observación', async () => {
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+    await screen.findByRole('button', { name: /volver/i });
+    expect(screen.queryByText('Observación de la línea')).not.toBeInTheDocument();
+  });
 });

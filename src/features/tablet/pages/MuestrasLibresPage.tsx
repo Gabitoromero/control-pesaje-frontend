@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { MuestrasListPanel } from '../components/MuestrasListPanel';
+import { LineaObservacionBanner } from '../components/LineaObservacionBanner';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
@@ -162,6 +163,12 @@ export function MuestrasLibresPage() {
           </button>
         </div>
       </div>
+
+      {linea?.observacion && (
+        <div className="flex-shrink-0">
+          <LineaObservacionBanner observacion={linea.observacion} />
+        </div>
+      )}
 
       {/* Etapa selector — flat pill row, any etapa clickable anytime (no locking) */}
       <div className="flex-shrink-0 flex flex-wrap gap-2">

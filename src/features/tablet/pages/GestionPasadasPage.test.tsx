@@ -477,4 +477,72 @@ describe('GestionPasadasPage', () => {
       expect(pasadasGrid?.className).toContain('min-[950px]:grid-cols-2');
     });
   });
+
+  describe('observación de la línea', () => {
+    it('muestra el banner informativo cuando la línea tiene observación', async () => {
+      vi.mocked(getLinea).mockResolvedValue({ ...lineaConRuta, observacion: 'Cuidado con el sensor de peso' });
+
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      expect(await screen.findByText('Observación de la línea')).toBeInTheDocument();
+      expect(screen.getByText('Cuidado con el sensor de peso')).toBeInTheDocument();
+    });
+
+    it('no muestra el banner cuando la línea no tiene observación', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await screen.findByText('Pasada #101');
+      expect(screen.queryByText('Observación de la línea')).not.toBeInTheDocument();
+    });
+
+    it('propone agregar la observación de la línea a la observación de la pasada en el modal', async () => {
+      vi.mocked(getLinea).mockResolvedValue({ ...lineaConRuta, observacion: 'Cuidado con el sensor de peso' });
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+      expect(screen.getByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Agregar observación de la línea' }));
+
+      expect(screen.getByLabelText(/observación de la pasada/i)).toHaveValue('Cuidado con el sensor de peso');
+      expect(screen.queryByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).not.toBeInTheDocument();
+    });
+
+    it('agrega la observación de la línea a continuación de lo ya escrito, sin sobreescribirlo', async () => {
+      vi.mocked(getLinea).mockResolvedValue({ ...lineaConRuta, observacion: 'Cuidado con el sensor de peso' });
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      const textarea = await screen.findByLabelText(/observación de la pasada/i);
+      await userEvent.type(textarea, 'Lote nuevo');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Agregar observación de la línea' }));
+
+      expect(textarea).toHaveValue('Lote nuevo\nCuidado con el sensor de peso');
+    });
+
+    it('descarta la sugerencia sin tocar la observación de la pasada al hacer click en la cruz', async () => {
+      vi.mocked(getLinea).mockResolvedValue({ ...lineaConRuta, observacion: 'Cuidado con el sensor de peso' });
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      expect(await screen.findByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Descartar sugerencia' }));
+
+      expect(screen.queryByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/observación de la pasada/i)).toHaveValue('');
+    });
+
+    it('no propone la sugerencia cuando la línea no tiene observación', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+      expect(screen.queryByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).not.toBeInTheDocument();
+    });
+  });
 });
