@@ -12,6 +12,7 @@ export interface DashboardLineaItem {
   dispositivo?: {
     id: string; // hardwareId — string, not numeric DB id
   } | null;
+  observacion?: string | null;
 }
 
 export interface DashboardLineaResumen {

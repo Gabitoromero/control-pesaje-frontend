@@ -56,4 +56,33 @@ describe('MonitoreoPage', () => {
 
     expect(screen.queryByText(/sin dispositivo/i)).not.toBeInTheDocument();
   });
+
+  it('muestra el banner de observación de la línea entre el header y los KPIs', () => {
+    vi.mocked(useMonitoreoLineas).mockReturnValue({
+      ...baseHookResult,
+      lineas: [{ id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: '5' }, observacion: 'Cuidado con el sensor de peso' }],
+      lineaActual: { id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: '5' }, observacion: 'Cuidado con el sensor de peso' },
+      resumen: { conectado: false, pasadaEnCurso: null, tiempoDesdeRuta: null },
+      kpis: { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, pasadasEnCurso: 0 },
+    });
+
+    renderWithProviders(<MonitoreoPage />);
+
+    expect(screen.getByText('Observación de la línea')).toBeInTheDocument();
+    expect(screen.getByText('Cuidado con el sensor de peso')).toBeInTheDocument();
+  });
+
+  it('no muestra el banner cuando la línea activa no tiene observación', () => {
+    vi.mocked(useMonitoreoLineas).mockReturnValue({
+      ...baseHookResult,
+      lineas: [{ id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: '5' } }],
+      lineaActual: { id: 1, nombre: 'Linea 1', activo: true, rutaAsignadaAt: null, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' }, dispositivo: { id: '5' } },
+      resumen: { conectado: false, pasadaEnCurso: null, tiempoDesdeRuta: null },
+      kpis: { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, pasadasEnCurso: 0 },
+    });
+
+    renderWithProviders(<MonitoreoPage />);
+
+    expect(screen.queryByText('Observación de la línea')).not.toBeInTheDocument();
+  });
 });

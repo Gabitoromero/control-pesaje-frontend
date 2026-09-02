@@ -6,6 +6,7 @@ import { MonitoreoKpiStrip } from '../components/MonitoreoKpiStrip';
 import { MonitoreoEtapasCarousel } from '../components/MonitoreoEtapasCarousel';
 import { useMonitoreoLineas } from '../hooks/useMonitoreoLineas';
 import { EmptyState } from '../../../components/EmptyState';
+import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
 import { Loader2, Inbox } from 'lucide-react';
 
 export const MonitoreoFullscreenPage = () => {
@@ -77,6 +78,7 @@ export const MonitoreoFullscreenPage = () => {
           onFullscreen={handleExitFullscreen}
           isFullscreen={true}
         />
+        <LineaObservacionBanner observacion={lineaActual?.observacion} />
         {kpis && <MonitoreoKpiStrip kpis={kpis} />}
       </div>
 

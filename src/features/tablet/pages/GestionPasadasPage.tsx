@@ -8,7 +8,7 @@ import { getLinea } from '../../../api/lineas';
 import { getBalanzas } from '../../../api/balanzas';
 import type { Pasada, Balanza } from '../../../shared/types/domain';
 import { PasadaCard } from '../components/PasadaCard';
-import { LineaObservacionBanner } from '../components/LineaObservacionBanner';
+import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
 import { resetSocket } from '../../../services/websocket';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { CONFIRM_LOGOUT_MESSAGE } from '../constants/logoutGuard';

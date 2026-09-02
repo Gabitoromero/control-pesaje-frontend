@@ -5,11 +5,12 @@ interface LineaObservacionBannerProps {
 }
 
 /**
- * Informative banner shown on the "Planta" tablet pages (GestionPasadasPage,
- * TabletWorkspace, MuestrasLibresPage) whenever the active línea carries a
- * non-null observación. Visual language matches the dashboard's blocking
- * "actividad" banners, but this one is informative — Info icon, not
- * AlertTriangle — and never disables anything.
+ * Informative banner shown wherever a línea de producción's context is
+ * visible (tablet "Planta" pages: GestionPasadasPage, TabletWorkspace,
+ * MuestrasLibresPage; dashboard: MonitoreoPage/MonitoreoFullscreenPage)
+ * whenever the active línea carries a non-null observación. Visual language
+ * matches the dashboard's blocking "actividad" banners, but this one is
+ * informative — Info icon, not AlertTriangle — and never disables anything.
  */
 export function LineaObservacionBanner({ observacion }: LineaObservacionBannerProps) {
   if (!observacion) return null;

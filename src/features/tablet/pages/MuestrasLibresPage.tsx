@@ -6,7 +6,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { MuestrasListPanel } from '../components/MuestrasListPanel';
-import { LineaObservacionBanner } from '../components/LineaObservacionBanner';
+import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
