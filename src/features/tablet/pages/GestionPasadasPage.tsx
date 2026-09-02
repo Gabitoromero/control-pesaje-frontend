@@ -19,6 +19,7 @@ export const GestionPasadasPage: React.FC = () => {
   const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
+  const [observacionIniciar, setObservacionIniciar] = React.useState('');
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
 
@@ -85,6 +86,7 @@ export const GestionPasadasPage: React.FC = () => {
   // render pass a setState-in-effect would trigger.
   const handleOpenModal = () => {
     setSelectedBalanzaId(linea?.idBalanza ?? null);
+    setObservacionIniciar('');
     setErrorIniciar(null);
     setIsModalOpen(true);
   };
@@ -92,6 +94,7 @@ export const GestionPasadasPage: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedBalanzaId(null);
+    setObservacionIniciar('');
   };
 
   if (!activeLineaId) {
@@ -143,9 +146,11 @@ export const GestionPasadasPage: React.FC = () => {
     try {
       setIniciando(true);
       setErrorIniciar(null);
+      const observacion = observacionIniciar.trim();
       const newPasada = await iniciarPasada({
         lineaProduccionId: activeLineaId,
         idBalanza: selectedBalanzaId,
+        ...(observacion && { observacion }),
       });
       setIsModalOpen(false);
       navigate(`/tablet?pasadaId=${newPasada.id}`);
@@ -335,6 +340,20 @@ export const GestionPasadasPage: React.FC = () => {
                   })}
                 </div>
               )}
+
+              <div className="mt-4">
+                <label htmlFor="pasada-observacion" className="block text-sm font-medium text-foreground mb-1">
+                  Observación <span className="text-muted-foreground font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  id="pasada-observacion"
+                  rows={2}
+                  placeholder="Ej: Lote de materia prima nuevo, proveedor X"
+                  className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground resize-none"
+                  value={observacionIniciar}
+                  onChange={(e) => setObservacionIniciar(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 p-5 border-t border-border">

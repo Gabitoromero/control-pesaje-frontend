@@ -304,6 +304,51 @@ describe('GestionPasadasPage', () => {
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
   });
 
+  // ── observacion field on the "Iniciar Nueva Pasada" modal ─────────────────
+
+  it('envía la observación escrita en el modal al iniciar la pasada', async () => {
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 300 } as Pasada);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    await userEvent.type(
+      screen.getByLabelText(/observación/i),
+      'Lote de materia prima nuevo'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /iniciar pasada/i }));
+
+    expect(iniciarPasada).toHaveBeenCalledWith({
+      lineaProduccionId: 1,
+      idBalanza: 1,
+      observacion: 'Lote de materia prima nuevo',
+    });
+  });
+
+  it('no manda la clave observacion si el campo queda vacío', async () => {
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 301 } as Pasada);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /iniciar pasada/i }));
+
+    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
+    expect(iniciarPasada).not.toHaveBeenCalledWith(expect.objectContaining({ observacion: expect.anything() }));
+  });
+
+  it('resetea la observación al cerrar y reabrir el modal', async () => {
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    await userEvent.type(screen.getByLabelText(/observación/i), 'texto temporal');
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar modal' }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(screen.getByLabelText(/observación/i)).toHaveValue('');
+  });
+
   it('no contiene ningún rastro del selector de artículo obsoleto', async () => {
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 

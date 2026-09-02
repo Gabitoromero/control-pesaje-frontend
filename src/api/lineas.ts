@@ -16,6 +16,7 @@ export interface Linea {
   estado?: 'disponible' | 'ocupada';
   idBalanza?: number;
   articuloId?: number;
+  observacion?: string | null;
 }
 
 export interface LineaCreate extends Omit<Linea, 'id' | 'rutaPasadaActiva' | 'dispositivo'> {

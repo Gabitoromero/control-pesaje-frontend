@@ -651,6 +651,90 @@ describe('LineasPage', () => {
       });
     });
 
+    it('creating a línea sends the typed observación in the payload', async () => {
+      let requestPayload: unknown = null;
+      server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', async ({ request }) => {
+          requestPayload = await request.json();
+          return HttpResponse.json({ success: true, data: { id: 99, ...(requestPayload as object) } }, { status: 201 });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      await selectComboboxOption(0, 'Balanza 2');
+      await selectComboboxOption(0, 'Azúcar');
+      await userEvent.type(screen.getByLabelText(/observación/i), 'Línea reservada para temporada');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      await waitFor(() => {
+        expect((requestPayload as Record<string, unknown>).observacion).toBe('Línea reservada para temporada');
+      });
+    });
+
+    it('creating a línea with a blank observación omits the key entirely (backend rejects "")', async () => {
+      let requestPayload: unknown = null;
+      server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', async ({ request }) => {
+          requestPayload = await request.json();
+          return HttpResponse.json({ success: true, data: { id: 99, ...(requestPayload as object) } }, { status: 201 });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Observación');
+      await selectComboboxOption(0, 'Balanza 1');
+      await selectComboboxOption(0, 'Harina 000');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      await waitFor(() => {
+        expect(requestPayload).not.toBeNull();
+      });
+      expect(requestPayload).not.toHaveProperty('observacion');
+    });
+
+    it('clearing an existing observación on edit sends observacion: null', async () => {
+      let requestPayload: unknown = null;
+      server.use(
+        http.put('http://localhost:3000/api/lineas-produccion/:id', async ({ request }) => {
+          requestPayload = await request.json();
+          return HttpResponse.json({ success: true, data: { id: 1, ...(requestPayload as object) } });
+        })
+      );
+
+      renderWithProviders(<LineasPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+
+      const lineaText = await screen.findByText('Línea 1 — Envasado A');
+      const lineaRow = lineaText.closest('tr')!;
+      await userEvent.click(within(lineaRow).getByTitle('Editar'));
+
+      const observacionField = screen.getByLabelText(/observación/i);
+      await userEvent.clear(observacionField);
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+      await waitFor(() => {
+        expect((requestPayload as Record<string, unknown>).observacion).toBeNull();
+      });
+    });
+
     it('empty balanza catalog shows an empty state with a link to the Balanza catalog page and blocks submission', async () => {
       server.use(
         http.get('http://localhost:3000/api/balanzas', () =>

@@ -37,6 +37,7 @@ const EMPTY_FORM = {
   dispositivoHardwareId: '',
   idBalanza: '',
   articuloId: '',
+  observacion: '',
 };
 
 const LINEA_FIELDS: SearchField[] = [
@@ -217,6 +218,7 @@ export const LineasPage = () => {
         dispositivoHardwareId: linea.dispositivo?.hardwareId || '',
         idBalanza: linea.idBalanza?.toString() || '',
         articuloId: linea.articuloId?.toString() || '',
+        observacion: linea.observacion ?? '',
       });
     } else {
       setEditingLinea(null);
@@ -238,6 +240,8 @@ export const LineasPage = () => {
 
     if (!canSubmit) return;
 
+    const observacion = formData.observacion.trim();
+
     if (editingLinea?.id) {
       updateMutation.mutate({
         id: editingLinea.id,
@@ -246,6 +250,9 @@ export const LineasPage = () => {
           rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
           idBalanza: Number(formData.idBalanza),
           articuloId: Number(formData.articuloId),
+          // Empty means "cleared" here — unlike a create, this PUT reflects
+          // the form's current state, so an emptied field sends null.
+          observacion: observacion || null,
         },
         hardwareId: formData.dispositivoHardwareId,
         accion: 'actualizada',
@@ -258,6 +265,9 @@ export const LineasPage = () => {
         dispositivoHardwareId: formData.dispositivoHardwareId,
         idBalanza: Number(formData.idBalanza),
         articuloId: Number(formData.articuloId),
+        // Backend rejects an empty string ("" fails Zod's min(1)) — omit the
+        // key entirely rather than sending "".
+        ...(observacion && { observacion }),
       });
     }
   };
@@ -443,6 +453,19 @@ export const LineasPage = () => {
                   options={rutas}
                   placeholder="Buscar ruta..."
                   clearable
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="linea-observacion" className="block text-sm font-medium text-foreground mb-1">
+                  Observación <span className="text-muted-foreground font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  id="linea-observacion"
+                  rows={2}
+                  placeholder="Ej: Línea reservada para producción de temporada"
+                  className="block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground resize-none"
+                  value={formData.observacion}
+                  onChange={(e) => setFormData({ ...formData, observacion: e.target.value })}
                 />
               </div>
             </div>
