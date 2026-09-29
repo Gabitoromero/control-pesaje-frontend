@@ -434,7 +434,7 @@ describe('EtapasPage', () => {
       expect(within(dialog).getByText('No se pudo actualizar')).toBeInTheDocument();
     });
 
-    it('delete failure shows an alertdialog titled "No se pudo eliminar la etapa" including the "Nota de sistema" detail', async () => {
+    it('delete failure shows an alertdialog titled "No se pudo eliminar la etapa" showing the backend message without a hardcoded "Nota de sistema"', async () => {
       server.use(
         http.delete('http://localhost:3000/api/etapas/:id', () =>
           HttpResponse.json({ success: false, error: { message: 'En uso' } }, { status: 409 })
@@ -458,7 +458,7 @@ describe('EtapasPage', () => {
       const errorDialog = await screen.findByRole('alertdialog');
       expect(within(errorDialog).getByText('No se pudo eliminar la etapa')).toBeInTheDocument();
       expect(within(errorDialog).getByText(/En uso/)).toBeInTheDocument();
-      expect(within(errorDialog).getByText(/Nota de sistema/)).toBeInTheDocument();
+      expect(within(errorDialog).queryByText(/Nota de sistema/)).not.toBeInTheDocument();
     });
   });
 });

@@ -164,7 +164,7 @@ describe('BalanzasPage', () => {
   });
 
   describe('RestrictError surfacing on blocked delete', () => {
-    it('delete failure (in-use balanza) shows alertdialog with backend message + Spanish operator note', async () => {
+    it('delete failure (in-use balanza) shows alertdialog with the backend message and no hardcoded system note', async () => {
       server.use(
         http.delete('http://localhost:3000/api/balanzas/:id', () =>
           HttpResponse.json(
@@ -190,7 +190,8 @@ describe('BalanzasPage', () => {
       const errorDialog = await screen.findByRole('alertdialog');
       expect(within(errorDialog).getByText('No se pudo eliminar la balanza')).toBeInTheDocument();
       expect(within(errorDialog).getByText(/Cannot delete balanza 1/)).toBeInTheDocument();
-      expect(within(errorDialog).getByText(/No podés eliminar una balanza que está asignada a una línea o usada en pasadas/)).toBeInTheDocument();
+      expect(within(errorDialog).queryByText(/Nota de sistema/)).not.toBeInTheDocument();
+      expect(within(errorDialog).queryByText(/Desactivala en su lugar/)).not.toBeInTheDocument();
     });
   });
 });
