@@ -184,7 +184,7 @@ describe('TabletWorkspace', () => {
     // Verify it renders Line name and stage name from MSW handlers
     expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
     expect((await screen.findAllByText('Amasado'))[0]).toBeInTheDocument();
-    expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
+    expect(screen.getByText('0 / 2')).toBeInTheDocument();
 
     // Tolerance OK badge + params row (pesoNeto=15 is within [10,20] for Amasado)
     expect(screen.getByText('OK')).toBeInTheDocument();
@@ -262,7 +262,7 @@ describe('TabletWorkspace', () => {
     // After clicking register, the sample list should contain the new sample.
     // Note: '15.0000 kg' also matches the tolerance params row (IDEAL=15 for Amasado).
     expect((await screen.findAllByText('15.0000 kg')).length).toBeGreaterThan(0);
-    expect(screen.getByText('1 / 2 muestras OK')).toBeInTheDocument();
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
   });
 
   it('muestra "Sin señal" y mantiene la página accesible cuando la balanza se desconecta', async () => {
@@ -345,7 +345,7 @@ describe('TabletWorkspace', () => {
 
     // Derived active stage is already Horneado (etapa 2) — no manual click needed.
     expect((await screen.findAllByText('Horneado'))[0]).toBeInTheDocument();
-    expect(screen.getByText('0 / 1 muestras OK')).toBeInTheDocument();
+    expect(screen.getByText('0 / 1')).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: /siguiente etapa/i })).not.toBeInTheDocument();
   });
@@ -725,7 +725,7 @@ describe('TabletWorkspace', () => {
     });
 
     // Stage 1 (Amasado, requires 2) starts with 1 OK sample.
-    expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
 
     // Open the sample popup and delete the sample.
     const row = (await screen.findAllByText('15.0000 kg')).map((el) => el.closest('li')).find(Boolean)!;
@@ -739,7 +739,7 @@ describe('TabletWorkspace', () => {
     // Deletion is refetch-driven, not optimistic: the query is invalidated
     // and the count comes back from the server's post-delete truth.
     await waitFor(() => {
-      expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
+      expect(screen.getByText('0 / 2')).toBeInTheDocument();
     });
   });
 
@@ -768,7 +768,7 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
     // No flash on initial mount — there is no prior active etapa to compare against.
     expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
 
@@ -811,7 +811,7 @@ describe('TabletWorkspace', () => {
       initialEntries: ['/tablet?pasadaId=101'],
     });
 
-    expect(await screen.findByText('1 / 2 muestras OK')).toBeInTheDocument();
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
     expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
 
     const row = (await screen.findAllByText('15.0000 kg')).map((el) => el.closest('li')).find(Boolean)!;
@@ -823,7 +823,7 @@ describe('TabletWorkspace', () => {
     await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
 
     await waitFor(() => {
-      expect(screen.getByText('0 / 2 muestras OK')).toBeInTheDocument();
+      expect(screen.getByText('0 / 2')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('stage-advance-flash')).not.toBeInTheDocument();
   });
@@ -831,10 +831,12 @@ describe('TabletWorkspace', () => {
   // ── Sample ordering (most recent first) ─────────────────────────────────
 
   it('ordena las muestras registradas con la más reciente arriba', async () => {
-    // Amasado requires 2 OK samples to auto-advance; only 1 of these 3 is
-    // 'ok' (13), so the stage stays active and all 3 remain visible together
-    // — otherwise the auto-advance (tested elsewhere) would move the active
-    // stage away before we can check the display order.
+    // Amasado requires 2 samples (OK or FUERA_DE_RANGO) to auto-advance; only
+    // 1 of these 3 counts toward that quota ('ok', id 3) since the other two
+    // are 'descartado' (which never counts), so the stage stays active and
+    // all 3 remain visible together — otherwise the auto-advance (tested
+    // elsewhere) would move the active stage away before we can check the
+    // display order.
     server.use(
       http.get(`${BASE}/muestras`, ({ request }) => {
         const url = new URL(request.url);
@@ -842,8 +844,8 @@ describe('TabletWorkspace', () => {
           return HttpResponse.json({
             success: true,
             data: [
-              { id: 1, pesoNeto: 11, estadoValidacion: 'fuera_de_rango', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z' },
-              { id: 2, pesoNeto: 12, estadoValidacion: 'fuera_de_rango', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:05:00Z' },
+              { id: 1, pesoNeto: 11, estadoValidacion: 'descartado', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:00:00Z' },
+              { id: 2, pesoNeto: 12, estadoValidacion: 'descartado', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:05:00Z' },
               { id: 3, pesoNeto: 13, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T19:10:00Z' },
             ],
           });

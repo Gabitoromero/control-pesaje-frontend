@@ -38,7 +38,7 @@ describe('StageProgressPanel', () => {
 
     // Stage 2: Check counter is present
     expect(screen.getByText('Stage 2')).toBeDefined();
-    expect(screen.getByText('1 / 3 muestras OK')).toBeDefined();
+    expect(screen.getByText('1 / 3')).toBeDefined();
 
     // Stage 3: Check pending name is present
     expect(screen.getByText('Stage 3')).toBeDefined();

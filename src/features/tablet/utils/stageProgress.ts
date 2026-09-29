@@ -13,12 +13,16 @@ export interface StageProgress {
   total: number;
 }
 
-function countOkMuestras(etapa: RutaPasadaEtapa, muestras: Muestra[]): number {
-  return muestras.filter((m) => m.etapaId === etapa.etapa.id && m.estadoValidacion === 'ok').length;
+const ESTADOS_QUE_AVANZAN: ReadonlyArray<Muestra['estadoValidacion']> = ['ok', 'fuera_de_rango'];
+
+function countMuestrasParaAvance(etapa: RutaPasadaEtapa, muestras: Muestra[]): number {
+  return muestras.filter(
+    (m) => m.etapaId === etapa.etapa.id && ESTADOS_QUE_AVANZAN.includes(m.estadoValidacion)
+  ).length;
 }
 
 function isEtapaSatisfied(etapa: RutaPasadaEtapa, muestras: Muestra[]): boolean {
-  return countOkMuestras(etapa, muestras) >= etapa.cantidadMuestrasRequeridas;
+  return countMuestrasParaAvance(etapa, muestras) >= etapa.cantidadMuestrasRequeridas;
 }
 
 export type EstadoEtapa = 'completada' | 'actual' | 'pendiente';
@@ -47,7 +51,7 @@ export function deriveEtapasConEstado(
   let actualFound = false;
 
   return orderedEtapas.map((etapa): EtapaConEstado => {
-    const muestrasOk = countOkMuestras(etapa, muestras);
+    const muestrasOk = countMuestrasParaAvance(etapa, muestras);
     const muestrasRequeridas = etapa.cantidadMuestrasRequeridas;
 
     let estado: EstadoEtapa;

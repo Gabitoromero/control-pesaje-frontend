@@ -44,7 +44,7 @@ export const StageProgressPanel: React.FC<StageProgressPanelProps> = ({
             circleClass = 'bg-card border-2 border-primary ring-2 ring-primary/20 text-primary';
             labelClass = 'text-foreground font-semibold';
             content = index + 1;
-            counterText = `${muestrasOk} / ${muestrasRequeridas} muestras OK`;
+            counterText = `${muestrasOk} / ${muestrasRequeridas}`;
           } else {
             circleClass = 'bg-muted text-muted-foreground';
             labelClass = 'text-muted-foreground';

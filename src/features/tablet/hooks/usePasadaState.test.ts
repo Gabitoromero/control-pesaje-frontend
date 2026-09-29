@@ -335,7 +335,7 @@ describe('usePasadaState', () => {
       expect(estados.some(e => e.estado === 'actual')).toBe(false);
     });
 
-    it('Stage 1 needs 3, has 3 fuera_de_rango -> stage 1 still actual', () => {
+    it('Stage 1 needs 3, has 3 fuera_de_rango -> stage 1 becomes completada', () => {
       const { result } = renderHook(() =>
         usePasadaState({
           pasadaId: 101,
@@ -384,7 +384,7 @@ describe('usePasadaState', () => {
       );
 
       const estados = result.current.etapasConEstado;
-      expect(estados[0].estado).toBe('actual');
+      expect(estados[0].estado).toBe('completada');
     });
 
     it('Empty etapas prop -> etapasConEstado is empty array, no throw', () => {
@@ -402,7 +402,7 @@ describe('usePasadaState', () => {
     });
   });
 
-  it('etapaActiva must not advance on fuera_de_rango', () => {
+  it('etapaActiva advances once fuera_de_rango samples meet the required quota', () => {
     const { result } = renderHook(() =>
       usePasadaState({
         pasadaId: 101,
@@ -432,8 +432,9 @@ describe('usePasadaState', () => {
       })
     );
 
-    // Should still be in Stage 1 since it requires 2 'ok' samples
-    expect(result.current.etapaActiva?.etapa.id).toBe(10);
+    // Stage 1 requires 2 samples (OK or FUERA_DE_RANGO); 2 FUERA_DE_RANGO
+    // samples satisfy the quota, so the active stage advances to Stage 2.
+    expect(result.current.etapaActiva?.etapa.id).toBe(20);
   });
 
   // ── updateSample ───────────────────────────────────────────────────────────

@@ -77,8 +77,20 @@ describe('deriveStageProgress', () => {
     expect(result.pendingCount).toBe(0);
   });
 
-  it('does not count muestras with a non-ok estadoValidacion toward satisfying a stage', () => {
+  it('counts muestras with a fuera_de_rango estadoValidacion toward satisfying a stage', () => {
     const etapas = [makeEtapa(1, 1, 2), makeEtapa(2, 2, 1)];
+    const muestras = [makeMuestra(1, 'ok'), makeMuestra(1, 'fuera_de_rango')];
+
+    const result = deriveStageProgress(etapas, muestras);
+
+    expect(result.done).toEqual([etapas[0]]);
+    expect(result.current).toEqual(etapas[1]);
+    expect(result.currentIndex).toBe(2);
+    expect(result.pendingCount).toBe(0);
+  });
+
+  it('does not count muestras with a descartado estadoValidacion toward satisfying a stage', () => {
+    const etapas = [makeEtapa(1, 1, 3), makeEtapa(2, 2, 1)];
     const muestras = [makeMuestra(1, 'ok'), makeMuestra(1, 'fuera_de_rango'), makeMuestra(1, 'descartado')];
 
     const result = deriveStageProgress(etapas, muestras);
