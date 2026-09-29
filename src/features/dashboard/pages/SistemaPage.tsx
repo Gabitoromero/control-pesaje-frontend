@@ -180,12 +180,24 @@ export function SistemaPage() {
           </p>
           <p>
             Si el peso registrado se aleja más del{' '}
-            <strong>porcentaje de tolerancia configurado por un Administrador</strong>{' '}
+            <strong>porcentaje de tolerancia global, configurado por un Administrador</strong>{' '}
             (Parametrización → Muestras) respecto del rango mínimo o máximo configurado para esa
             etapa, el registro queda <strong>bloqueado</strong> y aparece un aviso visual de
             tolerancia excedida — hay que corregir el peso (o consultar a tu Jefe) antes de poder
             seguir. El aviso indica el porcentaje vigente.
           </p>
+          <p>
+            Ese porcentaje es <strong>un único valor para todas las líneas, etapas y artículos</strong>{' '}
+            y lo edita solamente un Administrador. Cuando lo cambia, las tablets lo toman solas en
+            hasta 30 segundos, sin cerrar sesión ni recargar.
+          </p>
+          <Nota>
+            Si la tablet no logra leer la tolerancia (por ejemplo, si se abrió la pantalla sin
+            conexión), "Registrar Muestra" no registra: muestra el aviso{' '}
+            <strong>"Tolerancia no disponible"</strong> y un botón <strong>"Reintentar"</strong>.
+            Si ya la había leído antes, sigue usando el último valor conocido aunque haya un corte
+            de conexión momentáneo.
+          </Nota>
           <p>
             Cuando ya no queda ninguna etapa activa (todas completaron su cantidad de muestras
             requeridas), el botón "Registrar Muestra" es reemplazado por{' '}
@@ -418,11 +430,11 @@ export function SistemaPage() {
         </Sub>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Manual — Rol Administrador" count={3}>
+      <CollapsibleSection title="Manual — Rol Administrador" count={4}>
         <p className="text-sm text-muted-foreground mb-5">
           El Administrador ve y puede hacer todo lo que puede hacer un Jefe (Monitoreo, Pasadas
-          Activas y toda la Parametrización descripta arriba), más dos secciones exclusivas:
-          gestión de usuarios y sesiones activas.
+          Activas y toda la Parametrización descripta arriba), más tres secciones exclusivas:
+          gestión de usuarios, sesiones activas y tolerancia de peso.
         </p>
 
         <Sub title="1. Todo lo de Jefe">
@@ -463,6 +475,35 @@ export function SistemaPage() {
             <strong>por línea</strong>, no por usuario aislado: fuerza el logout del operario que
             en ese momento tenga esa línea abierta (ver "Cierre de sesión por inactividad" en el
             manual de Operario, mismo flujo, mensaje distinto).
+          </p>
+        </Sub>
+
+        <Sub title="4. Parametrización — Muestras (tolerancia de peso)">
+          <p>
+            Pantalla exclusiva de Administrador, dentro del grupo "Parametrización" (el Jefe no la
+            ve). Define el <strong>porcentaje de tolerancia global</strong>: un solo valor que se
+            aplica a todas las líneas, etapas y artículos por igual, no uno por etapa.
+          </p>
+          <p>
+            Se edita con los botones <strong>−</strong> y <strong>+</strong> (suben o bajan de a
+            1 punto) o escribiendo el número, que puede llevar decimales (por ejemplo 12,5). El
+            valor va entre 0% y 50%. Se aplica con el botón <strong>"Guardar"</strong>.
+          </p>
+          <Nota clave>
+            La regla es: el registro se bloquea por debajo del (100 − %) del peso mínimo y por
+            encima del (100 + %) del peso máximo de la etapa. Como el mínimo y el máximo no son
+            simétricos, cada límite se calcula sobre su propio valor. Ejemplo con 20%, mínimo 10 kg
+            y máximo 20 kg: se bloquea con menos de 8 kg o más de 24 kg.
+          </Nota>
+          <p>
+            La pantalla muestra <strong>quién lo modificó y cuándo</strong> por última vez (o
+            "Valor inicial del sistema" si nunca se cambió); solo se guarda el último cambio, no
+            hay historial. Debajo del campo hay una vista previa gráfica que se mueve mientras
+            editás, antes de guardar. Es un esquema genérico, no representa un producto real.
+          </p>
+          <p>
+            Los cambios llegan a las tablets en hasta 30 segundos. Conviene avisarle al personal de
+            planta cuando se modifica, porque cambia qué pesos se pueden registrar.
           </p>
         </Sub>
       </CollapsibleSection>
