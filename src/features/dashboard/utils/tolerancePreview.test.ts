@@ -14,34 +14,54 @@ describe('getTolerancePreviewLayout', () => {
     expect(layout.bandWidth).toBeCloseTo((20 / 120) * 100, 5); // 90..110 -> 16.67%
   });
 
-  it('at 0% the block markers sit exactly on min and max', () => {
-    const layout = getTolerancePreviewLayout(0);
-    expect(layout.lowerBlockValue).toBe(90);
-    expect(layout.upperBlockValue).toBe(110);
-    expect(layout.lowerBlockLeft).toBeCloseTo(layout.bandLeft, 5);
-    expect(layout.upperBlockLeft).toBeCloseTo(layout.bandLeft + layout.bandWidth, 5);
+  it.each([
+    [0, 0],
+    [12.5, 0.125],
+    [20, 0.2],
+    [25, 0.25],
+    [50, 0.5],
+  ])('at %s%% each marker travels a %s fraction of its red zone', (pct, fraction) => {
+    const layout = getTolerancePreviewLayout(pct);
+    const bandRight = layout.bandLeft + layout.bandWidth;
+    const lowerRedZone = layout.bandLeft;
+    const upperRedZone = 100 - bandRight;
+
+    expect(layout.lowerBlockLeft).toBeCloseTo(layout.bandLeft - fraction * lowerRedZone, 5);
+    expect(layout.upperBlockLeft).toBeCloseTo(bandRight + fraction * upperRedZone, 5);
   });
 
-  it('at 20% the block values are min*(1-f) and max*(1+f)', () => {
-    const layout = getTolerancePreviewLayout(20);
-    expect(layout.lowerBlockValue).toBeCloseTo(72, 5);
-    expect(layout.upperBlockValue).toBeCloseTo(132, 5);
-    expect(layout.lowerBlockLeft).toBeCloseTo(((72 - 40) / 120) * 100, 5);
-    expect(layout.upperBlockLeft).toBeCloseTo(((132 - 40) / 120) * 100, 5);
-  });
-
-  it('at 50% the lower marker is inside the window and the upper one is clamped to 100', () => {
+  it('at 50% each marker sits at the midpoint of its red zone', () => {
     const layout = getTolerancePreviewLayout(50);
-    expect(layout.lowerBlockValue).toBeCloseTo(45, 5);
-    expect(layout.upperBlockValue).toBeCloseTo(165, 5);
-    expect(layout.lowerBlockLeft).toBeCloseTo(((45 - 40) / 120) * 100, 5);
-    expect(layout.upperBlockLeft).toBe(100);
+    const bandRight = layout.bandLeft + layout.bandWidth;
+
+    expect(layout.lowerBlockLeft).toBeCloseTo(layout.bandLeft / 2, 5);
+    expect(layout.upperBlockLeft).toBeCloseTo(bandRight + (100 - bandRight) / 2, 5);
   });
 
-  it('clamps positions to [0, 100] for extreme values', () => {
+  it('travels the same distance on both sides', () => {
+    for (const pct of [5, 12.5, 30, 50]) {
+      const layout = getTolerancePreviewLayout(pct);
+      const bandRight = layout.bandLeft + layout.bandWidth;
+      expect(layout.bandLeft - layout.lowerBlockLeft).toBeCloseTo(layout.upperBlockLeft - bandRight, 5);
+    }
+  });
+
+  it('grows linearly with the tolerance', () => {
+    const at = (pct: number) => getTolerancePreviewLayout(pct).upperBlockLeft;
+    expect(at(20) - at(10)).toBeCloseTo(at(40) - at(30), 5);
+  });
+
+  it('does not expose real block weights (schematic preview)', () => {
+    const layout = getTolerancePreviewLayout(20);
+    expect(layout).not.toHaveProperty('lowerBlockValue');
+    expect(layout).not.toHaveProperty('upperBlockValue');
+  });
+
+  it('clamps positions to [0, 100] for out-of-range input', () => {
     const layout = getTolerancePreviewLayout(500);
     expect(layout.lowerBlockLeft).toBe(0);
     expect(layout.upperBlockLeft).toBe(100);
+    expect(getTolerancePreviewLayout(-500).lowerBlockLeft).toBeLessThanOrEqual(100);
   });
 
   it('a wider tolerance moves the markers outward', () => {

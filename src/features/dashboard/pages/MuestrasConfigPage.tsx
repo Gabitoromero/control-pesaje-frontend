@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { Minus, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { updateToleranciaConfig } from '../../../api/tolerancia';
@@ -18,6 +19,12 @@ const parseTolerance = (text: string): number | null => {
   if (!Number.isFinite(value) || value < MIN_TOLERANCE_PCT || value > MAX_TOLERANCE_PCT) return null;
   return value;
 };
+
+const STEP_PCT = 1;
+
+// Rounded to avoid float artifacts (e.g. 12.5 + 1) and clamped to the allowed range.
+const stepTolerance = (current: number, delta: number): number =>
+  Math.min(MAX_TOLERANCE_PCT, Math.max(MIN_TOLERANCE_PCT, Math.round((current + delta) * 1e6) / 1e6));
 
 const formatLastChange = (iso: string): string => {
   const date = new Date(iso);
@@ -73,6 +80,11 @@ export function MuestrasConfigPage() {
   const isUnchanged = parsed === data.toleranciaPct;
   const canSave = isValid && !isUnchanged && !mutation.isPending;
 
+  const handleStep = (delta: number) => {
+    if (parsed === null) return;
+    setDraft(String(stepTolerance(parsed, delta)));
+  };
+
   const handleSave = () => {
     if (parsed === null) return;
     mutation.mutate(parsed);
@@ -96,17 +108,35 @@ export function MuestrasConfigPage() {
             Tolerancia de peso (%)
           </label>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Disminuir tolerancia"
+              onClick={() => handleStep(-STEP_PCT)}
+              disabled={parsed === null || parsed <= MIN_TOLERANCE_PCT}
+              className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Minus size={16} />
+            </button>
             <input
               id={inputId}
               type="number"
               inputMode="decimal"
               min={MIN_TOLERANCE_PCT}
               max={MAX_TOLERANCE_PCT}
-              step={0.1}
+              step={1}
               value={text}
               onChange={(e) => setDraft(e.target.value)}
-              className="w-32 px-3 py-2 rounded-md border border-border bg-background text-foreground"
+              className="w-32 px-3 py-2 rounded-md border border-border bg-background text-foreground [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
+            <button
+              type="button"
+              aria-label="Aumentar tolerancia"
+              onClick={() => handleStep(STEP_PCT)}
+              disabled={parsed === null || parsed >= MAX_TOLERANCE_PCT}
+              className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={16} />
+            </button>
             <button
               type="button"
               onClick={handleSave}

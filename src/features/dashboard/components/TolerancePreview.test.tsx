@@ -13,12 +13,15 @@ describe('TolerancePreview', () => {
     expect(screen.getByTestId('preview-ideal-marker')).toBeInTheDocument();
   });
 
-  it('shows the caption with the blocking limits for 20%', () => {
-    render(<TolerancePreview toleranciaPct={20} />);
+  it.each([
+    [0, 'Se bloquea por debajo del 100% del mínimo y por encima del 100% del máximo'],
+    [20, 'Se bloquea por debajo del 80% del mínimo y por encima del 120% del máximo'],
+    [12.5, 'Se bloquea por debajo del 87,5% del mínimo y por encima del 112,5% del máximo'],
+    [50, 'Se bloquea por debajo del 50% del mínimo y por encima del 150% del máximo'],
+  ])('shows the blocking caption for %s%%', (pct, caption) => {
+    render(<TolerancePreview toleranciaPct={pct} />);
 
-    expect(
-      screen.getByText('Se bloquea el registro por debajo de 72 y por encima de 132'),
-    ).toBeInTheDocument();
+    expect(screen.getByText(caption)).toBeInTheDocument();
   });
 
   it('updates the caption when the prop changes (20 -> 40) without saving', () => {
@@ -26,23 +29,14 @@ describe('TolerancePreview', () => {
     rerender(<TolerancePreview toleranciaPct={40} />);
 
     expect(
-      screen.getByText('Se bloquea el registro por debajo de 54 y por encima de 154'),
+      screen.getByText('Se bloquea por debajo del 60% del mínimo y por encima del 140% del máximo'),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/por debajo de 72/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/80% del mínimo/)).not.toBeInTheDocument();
   });
 
-  it('formats decimal limits with the Spanish locale', () => {
-    render(<TolerancePreview toleranciaPct={12.5} />);
-
-    // 90 * 0.875 = 78.75 ; 110 * 1.125 = 123.75
-    expect(
-      screen.getByText('Se bloquea el registro por debajo de 78,75 y por encima de 123,75'),
-    ).toBeInTheDocument();
-  });
-
-  it('positions the block markers from the layout function', () => {
-    render(<TolerancePreview toleranciaPct={20} />);
-    const layout = getTolerancePreviewLayout(20);
+  it.each([0, 12.5, 25, 50])('positions the block markers from the layout function at %s%%', (pct) => {
+    render(<TolerancePreview toleranciaPct={pct} />);
+    const layout = getTolerancePreviewLayout(pct);
 
     expect(screen.getByTestId('preview-block-lower').style.left).toBe(`${layout.lowerBlockLeft}%`);
     expect(screen.getByTestId('preview-block-upper').style.left).toBe(`${layout.upperBlockLeft}%`);

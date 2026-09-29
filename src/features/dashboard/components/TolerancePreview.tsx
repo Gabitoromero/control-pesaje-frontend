@@ -8,9 +8,9 @@ interface TolerancePreviewProps {
 }
 
 /**
- * Mini animation: a horizontal line centered on an illustrative ideal weight,
- * green between min and max and red outside, with two markers at the weights
- * where registration starts to be blocked for the given tolerance.
+ * Mini animation (schematic, not real weights): a horizontal line with a green
+ * band and red zones, and two markers that move away from the band edges in
+ * proportion to the given tolerance.
  */
 export function TolerancePreview({ toleranciaPct }: TolerancePreviewProps) {
   const layout = getTolerancePreviewLayout(toleranciaPct);
@@ -60,7 +60,7 @@ export function TolerancePreview({ toleranciaPct }: TolerancePreviewProps) {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        {`Se bloquea el registro por debajo de ${formatTolerancePct(layout.lowerBlockValue)} y por encima de ${formatTolerancePct(layout.upperBlockValue)}`}
+        {`Se bloquea por debajo del ${formatTolerancePct(100 - toleranciaPct)}% del mínimo y por encima del ${formatTolerancePct(100 + toleranciaPct)}% del máximo`}
       </p>
     </div>
   );

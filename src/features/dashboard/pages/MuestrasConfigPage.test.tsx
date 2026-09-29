@@ -147,6 +147,121 @@ describe('MuestrasConfigPage', () => {
     expect(screen.getByRole('button', { name: /guardar/i })).toBeEnabled();
   });
 
+  it('uses whole-unit steps for the spinner while a typed decimal stays valid and savable', async () => {
+    const { puts } = useBackend(anaConfig);
+    const user = userEvent.setup();
+    renderPage();
+
+    const input = await findInput();
+    expect(input).toHaveAttribute('step', '1');
+
+    await user.clear(input);
+    await user.type(input, '12.5');
+    // Native step validation flags 12.5 (step 1) but nothing consumes it: no <form>, only our own gate.
+    expect(input.closest('form')).toBeNull();
+    expect(screen.queryByText(/entre 0 y 50/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /guardar/i }));
+
+    expect(await screen.findByText('Tolerancia actualizada')).toBeInTheDocument();
+    expect(puts).toEqual([{ toleranciaPct: 12.5 }]);
+  });
+
+  it('has accessible themed stepper buttons and hides the native spinners', async () => {
+    useBackend(anaConfig);
+    renderPage();
+
+    const input = await findInput();
+    const minus = screen.getByRole('button', { name: 'Disminuir tolerancia' });
+    const plus = screen.getByRole('button', { name: 'Aumentar tolerancia' });
+
+    expect(minus).toHaveAttribute('type', 'button');
+    expect(plus).toHaveAttribute('type', 'button');
+    expect(minus.className).toContain('bg-secondary');
+    expect(minus.className).toContain('border-border');
+    expect(input).toHaveAttribute('type', 'number');
+    expect(input.className).toContain('[appearance:textfield]');
+    expect(input.className).toContain('[&::-webkit-inner-spin-button]:appearance-none');
+    expect(input.className).toContain('[&::-webkit-outer-spin-button]:appearance-none');
+  });
+
+  it('steps by exactly 1 with the buttons and updates the preview live', async () => {
+    const { puts } = useBackend(anaConfig);
+    const user = userEvent.setup();
+    renderPage();
+
+    const input = await findInput();
+    await user.click(screen.getByRole('button', { name: 'Aumentar tolerancia' }));
+    expect(input.value).toBe('21');
+    expect(
+      screen.getByText('Se bloquea por debajo del 79% del mínimo y por encima del 121% del máximo'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Disminuir tolerancia' }));
+    await user.click(screen.getByRole('button', { name: 'Disminuir tolerancia' }));
+    expect(input.value).toBe('19');
+    expect(
+      screen.getByText('Se bloquea por debajo del 81% del mínimo y por encima del 119% del máximo'),
+    ).toBeInTheDocument();
+    expect(puts).toHaveLength(0);
+  });
+
+  it('disables minus at 0 and plus at 50', async () => {
+    useBackend(anaConfig);
+    const user = userEvent.setup();
+    renderPage();
+
+    const input = await findInput();
+    await user.clear(input);
+    await user.type(input, '0');
+    expect(screen.getByRole('button', { name: 'Disminuir tolerancia' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Aumentar tolerancia' })).toBeEnabled();
+
+    await user.clear(input);
+    await user.type(input, '50');
+    expect(screen.getByRole('button', { name: 'Aumentar tolerancia' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Disminuir tolerancia' })).toBeEnabled();
+  });
+
+  it('steps a fractional value to the adjacent value by 1, clamped to [0, 50]', async () => {
+    useBackend(anaConfig);
+    const user = userEvent.setup();
+    renderPage();
+
+    const input = await findInput();
+    await user.clear(input);
+    await user.type(input, '12.5');
+    await user.click(screen.getByRole('button', { name: 'Aumentar tolerancia' }));
+    expect(input.value).toBe('13.5');
+
+    await user.clear(input);
+    await user.type(input, '12.5');
+    await user.click(screen.getByRole('button', { name: 'Disminuir tolerancia' }));
+    expect(input.value).toBe('11.5');
+
+    await user.clear(input);
+    await user.type(input, '0.5');
+    await user.click(screen.getByRole('button', { name: 'Disminuir tolerancia' }));
+    expect(input.value).toBe('0');
+
+    await user.clear(input);
+    await user.type(input, '49.5');
+    await user.click(screen.getByRole('button', { name: 'Aumentar tolerancia' }));
+    expect(input.value).toBe('50');
+  });
+
+  it('saves the value reached with the stepper buttons', async () => {
+    const { puts } = useBackend(anaConfig);
+    const user = userEvent.setup();
+    renderPage();
+
+    await findInput();
+    await user.click(screen.getByRole('button', { name: 'Aumentar tolerancia' }));
+    await user.click(screen.getByRole('button', { name: /guardar/i }));
+
+    expect(await screen.findByText('Tolerancia actualizada')).toBeInTheDocument();
+    expect(puts).toEqual([{ toleranciaPct: 21 }]);
+  });
+
   it('keeps Save disabled while the value is unchanged', async () => {
     useBackend(anaConfig);
     renderPage();
@@ -206,14 +321,14 @@ describe('MuestrasConfigPage', () => {
 
     const input = await findInput();
     expect(
-      screen.getByText('Se bloquea el registro por debajo de 72 y por encima de 132'),
+      screen.getByText('Se bloquea por debajo del 80% del mínimo y por encima del 120% del máximo'),
     ).toBeInTheDocument();
 
     await user.clear(input);
     await user.type(input, '40');
 
     expect(
-      screen.getByText('Se bloquea el registro por debajo de 54 y por encima de 154'),
+      screen.getByText('Se bloquea por debajo del 60% del mínimo y por encima del 140% del máximo'),
     ).toBeInTheDocument();
     expect(puts).toHaveLength(0);
   });
