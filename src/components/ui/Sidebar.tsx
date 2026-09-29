@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import {
   LayoutDashboard, FileBarChart, LogOut, Package, Users, UserRoundCog, Factory,
-  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar, Scale, BookOpen
+  Layers, Route as RouteIcon, SplinePointer, ChevronDown, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar, Scale, BookOpen, FlaskConical
 } from 'lucide-react';
 import { useTheme } from '../../features/theme/ThemeContext';
 import { UsuarioRol } from '../../shared/types';
@@ -20,7 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
   const { theme, toggleTheme } = useTheme();
 
   const [isCatalogoOpen, setIsCatalogoOpen] = useState(() => {
-    return ['/usuarios', '/articulos', '/balanzas', '/etapas', '/lineas', '/rutas', '/dispositivos-conectados']
+    return ['/usuarios', '/articulos', '/balanzas', '/etapas', '/lineas', '/rutas', '/dispositivos-conectados', '/dashboard/muestras']
       .some(path => location.pathname.includes(path));
   });
 
@@ -135,6 +135,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
                   <Cpu className="w-5 h-5 mr-3" />
                   Dispositivos
                 </NavLink>
+                {isAdmin && (
+                  <NavLink to="/dashboard/muestras" className={navClass} onClick={handleLinkClick}>
+                    <FlaskConical className="w-5 h-5 mr-3" />
+                    Muestras
+                  </NavLink>
+                )}
               </div>
             )}
           </div>

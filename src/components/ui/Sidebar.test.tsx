@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar';
 
 const admin: User    = { id: 1, legajo: 'A1', nombreUsuario: 'admin',  rol: 'administrador', puedeTomarMuestrasLibres: true };
 const jefe: User     = { id: 2, legajo: 'J1', nombreUsuario: 'jefe1',  rol: 'jefe', puedeTomarMuestrasLibres: true };
+const operario: User = { id: 3, legajo: 'O1', nombreUsuario: 'oper1',  rol: 'operario', puedeTomarMuestrasLibres: false };
 
 describe('Sidebar', () => {
   it('renders navigation links and user info based on role', () => {
@@ -95,6 +96,45 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /pasadas activas/i })).toBeInTheDocument();
     // Sesiones Activas es admin-only — el jefe NO la ve
     expect(screen.queryByRole('link', { name: /sesiones activas/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the admin-only Muestras item inside Parametrización for ADMINISTRADOR', async () => {
+    const userEventSetup = userEvent.setup();
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
+
+    await userEventSetup.click(screen.getByRole('button', { name: /parametrización/i }));
+
+    const link = screen.getByRole('link', { name: /muestras/i });
+    expect(link).toHaveAttribute('href', '/dashboard/muestras');
+  });
+
+  it('hides Muestras from JEFE even though Parametrización is visible to them', async () => {
+    const userEventSetup = userEvent.setup();
+    renderWithAuth(<Sidebar />, { user: jefe, initialEntries: ['/dashboard'] });
+
+    await userEventSetup.click(screen.getByRole('button', { name: /parametrización/i }));
+
+    expect(screen.getByRole('link', { name: /artículos/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /muestras/i })).not.toBeInTheDocument();
+  });
+
+  it('hides Muestras from OPERARIO (no Parametrización group at all)', () => {
+    renderWithAuth(<Sidebar />, { user: operario, initialEntries: ['/dashboard'] });
+
+    expect(screen.queryByRole('button', { name: /parametrización/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /muestras/i })).not.toBeInTheDocument();
+  });
+
+  it('opens Parametrización by default when the current path is /dashboard/muestras', () => {
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard/muestras'] });
+
+    expect(screen.getByRole('link', { name: /muestras/i })).toBeInTheDocument();
+  });
+
+  it('does not open Parametrización for the tablet free-samples path', () => {
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/tablet/muestras-libres'] });
+
+    expect(screen.queryByRole('link', { name: /muestras/i })).not.toBeInTheDocument();
   });
 
   // ── ux-polish Task 2: header/avatar reorder ───────────────────────────────
