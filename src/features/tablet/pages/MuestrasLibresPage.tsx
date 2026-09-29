@@ -10,9 +10,11 @@ import { LineaObservacionBanner } from '../../../components/LineaObservacionBann
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
+import { ToleranceStatus } from '../components/ToleranceStatus';
 import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
-import { isToleranceBlocked } from '../utils/tolerance';
+import { isToleranceBlocked, formatTolerancePct } from '../utils/tolerance';
+import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { PESO_DECIMALS } from '../../../shared/constants';
 
@@ -46,6 +48,11 @@ export function MuestrasLibresPage() {
     clearSession,
     isRegistering,
   } = useMuestrasLibresContext();
+
+  // Global admin-configurable tolerance. Called above the `etapas.length === 0`
+  // early return to keep the hooks order stable. No fallback value: Registrar
+  // is blocked until a value was obtained at least once.
+  const tolerance = useToleranceConfig();
 
   // Topbar display info (linea nombre + ruta nombre) — same query key as
   // MuestrasLibresLayout/GestionPasadasPage, so react-query dedupes the fetch.
@@ -102,21 +109,32 @@ export function MuestrasLibresPage() {
   const pesoMaximo = selectedEtapa?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
 
-  // ux-polish Task 1: guard against samples outside a 20% margin beyond
+  // Guard against samples outside the configured margin beyond
   // pesoMinimo/pesoMaximo. A weight already inside [pesoMinimo, pesoMaximo]
   // is never blocked, no matter how far from pesoIdeal. Button stays
   // clickable (NOT disabled) so the operator gets an alertWarning popup.
+  const isToleranceUnavailable = tolerance.status !== 'ready';
   const isToleranceBlockedFlag =
     hasTolerancia &&
     selectedEtapa !== null &&
-    isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!);
+    tolerance.status === 'ready' &&
+    isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!, tolerance.toleranciaPct);
 
   const handleRegistrar = async () => {
+    if (tolerance.status !== 'ready') {
+      await alertWarning({
+        title: 'Tolerancia no disponible',
+        description:
+          'No se pudo obtener la tolerancia de peso configurada, por lo que no se puede ' +
+          'registrar la muestra. Reintentá en unos segundos.',
+      });
+      return;
+    }
     if (isToleranceBlockedFlag) {
       await alertWarning({
         title: 'Muestra fuera de tolerancia',
         description:
-          'El peso se aleja más del 20% del ideal. ' +
+          `El peso se aleja más del ${formatTolerancePct(tolerance.toleranciaPct)}% del rango permitido (mínimo/máximo). ` +
           'Corregí el peso antes de registrar la muestra.',
       });
       return;
@@ -233,15 +251,16 @@ export function MuestrasLibresPage() {
             onClick={handleRegistrar}
             disabled={!isConnected || isRegistering || selectedEtapaId === null}
             className={`w-full py-4 rounded-2xl text-xl font-bold transition-all shadow-lg
-              ${isConnected && !isRegistering && selectedEtapaId !== null && !isToleranceBlockedFlag
+              ${isConnected && !isRegistering && selectedEtapaId !== null && !isToleranceBlockedFlag && !isToleranceUnavailable
                 ? 'bg-warning hover:bg-warning/90 text-warning-foreground active:scale-95'
-                : isToleranceBlockedFlag
+                : isToleranceBlockedFlag || isToleranceUnavailable
                   ? 'bg-muted text-muted-foreground'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
           >
             Registrar Muestra de Calidad
           </button>
+          <ToleranceStatus tolerance={tolerance} />
         </div>
 
         {/* Samples panel — filtered to the currently-selected etapa */}

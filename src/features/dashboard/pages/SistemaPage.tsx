@@ -179,10 +179,12 @@ export function SistemaPage() {
             aplicarlo.
           </p>
           <p>
-            Si el peso registrado se aleja más de un <strong>20% del rango mínimo o máximo</strong>{' '}
-            configurado para esa etapa, el registro queda <strong>bloqueado</strong> y aparece un
-            aviso visual de tolerancia excedida — hay que corregir el peso (o consultar a tu
-            Jefe) antes de poder seguir.
+            Si el peso registrado se aleja más del{' '}
+            <strong>porcentaje de tolerancia configurado por un Administrador</strong>{' '}
+            (Parametrización → Muestras) respecto del rango mínimo o máximo configurado para esa
+            etapa, el registro queda <strong>bloqueado</strong> y aparece un aviso visual de
+            tolerancia excedida — hay que corregir el peso (o consultar a tu Jefe) antes de poder
+            seguir. El aviso indica el porcentaje vigente.
           </p>
           <p>
             Cuando ya no queda ninguna etapa activa (todas completaron su cantidad de muestras

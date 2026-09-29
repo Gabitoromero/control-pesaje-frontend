@@ -7,6 +7,14 @@ import { vi, describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } 
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
+import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
+
+// Partial mock: real implementation by default (msw-backed), overridden per test
+// to force loading / unavailable / stale states without waiting for real retries.
+vi.mock('../../../hooks/useToleranceConfig', async (importActual) => {
+  const actual = await importActual<typeof import('../../../hooks/useToleranceConfig')>();
+  return { ...actual, useToleranceConfig: vi.fn(actual.useToleranceConfig) };
+});
 
 // Mock useBalanzaWebSocket hook
 vi.mock('../hooks/useBalanzaWebSocket', () => ({
@@ -28,8 +36,16 @@ vi.mock('react-router-dom', async () => {
 });
 
 const BASE = 'http://localhost:3000/api';
+const realUseToleranceConfig = vi.mocked(useToleranceConfig).getMockImplementation()!;
+
+const toleranciaResponse = (toleranciaPct: number) =>
+  HttpResponse.json({
+    success: true,
+    data: { toleranciaPct, updatedAt: '2026-09-29T12:00:00.000Z', updatedBy: null },
+  });
 
 const handlers = [
+  http.get(`${BASE}/configuracion/tolerancia`, () => toleranciaResponse(20)),
   http.get(`${BASE}/pasadas/101`, () => {
     return HttpResponse.json({
       success: true,
@@ -126,6 +142,8 @@ describe('TabletWorkspace', () => {
 
   beforeEach(() => {
     navigateMock.mockClear();
+    vi.mocked(useToleranceConfig).mockReset();
+    vi.mocked(useToleranceConfig).mockImplementation(realUseToleranceConfig);
     // Default WebSocket mock state: connected with weight 15.000
     vi.mocked(useBalanzaWebSocket).mockReturnValue({
       pesoNeto: 15.0,
@@ -932,5 +950,185 @@ describe('TabletWorkspace', () => {
 
     await screen.findByRole('button', { name: /volver/i });
     expect(screen.queryByText('Observación de la línea')).not.toBeInTheDocument();
+  });
+
+  // ── Configurable tolerance (SC-001) ───────────────────────────────────────
+
+  // Amasado: min 14 / max 16 -> limits: 20% = [11.2, 19.2], 10% = [12.6, 17.6],
+  // 12.5% = [12.25, 18], 50% = [7, 24].
+  const useNarrowEtapa = () => {
+    server.use(
+      http.get(`${BASE}/lineas-produccion/1`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            id: 1,
+            nombre: 'Línea 1 — Envasado A',
+            numeroBalanza: 1,
+            activo: true,
+            rutaPasadaActiva: {
+              id: 1,
+              nombre: 'Ruta 1',
+              activo: true,
+              etapas: [
+                { id: 10, etapa: { id: 1, nombre: 'Amasado' }, orden: 1, pesoMinimo: 14, pesoIdeal: 15, pesoMaximo: 16, cantidadMuestrasRequeridas: 2 },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+  };
+
+  const trackPosts = () => {
+    const posts = { count: 0 };
+    server.use(
+      http.post(`${BASE}/muestras`, () => {
+        posts.count += 1;
+        return HttpResponse.json({
+          success: true,
+          data: { id: 50, pesoNeto: 22, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T20:00:00Z' },
+        });
+      }),
+    );
+    return posts;
+  };
+
+  const setPeso = (pesoNeto: number) =>
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+
+  const renderWorkspace = () =>
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+
+  it('el popup muestra el porcentaje configurado por defecto (20%)', async () => {
+    useNarrowEtapa();
+    setPeso(25);
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i }).className).toContain('bg-muted'));
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/más del 20% del rango permitido/)).toBeInTheDocument();
+    expect(posts.count).toBe(0);
+  });
+
+  it('con tolerancia 12,5 el popup muestra "12,5%" y no "20%"', async () => {
+    server.use(http.get(`${BASE}/configuracion/tolerancia`, () => toleranciaResponse(12.5)));
+    useNarrowEtapa();
+    setPeso(22);
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i }).className).toContain('bg-muted'));
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/más del 12,5% del rango permitido/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/20%/)).not.toBeInTheDocument();
+    expect(posts.count).toBe(0);
+  });
+
+  it('con tolerancia 10 el mismo peso sigue bloqueado y el popup muestra "10%"', async () => {
+    server.use(http.get(`${BASE}/configuracion/tolerancia`, () => toleranciaResponse(10)));
+    useNarrowEtapa();
+    setPeso(18); // > 17.6 (10%) but < 19.2 (20%)
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i }).className).toContain('bg-muted'));
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/más del 10% del rango permitido/)).toBeInTheDocument();
+    expect(posts.count).toBe(0);
+  });
+
+  it('con tolerancia 50 un peso que se bloquea al 20% se registra', async () => {
+    server.use(http.get(`${BASE}/configuracion/tolerancia`, () => toleranciaResponse(50)));
+    useNarrowEtapa();
+    setPeso(22); // > 19.2 (20%) but < 24 (50%)
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i }).className).toContain('bg-success'));
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+
+    await waitFor(() => expect(posts.count).toBe(1));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('tolerancia no disponible: el click muestra "Tolerancia no disponible", no hace POST y ofrece Reintentar (sin fallback a 20%)', async () => {
+    const retry = vi.fn();
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'unavailable', isRetrying: false, retry });
+    setPeso(15); // would be allowed at any percentage
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    expect(screen.getByText(/No se pudo obtener la tolerancia de peso/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Tolerancia no disponible')).toBeInTheDocument();
+    expect(posts.count).toBe(0);
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('tolerancia no disponible y reintentando: el botón muestra "Reintentando..." y está deshabilitado', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'unavailable', isRetrying: true, retry: vi.fn() });
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    expect(screen.getByRole('button', { name: 'Reintentando...' })).toBeDisabled();
+  });
+
+  it('tolerancia cargando: muestra "Cargando tolerancia de peso..." y bloquea el registro sin POST', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'loading' });
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    expect(screen.getByText('Cargando tolerancia de peso...')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Tolerancia no disponible')).toBeInTheDocument();
+    expect(posts.count).toBe(0);
+  });
+
+  it('un error transitorio de refetch conserva el último valor: sigue registrando sin mensajes de bloqueo', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'ready', toleranciaPct: 20, isStale: true });
+    const posts = trackPosts();
+    renderWorkspace();
+
+    await screen.findAllByText('Amasado');
+    expect(screen.queryByText(/No se pudo obtener la tolerancia/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra/i }));
+
+    await waitFor(() => expect(posts.count).toBe(1));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('con activeLineaId null renderiza el redirect sin error de orden de hooks y el hook se llamó', () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'loading' });
+    renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: null,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+    expect(useToleranceConfig).toHaveBeenCalled();
   });
 });

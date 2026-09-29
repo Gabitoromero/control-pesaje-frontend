@@ -14,6 +14,7 @@ import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
+import { ToleranceStatus } from '../components/ToleranceStatus';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulo } from '../../../api/articulos';
@@ -23,7 +24,8 @@ import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { PESO_DECIMALS } from '../../../shared/constants';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
-import { isToleranceBlocked } from '../utils/tolerance';
+import { isToleranceBlocked, formatTolerancePct } from '../utils/tolerance';
+import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 import { useDialog } from '../../../components/dialogs/useDialog';
 
 export const TabletWorkspace: React.FC = () => {
@@ -42,6 +44,11 @@ export const TabletWorkspace: React.FC = () => {
 
   const { pesoNeto, isConnected, hardwareId, unidad } = useBalanzaWebSocket(lineaId);
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
+
+  // Global admin-configurable tolerance. Called above every early return to
+  // keep the hooks order stable. No fallback value: Registrar is blocked until
+  // a value was obtained at least once.
+  const tolerance = useToleranceConfig();
 
   // Task 3.3: Load the active run using GET /api/pasadas/:id
   // Poll every 5 s so the workspace detects if the run is aborted externally
@@ -163,11 +170,20 @@ export const TabletWorkspace: React.FC = () => {
   // Task 3.4: Bind weight capture (addSample) from WebSocket to registrarMuestra API
   const handleRegistrarMuestra = async () => {
     if (!isConnected) return;
+    if (tolerance.status !== 'ready') {
+      await alertWarning({
+        title: 'Tolerancia no disponible',
+        description:
+          'No se pudo obtener la tolerancia de peso configurada, por lo que no se puede ' +
+          'registrar la muestra. Reintentá en unos segundos.',
+      });
+      return;
+    }
     if (isToleranceBlockedFlag) {
       await alertWarning({
         title: 'Muestra fuera de tolerancia',
         description:
-          'El peso se aleja más del 20% del ideal. ' +
+          `El peso se aleja más del ${formatTolerancePct(tolerance.toleranciaPct)}% del rango permitido (mínimo/máximo). ` +
           'Corregí el peso antes de registrar la muestra.',
       });
       return;
@@ -230,14 +246,16 @@ export const TabletWorkspace: React.FC = () => {
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;
   const hasTolerancia = pesoMinimo !== undefined && pesoIdeal !== undefined && pesoMaximo !== undefined;
-  // ux-polish Task 1: guard against samples outside a 20% margin beyond
+  // Guard against samples outside the configured margin beyond
   // pesoMinimo/pesoMaximo. A weight already inside [pesoMinimo, pesoMaximo]
   // is never blocked, no matter how far from pesoIdeal. The button stays
   // clickable (NOT disabled) so the operator gets an alertWarning popup.
+  const isToleranceUnavailable = tolerance.status !== 'ready';
   const isToleranceBlockedFlag =
     hasTolerancia &&
     etapaActiva !== null &&
-    isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!);
+    tolerance.status === 'ready' &&
+    isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!, tolerance.toleranciaPct);
 
 
   // Phase 4: PasadaBlock start-time formatting (native Intl, no date library)
@@ -346,15 +364,16 @@ export const TabletWorkspace: React.FC = () => {
             onClick={handleRegistrarMuestra}
             disabled={!isConnected || etapaActiva === null}
             className={`w-full py-4 rounded-2xl text-xl font-bold transition-all shadow-lg
-              ${isConnected && etapaActiva !== null && !isToleranceBlockedFlag
+              ${isConnected && etapaActiva !== null && !isToleranceBlockedFlag && !isToleranceUnavailable
                 ? 'bg-success hover:bg-success/90 text-white active:scale-95'
-                : isToleranceBlockedFlag
+                : isToleranceBlockedFlag || isToleranceUnavailable
                   ? 'bg-muted text-muted-foreground'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
           >
             Registrar Muestra
           </button>
+          <ToleranceStatus tolerance={tolerance} />
         </div>
 
         {/* Muestras List */}

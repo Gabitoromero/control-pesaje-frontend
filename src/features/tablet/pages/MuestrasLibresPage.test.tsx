@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -6,6 +6,7 @@ import { MuestrasLibresPage } from './MuestrasLibresPage';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { getLinea } from '../../../api/lineas';
+import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 import type { User } from '../../../shared/types/auth';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
@@ -15,6 +16,10 @@ vi.mock('../context/MuestrasLibresContext', () => ({
 
 vi.mock('../hooks/useBalanzaWebSocket', () => ({
   useBalanzaWebSocket: vi.fn(),
+}));
+
+vi.mock('../../../hooks/useToleranceConfig', () => ({
+  useToleranceConfig: vi.fn(),
 }));
 
 vi.mock('../../../api/lineas', () => ({
@@ -108,6 +113,7 @@ describe('MuestrasLibresPage', () => {
     vi.mocked(useMuestrasLibresContext).mockReturnValue({ ...baseContextValue });
     vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 12.345, isConnected: true, hardwareId: undefined, unidad: undefined });
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta as never);
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'ready', toleranciaPct: 20, isStale: false });
   });
 
   it('renders the amber "MUESTRAS LIBRES" pill in the topbar', async () => {
@@ -315,6 +321,101 @@ describe('MuestrasLibresPage', () => {
     expect(btnRegistrar).not.toBeDisabled();
     expect(btnRegistrar.className).toContain('bg-warning');
     expect(btnRegistrar.className).not.toContain('bg-muted');
+  });
+
+  // ── Configurable tolerance (SC-001) ───────────────────────────────────────
+
+  // Amasado: min 14 / max 16 -> limits: 20% = [11.2, 19.2], 12.5% = [12.25, 18], 50% = [7, 24].
+  const etapaNarrow: RutaPasadaEtapa = {
+    id: 1,
+    etapa: { id: 10, nombre: 'Amasado' },
+    orden: 1,
+    pesoMinimo: 14,
+    pesoIdeal: 15,
+    pesoMaximo: 16,
+    cantidadMuestrasRequeridas: 2,
+  };
+
+  const setupNarrow = (pesoNeto: number) => {
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({
+      ...baseContextValue,
+      etapas: [etapaNarrow],
+      selectedEtapa: etapaNarrow,
+      selectedEtapaId: 10,
+    });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+  };
+
+  it('el popup muestra el porcentaje configurado en formato es-AR ("12,5%") y no "20%"', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'ready', toleranciaPct: 12.5, isStale: false });
+    setupNarrow(22);
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/más del 12,5% del rango permitido/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/20%/)).not.toBeInTheDocument();
+    expect(addSampleMock).not.toHaveBeenCalled();
+  });
+
+  it('con tolerancia 50 un peso (22) que se bloquea al 20% se registra', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'ready', toleranciaPct: 50, isStale: false });
+    setupNarrow(22);
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+
+    expect(addSampleMock).toHaveBeenCalledWith(22);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('tolerancia no disponible: muestra "Tolerancia no disponible", no llama addSample y ofrece Reintentar', async () => {
+    const retry = vi.fn();
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'unavailable', isRetrying: false, retry });
+    setupNarrow(15); // would be allowed at any percentage
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    expect(screen.getByText(/No se pudo obtener la tolerancia de peso/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Tolerancia no disponible')).toBeInTheDocument();
+    expect(addSampleMock).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Aceptar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('tolerancia cargando: muestra "Cargando tolerancia de peso..." y bloquea addSample', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'loading' });
+    setupNarrow(15);
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    expect(screen.getByText('Cargando tolerancia de peso...')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Tolerancia no disponible')).toBeInTheDocument();
+    expect(addSampleMock).not.toHaveBeenCalled();
+  });
+
+  it('un valor obsoleto (refetch fallido tras un éxito) sigue permitiendo registrar', async () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'ready', toleranciaPct: 20, isStale: true });
+    setupNarrow(15);
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+    expect(addSampleMock).toHaveBeenCalledWith(15);
+  });
+
+  it('el guard sin etapas sigue renderizando con el hook por encima del early return (loading)', () => {
+    vi.mocked(useToleranceConfig).mockReturnValue({ status: 'loading' });
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({ ...baseContextValue, etapas: [], selectedEtapa: null, selectedEtapaId: null });
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+    expect(screen.getByText(/sin ruta de pesaje asignada/i)).toBeInTheDocument();
+    expect(useToleranceConfig).toHaveBeenCalled();
   });
 
   // ── línea observación banner ───────────────────────────────────────────
