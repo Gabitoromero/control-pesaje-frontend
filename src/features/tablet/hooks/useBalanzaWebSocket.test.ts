@@ -2,9 +2,14 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useBalanzaWebSocket, PESO_STALE_TIMEOUT_MS } from './useBalanzaWebSocket';
 import { getSocket } from '../../../services/websocket';
+import { toast } from 'sonner';
 
 vi.mock('../../../services/websocket', () => ({
   getSocket: vi.fn(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: { info: vi.fn() },
 }));
 
 // Stable references: the hook lists logout/user as effect deps, so new
@@ -19,6 +24,7 @@ describe('useBalanzaWebSocket stale weight timeout', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.mocked(toast.info).mockClear();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     listeners = {};
     const mockSocket = {
@@ -74,6 +80,33 @@ describe('useBalanzaWebSocket stale weight timeout', () => {
     });
 
     expect(result.current.pesoNeto).toBe(2.5);
+  });
+
+  it('notifies the operator when a non-zero weight is reset by the timeout', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+
+    act(() => {
+      listeners['balanza-data']({ pesoNeto: 2.5 });
+    });
+    expect(toast.info).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(PESO_STALE_TIMEOUT_MS);
+    });
+    expect(toast.info).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not notify when the last weight was already 0', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+
+    act(() => {
+      listeners['balanza-data']({ pesoNeto: 0 });
+    });
+    act(() => {
+      vi.advanceTimersByTime(PESO_STALE_TIMEOUT_MS);
+    });
+
+    expect(toast.info).not.toHaveBeenCalled();
   });
 
   it('does not keep a pending timer after unmount', () => {

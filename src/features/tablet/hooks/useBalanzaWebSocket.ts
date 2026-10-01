@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { getSocket } from '../../../services/websocket';
 import { useAuth } from '../../auth/context/AuthContext';
 import type { UnidadPeso } from '../../../shared/types/domain';
@@ -69,7 +70,14 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     const onBalanzaData = (data: BalanzaData) => {
       setPesoNeto(data.pesoNeto);
       clearStaleTimer();
-      staleTimer = setTimeout(() => setPesoNeto(0), PESO_STALE_TIMEOUT_MS);
+      staleTimer = setTimeout(() => {
+        setPesoNeto(0);
+        // Only tell the operator when the screen actually changes: a weight
+        // already at 0 going silent is not a reset worth announcing.
+        if (data.pesoNeto !== 0) {
+          toast.info('La balanza dejó de enviar datos: el peso volvió a 0.');
+        }
+      }, PESO_STALE_TIMEOUT_MS);
     };
 
     const onConnectError = (err: Error) => {
