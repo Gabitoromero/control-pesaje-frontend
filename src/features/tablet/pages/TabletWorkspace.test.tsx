@@ -1133,4 +1133,128 @@ describe('TabletWorkspace', () => {
     });
     expect(useToleranceConfig).toHaveBeenCalled();
   });
+
+  // ── Non-positive weight guard ─────────────────────────────────────────────
+
+  describe('non-positive weight guard', () => {
+    const useEtapa = (tolerance: boolean) => {
+      server.use(
+        http.get(`${BASE}/lineas-produccion/1`, () =>
+          HttpResponse.json({
+            success: true,
+            data: {
+              id: 1,
+              nombre: 'Línea 1 — Envasado A',
+              numeroBalanza: 1,
+              activo: true,
+              rutaPasadaActiva: {
+                id: 1,
+                nombre: 'Ruta 1',
+                activo: true,
+                etapas: [
+                  {
+                    id: 10,
+                    etapa: { id: 1, nombre: 'Amasado' },
+                    orden: 1,
+                    ...(tolerance ? { pesoMinimo: 14, pesoIdeal: 15, pesoMaximo: 16 } : {}),
+                    cantidadMuestrasRequeridas: 2,
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      );
+    };
+
+    const trackPosts = () => {
+      const posts = { count: 0 };
+      server.use(
+        http.post(`${BASE}/muestras`, () => {
+          posts.count += 1;
+          return HttpResponse.json({
+            success: true,
+            data: { id: 50, pesoNeto: 15, estadoValidacion: 'ok', usuarioId: 3, etapaId: 1, lineaProduccionId: 1, timestamp: '2026-06-23T20:00:00Z' },
+          });
+        }),
+      );
+      return posts;
+    };
+
+    const setPeso = (pesoNeto: number) =>
+      vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+
+    const clickRegistrar = async () => {
+      await screen.findAllByText('Amasado');
+      const button = screen.getByRole('button', { name: /registrar muestra/i });
+      expect(button).not.toBeDisabled();
+      await userEvent.click(button);
+    };
+
+    const render = () =>
+      renderWithAuth(<TabletWorkspace />, {
+        user: operarioUser,
+        activeLineaId: 1,
+        initialEntries: ['/tablet?pasadaId=101'],
+      });
+
+    it.each([
+      ['negative', -0.0694],
+      ['zero', 0],
+    ])('shows "Peso no válido" and does not POST for a %s weight (etapa with tolerance)', async (_label, peso) => {
+      useEtapa(true);
+      setPeso(peso);
+      const posts = trackPosts();
+      render();
+
+      await clickRegistrar();
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Peso no válido')).toBeInTheDocument();
+      expect(posts.count).toBe(0);
+    });
+
+    it.each([
+      ['negative', -0.0694],
+      ['zero', 0],
+    ])('blocks a %s weight even when the etapa has NO tolerance data', async (_label, peso) => {
+      useEtapa(false);
+      setPeso(peso);
+      const posts = trackPosts();
+      render();
+
+      await clickRegistrar();
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Peso no válido')).toBeInTheDocument();
+      expect(posts.count).toBe(0);
+    });
+
+    it('runs before the tolerance availability check', async () => {
+      useEtapa(true);
+      vi.mocked(useToleranceConfig).mockReturnValue({ status: 'loading' });
+      setPeso(-1);
+      const posts = trackPosts();
+      render();
+
+      await clickRegistrar();
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Peso no válido')).toBeInTheDocument();
+      expect(within(dialog).queryByText('Tolerancia no disponible')).not.toBeInTheDocument();
+      expect(posts.count).toBe(0);
+    });
+
+    it('still registers a positive in-range weight', async () => {
+      useEtapa(true);
+      setPeso(15);
+      const posts = trackPosts();
+      render();
+
+      await clickRegistrar();
+
+      await waitFor(() => expect(posts.count).toBe(1));
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+  });
 });

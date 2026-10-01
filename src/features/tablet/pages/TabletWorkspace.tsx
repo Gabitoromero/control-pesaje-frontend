@@ -24,7 +24,12 @@ import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { PESO_DECIMALS } from '../../../shared/constants';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
-import { isToleranceBlocked, formatTolerancePct } from '../utils/tolerance';
+import {
+  isToleranceBlocked,
+  formatTolerancePct,
+  isNonPositiveWeight,
+  NON_POSITIVE_WEIGHT_ALERT,
+} from '../utils/tolerance';
 import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 import { useDialog } from '../../../components/dialogs/useDialog';
 
@@ -170,6 +175,10 @@ export const TabletWorkspace: React.FC = () => {
   // Task 3.4: Bind weight capture (addSample) from WebSocket to registrarMuestra API
   const handleRegistrarMuestra = async () => {
     if (!isConnected) return;
+    if (isNonPositiveWeight(pesoNeto)) {
+      await alertWarning({ ...NON_POSITIVE_WEIGHT_ALERT });
+      return;
+    }
     if (tolerance.status !== 'ready') {
       await alertWarning({
         title: 'Tolerancia no disponible',

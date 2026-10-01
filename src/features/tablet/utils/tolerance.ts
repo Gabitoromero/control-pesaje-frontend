@@ -36,3 +36,17 @@ const pctFormatter = new Intl.NumberFormat('es-AR', {
 
 /** Formats a tolerance percentage for UI text using the es-AR locale (20 -> "20", 12.5 -> "12,5"). */
 export const formatTolerancePct = (pct: number): string => pctFormatter.format(pct);
+
+/**
+ * True when the live weight cannot be registered as a sample: the scale may
+ * report zero or negative readings, and the backend only accepts pesoNeto > 0.
+ */
+export const isNonPositiveWeight = (pesoNeto: number): boolean => pesoNeto <= 0;
+
+/** Popup copy shown when the operator tries to register a zero/negative weight. */
+export const NON_POSITIVE_WEIGHT_ALERT = {
+  title: 'Peso no válido',
+  description:
+    'El peso es cero o negativo, por lo que no se puede registrar la muestra. ' +
+    'Colocá el producto en la balanza y registrá cuando se lea un peso positivo.',
+} as const;

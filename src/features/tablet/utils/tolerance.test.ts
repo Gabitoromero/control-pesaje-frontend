@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isToleranceBlocked, formatTolerancePct } from './tolerance';
+import { isToleranceBlocked, formatTolerancePct, isNonPositiveWeight } from './tolerance';
 
 describe('isToleranceBlocked', () => {
   it('does NOT block when pesoNeto is exactly pesoMinimo or pesoMaximo', () => {
@@ -75,5 +75,17 @@ describe('formatTolerancePct', () => {
 
   it('rounds to at most 2 decimals', () => {
     expect(formatTolerancePct(12.345)).toBe('12,35');
+  });
+});
+
+describe('isNonPositiveWeight', () => {
+  it('is true for zero and negative weights', () => {
+    expect(isNonPositiveWeight(0)).toBe(true);
+    expect(isNonPositiveWeight(-0.0694)).toBe(true);
+  });
+
+  it('is false for positive weights', () => {
+    expect(isNonPositiveWeight(0.0001)).toBe(false);
+    expect(isNonPositiveWeight(15)).toBe(false);
   });
 });

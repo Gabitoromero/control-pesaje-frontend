@@ -13,7 +13,12 @@ import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { ToleranceStatus } from '../components/ToleranceStatus';
 import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
-import { isToleranceBlocked, formatTolerancePct } from '../utils/tolerance';
+import {
+  isToleranceBlocked,
+  formatTolerancePct,
+  isNonPositiveWeight,
+  NON_POSITIVE_WEIGHT_ALERT,
+} from '../utils/tolerance';
 import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { PESO_DECIMALS } from '../../../shared/constants';
@@ -121,6 +126,10 @@ export function MuestrasLibresPage() {
     isToleranceBlocked(pesoNeto, pesoMinimo!, pesoMaximo!, tolerance.toleranciaPct);
 
   const handleRegistrar = async () => {
+    if (isNonPositiveWeight(pesoNeto)) {
+      await alertWarning({ ...NON_POSITIVE_WEIGHT_ALERT });
+      return;
+    }
     if (tolerance.status !== 'ready') {
       await alertWarning({
         title: 'Tolerancia no disponible',

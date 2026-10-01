@@ -438,4 +438,82 @@ describe('MuestrasLibresPage', () => {
     await screen.findByText('MUESTRAS LIBRES');
     expect(screen.queryByText('Observación de la línea')).not.toBeInTheDocument();
   });
+
+  // ── Non-positive weight guard ─────────────────────────────────────────────
+
+  describe('non-positive weight guard', () => {
+    const etapaSinTolerancia = {
+      ...etapaAmasado,
+      pesoMinimo: undefined,
+      pesoIdeal: undefined,
+      pesoMaximo: undefined,
+    } as unknown as RutaPasadaEtapa;
+
+    const setup = (pesoNeto: number, etapa: RutaPasadaEtapa = etapaAmasado) => {
+      vi.mocked(useMuestrasLibresContext).mockReturnValue({
+        ...baseContextValue,
+        etapas: [etapa],
+        selectedEtapa: etapa,
+        selectedEtapaId: 10,
+      });
+      vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+    };
+
+    const clickRegistrar = async () => {
+      const button = screen.getByRole('button', { name: /registrar muestra de calidad/i });
+      expect(button).not.toBeDisabled();
+      await userEvent.click(button);
+    };
+
+    it.each([
+      ['negative', -0.0694],
+      ['zero', 0],
+    ])('shows "Peso no válido" and does not call addSample for a %s weight', async (_label, peso) => {
+      setup(peso);
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await clickRegistrar();
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Peso no válido')).toBeInTheDocument();
+      expect(addSampleMock).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['negative', -0.0694],
+      ['zero', 0],
+    ])('blocks a %s weight even when the etapa has NO tolerance data', async (_label, peso) => {
+      setup(peso, etapaSinTolerancia);
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await clickRegistrar();
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Peso no válido')).toBeInTheDocument();
+      expect(addSampleMock).not.toHaveBeenCalled();
+    });
+
+    it('runs before the tolerance availability check', async () => {
+      vi.mocked(useToleranceConfig).mockReturnValue({ status: 'loading' });
+      setup(-1);
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await clickRegistrar();
+
+      const dialog = await screen.findByRole('alertdialog');
+      expect(within(dialog).getByText('Peso no válido')).toBeInTheDocument();
+      expect(within(dialog).queryByText('Tolerancia no disponible')).not.toBeInTheDocument();
+      expect(addSampleMock).not.toHaveBeenCalled();
+    });
+
+    it('still registers a positive in-range weight', async () => {
+      setup(15);
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await clickRegistrar();
+
+      expect(addSampleMock).toHaveBeenCalledWith(15);
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+  });
 });
