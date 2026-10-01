@@ -13,6 +13,11 @@ export interface BalanzaStatusPayload {
   unidad?: UnidadPeso;
 }
 
+// The scale streams frames continuously while the net weight is >= 0, but sends
+// nothing when it goes negative (e.g. a tared bucket is lifted off). Silence
+// must not leave the last weight on screen, so it resets to 0.
+export const PESO_STALE_TIMEOUT_MS = 5000;
+
 export function useBalanzaWebSocket(lineaId: number | null) {
   const [pesoNeto, setPesoNeto] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -24,6 +29,14 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     if (!lineaId) return;
 
     const socket = getSocket();
+    let staleTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const clearStaleTimer = () => {
+      if (staleTimer !== undefined) {
+        clearTimeout(staleTimer);
+        staleTimer = undefined;
+      }
+    };
 
     socket.connect();
 
@@ -35,6 +48,7 @@ export function useBalanzaWebSocket(lineaId: number | null) {
 
     const onDisconnect = () => {
       console.log('[Balanza WebSocket] Disconnected from backend');
+      clearStaleTimer();
       setIsConnected(false);
       setPesoNeto(0);
       setHardwareId(undefined);
@@ -47,12 +61,15 @@ export function useBalanzaWebSocket(lineaId: number | null) {
       setHardwareId(data.hardwareId);
       setUnidad(data.unidad);
       if (!data.isConnected) {
+        clearStaleTimer();
         setPesoNeto(0);
       }
     };
 
     const onBalanzaData = (data: BalanzaData) => {
       setPesoNeto(data.pesoNeto);
+      clearStaleTimer();
+      staleTimer = setTimeout(() => setPesoNeto(0), PESO_STALE_TIMEOUT_MS);
     };
 
     const onConnectError = (err: Error) => {
@@ -81,6 +98,7 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     });
 
     return () => {
+      clearStaleTimer();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
