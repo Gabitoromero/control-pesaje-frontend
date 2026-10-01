@@ -109,6 +109,40 @@ describe('useBalanzaWebSocket stale weight timeout', () => {
     expect(toast.info).not.toHaveBeenCalled();
   });
 
+  it('cancels the stale timer on disconnect so no second toast fires', () => {
+    const { result } = renderHook(() => useBalanzaWebSocket(1));
+
+    act(() => {
+      listeners['balanza-data']({ pesoNeto: 2.5 });
+    });
+    act(() => {
+      listeners['disconnect']();
+    });
+    expect(result.current.pesoNeto).toBe(0);
+
+    act(() => {
+      vi.advanceTimersByTime(PESO_STALE_TIMEOUT_MS);
+    });
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
+  it('cancels the stale timer when the scale reports offline so no second toast fires', () => {
+    const { result } = renderHook(() => useBalanzaWebSocket(1));
+
+    act(() => {
+      listeners['balanza-data']({ pesoNeto: 2.5 });
+    });
+    act(() => {
+      listeners['balanza-status']({ isConnected: false });
+    });
+    expect(result.current.pesoNeto).toBe(0);
+
+    act(() => {
+      vi.advanceTimersByTime(PESO_STALE_TIMEOUT_MS);
+    });
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
   it('does not keep a pending timer after unmount', () => {
     const { unmount } = renderHook(() => useBalanzaWebSocket(1));
 
