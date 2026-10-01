@@ -68,6 +68,9 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     };
 
     const onBalanzaData = (data: BalanzaData) => {
+      // A malformed frame must neither reach the screen nor arm a reset toast.
+      if (!Number.isFinite(data.pesoNeto)) return;
+
       setPesoNeto(data.pesoNeto);
       clearStaleTimer();
       staleTimer = setTimeout(() => {
@@ -106,7 +109,10 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     });
 
     return () => {
+      // Dropping the timer without resetting would leave the last weight on
+      // screen with nothing left to clear it until the next frame.
       clearStaleTimer();
+      setPesoNeto(0);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);

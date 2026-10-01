@@ -80,6 +80,44 @@ describe('useBalanzaWebSocket stale weight timeout', () => {
     });
 
     expect(result.current.pesoNeto).toBe(2.5);
+
+    // The re-armed timer must still fire once the full window elapses.
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.pesoNeto).toBe(0);
+  });
+
+  it('resets the weight when the effect re-runs with a different line', () => {
+    const { result, rerender } = renderHook(({ id }) => useBalanzaWebSocket(id), {
+      initialProps: { id: 1 },
+    });
+
+    act(() => {
+      listeners['balanza-data']({ pesoNeto: 2.5 });
+    });
+    expect(result.current.pesoNeto).toBe(2.5);
+
+    rerender({ id: 2 });
+
+    expect(result.current.pesoNeto).toBe(0);
+  });
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['undefined', undefined],
+  ])('ignores a frame with pesoNeto %s: no weight change and no toast', (_label, bad) => {
+    const { result } = renderHook(() => useBalanzaWebSocket(1));
+
+    act(() => {
+      listeners['balanza-data']({ pesoNeto: bad });
+    });
+    expect(result.current.pesoNeto).toBe(0);
+
+    act(() => {
+      vi.advanceTimersByTime(PESO_STALE_TIMEOUT_MS);
+    });
+    expect(toast.info).not.toHaveBeenCalled();
   });
 
   it('notifies the operator when a non-zero weight is reset by the timeout', () => {
