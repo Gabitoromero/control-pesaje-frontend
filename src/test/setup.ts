@@ -30,12 +30,13 @@ mockMatchMedia(false);
 
 import { vi } from 'vitest';
 vi.mock('../features/dashboard/hooks/useActividadGlobal', () => ({
-  useActividadGlobal: () => ({
+  useActividadGlobal: vi.fn(() => ({
     hayActividad: false,
+    lineaIdsConActividad: new Set<number>(),
     pasadas: [],
     sesiones: [],
     isLoading: false,
-  })
+  })),
 }));
 
 /**

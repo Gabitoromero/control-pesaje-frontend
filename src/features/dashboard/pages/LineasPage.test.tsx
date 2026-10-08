@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 import { handlers, lineasMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { LineasPage } from './LineasPage';
+import { useActividadGlobal } from '../hooks/useActividadGlobal';
 
 const server = setupServer(...handlers);
 
@@ -758,6 +759,113 @@ describe('LineasPage', () => {
       expect(link).toHaveAttribute('href', '/dashboard/balanzas');
 
       expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+    });
+  });
+
+  describe('per-line activity lock', () => {
+    const BLOCKED_TITLE = 'Línea con pasada o sesión activa: no se puede editar';
+    const lockedState = (ids: number[]) => ({
+      hayActividad: true,
+      lineaIdsConActividad: new Set<number>(ids),
+      pasadas: [],
+      sesiones: [],
+      isLoading: false,
+    });
+
+    afterEach(() => {
+      vi.mocked(useActividadGlobal).mockReset();
+    });
+
+    const rowOf = async (name: string) =>
+      (await screen.findByText(name)).closest('tr') as HTMLElement;
+
+    it('locks only the Edit button and row of the busy line', async () => {
+      vi.mocked(useActividadGlobal).mockReturnValue(lockedState([1]));
+      renderWithProviders(<LineasPage />);
+
+      const row1 = await rowOf('Línea 1 — Envasado A');
+      expect(within(row1).getByTitle(BLOCKED_TITLE)).toBeDisabled();
+      expect(row1.className).toContain('bg-warning/20');
+      expect(row1.className).not.toContain('even:bg-muted/40');
+      expect(row1.className).not.toContain('hover:bg-accent');
+    });
+
+    it('keeps other lines editable and opens the edit modal', async () => {
+      vi.mocked(useActividadGlobal).mockReturnValue(lockedState([1]));
+      renderWithProviders(<LineasPage />);
+
+      const row2 = await rowOf('Línea 2 — Envasado B');
+      const editBtn = within(row2).getByTitle('Editar');
+      expect(editBtn).toBeEnabled();
+      expect(row2.className).not.toContain('bg-warning/20');
+
+      await userEvent.click(editBtn);
+      expect(await screen.findByRole('heading', { name: 'Editar Línea' })).toBeInTheDocument();
+    });
+
+    it('keeps Nueva Línea disabled globally while there is activity', async () => {
+      vi.mocked(useActividadGlobal).mockReturnValue(lockedState([1]));
+      renderWithProviders(<LineasPage />);
+
+      await rowOf('Línea 2 — Envasado B');
+      const btn = screen.getByRole('button', { name: /nueva línea/i });
+      expect(btn).toBeDisabled();
+      expect(btn).toHaveAttribute(
+        'title',
+        'No se pueden crear líneas mientras haya pasadas o sesiones activas',
+      );
+    });
+
+    it('shows the reworded banner and not the old text', async () => {
+      vi.mocked(useActividadGlobal).mockReturnValue(lockedState([1]));
+      renderWithProviders(<LineasPage />);
+
+      await rowOf('Línea 1 — Envasado A');
+      expect(screen.getByText(/resaltadas en amarillo/i)).toBeInTheDocument();
+      expect(screen.getByText(/Tampoco se pueden crear líneas nuevas/i)).toBeInTheDocument();
+      expect(screen.queryByText(/No se permite crear, editar o eliminar líneas/i)).not.toBeInTheDocument();
+    });
+
+    it('locks a line that only has an active session', async () => {
+      vi.mocked(useActividadGlobal).mockReturnValue(lockedState([3]));
+      renderWithProviders(<LineasPage />);
+
+      const row3 = await rowOf('Línea 3 — Fraccionado');
+      expect(within(row3).getByTitle(BLOCKED_TITLE)).toBeDisabled();
+      expect(row3.className).toContain('bg-warning/20');
+    });
+
+    it('with no activity shows no banner, enables Nueva Línea and every Edit', async () => {
+      renderWithProviders(<LineasPage />);
+
+      await rowOf('Línea 1 — Envasado A');
+      expect(screen.queryByText(/resaltadas en amarillo/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Bloqueo de seguridad activo/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /nueva línea/i })).toBeEnabled();
+      for (const btn of screen.getAllByTitle('Editar')) {
+        expect(btn).toBeEnabled();
+      }
+    });
+
+    it('unblocks the line when activity disappears', async () => {
+      vi.mocked(useActividadGlobal).mockReturnValue(lockedState([1]));
+      renderWithProviders(<LineasPage />);
+
+      const row1 = await rowOf('Línea 1 — Envasado A');
+      expect(within(row1).getByTitle(BLOCKED_TITLE)).toBeDisabled();
+
+      // Simulate the next poll: the hook now reports no activity. Toggling the status
+      // filter forces LineasPage to re-render and re-read the hook.
+      vi.mocked(useActividadGlobal).mockReturnValue({ ...lockedState([]), hayActividad: false });
+      const statusSelect = screen.getAllByRole('combobox')[0];
+      await userEvent.selectOptions(statusSelect, 'inactivo');
+      await userEvent.selectOptions(statusSelect, 'activo');
+
+      const unlockedRow = await rowOf('Línea 1 — Envasado A');
+      expect(within(unlockedRow).getByTitle('Editar')).toBeEnabled();
+      expect(unlockedRow.className).not.toContain('bg-warning/20');
+      expect(screen.queryByText(/resaltadas en amarillo/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /nueva línea/i })).toBeEnabled();
     });
   });
 });

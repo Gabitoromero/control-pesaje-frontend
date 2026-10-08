@@ -59,7 +59,7 @@ export const LineasPage = () => {
     }
   };
   
-  const { hayActividad } = useActividadGlobal();
+  const { hayActividad, lineaIdsConActividad } = useActividadGlobal();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLinea, setEditingLinea] = useState<Linea | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -336,7 +336,8 @@ export const LineasPage = () => {
             ⚠️ Bloqueo de seguridad activo
           </p>
           <p className="text-sm mt-1">
-            No se permite crear, editar o eliminar líneas mientras haya pasadas o sesiones activas en el sistema.
+            Las líneas resaltadas en amarillo tienen una pasada o sesión activa y no se pueden editar hasta que finalice.
+            Tampoco se pueden crear líneas nuevas mientras haya pasadas o sesiones activas en el sistema.
           </p>
         </div>
       )}
@@ -354,8 +355,11 @@ export const LineasPage = () => {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {lineasFiltradas.map((linea) => (
-                <tr key={linea.id} className={`hover:bg-accent even:bg-muted/40 ${linea.activo === false ? 'opacity-60' : ''}`}>
+              {lineasFiltradas.map((linea) => {
+                // Linea.id is optional in the API type; a line without id cannot be locked.
+                const bloqueada = linea.id !== undefined && lineaIdsConActividad.has(linea.id);
+                return (
+                <tr key={linea.id} className={`${bloqueada ? 'bg-warning/20' : 'hover:bg-accent even:bg-muted/40'} ${linea.activo === false ? 'opacity-60' : ''}`}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{linea.nombre}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {linea.dispositivo ? `${linea.dispositivo.nombre} (${linea.dispositivo.hardwareId.slice(0, 8)})` : '-'}
@@ -369,15 +373,16 @@ export const LineasPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
                       onClick={() => openModal(linea)} 
-                      disabled={hayActividad}
-                      className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed" 
-                      title={hayActividad ? 'Bloqueado por actividad en el sistema' : 'Editar'}
+                      disabled={bloqueada}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={bloqueada ? 'Línea con pasada o sesión activa: no se puede editar' : 'Editar'}
                     >
                       <Edit size={18} />
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {lineasFiltradas.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">No hay líneas de producción {status === 'activo' ? 'activas' : 'inactivas'}.</td>
