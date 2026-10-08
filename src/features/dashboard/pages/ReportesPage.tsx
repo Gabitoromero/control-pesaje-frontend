@@ -1,25 +1,47 @@
 import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { downloadReportePasadasMuestras } from '@/api/reportes';
+import { downloadReportePasadasMuestras, downloadReporteRutasPasada } from '@/api/reportes';
 
-interface ReporteDefinicion {
+interface ReporteBase {
   id: string;
   titulo: string;
   descripcion: string;
 }
 
-const REPORTES: ReporteDefinicion[] = [
+interface ReporteConRango extends ReporteBase {
+  requiresDateRange: true;
+  download: (desde: string, hasta: string) => Promise<void>;
+}
 
+interface ReporteDirecto extends ReporteBase {
+  requiresDateRange: false;
+  download: () => Promise<void>;
+}
+
+type ReporteDefinicion = ReporteConRango | ReporteDirecto;
+
+const REPORTES: ReporteDefinicion[] = [
   {
     id: 'reporte-pasadas-muestras',
     titulo: 'Reporte de Pasadas y Muestras',
     descripcion: 'Reporte de pasadas y muestras consolidado.',
+    requiresDateRange: true,
+    download: downloadReportePasadasMuestras,
+  },
+  {
+    id: 'reporte-rutas-pasada',
+    titulo: 'Reporte de Rutas de Pasada',
+    descripcion:
+      'Configuración actual de rutas de pasada, sus etapas con pesos y los artículos asignados.',
+    requiresDateRange: false,
+    download: downloadReporteRutasPasada,
   },
 ];
 
 export const ReportesPage: React.FC = () => {
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalReporte, setModalReporte] = useState<ReporteConRango | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,16 +69,27 @@ export const ReportesPage: React.FC = () => {
 
   const handleDownload = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (validationError) return;
+    if (validationError || !modalReporte) return;
 
     try {
       setLoading(true);
-      await downloadReportePasadasMuestras(desde, hasta);
-      setModalOpen(false);
+      await modalReporte.download(desde, hasta);
+      setModalReporte(null);
     } catch (error) {
       console.error('Error al descargar el reporte', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDirectDownload = async (reporte: ReporteDirecto) => {
+    try {
+      setDownloadingId(reporte.id);
+      await reporte.download();
+    } catch (error) {
+      console.error('Error al descargar el reporte', error);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -65,44 +98,35 @@ export const ReportesPage: React.FC = () => {
       <h2 className="text-2xl font-bold mb-6 text-foreground">Reportes</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {REPORTES.map((reporte) => (
-          <div
-            key={reporte.id}
-            className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-3"
-          >
-            <h3 className="text-lg font-bold text-foreground">{reporte.titulo}</h3>
-            <p className="text-sm text-muted-foreground flex-1">{reporte.descripcion}</p>
+        {REPORTES.map((reporte) => {
+          const isDownloading = downloadingId === reporte.id;
+          return (
+            <div
+              key={reporte.id}
+              className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-3"
+            >
+              <h3 className="text-lg font-bold text-foreground">{reporte.titulo}</h3>
+              <p className="text-sm text-muted-foreground flex-1">{reporte.descripcion}</p>
 
-            <div>
-              {reporte.id === 'reporte-pasadas-muestras' ? (
+              <div>
                 <button
                   type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+                  aria-label={`Descargar ${reporte.titulo}`}
+                  disabled={isDownloading}
+                  onClick={() =>
+                    reporte.requiresDateRange ? setModalReporte(reporte) : handleDirectDownload(reporte)
+                  }
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Download className="w-4 h-4" />
-                  Descargar
+                  {isDownloading ? 'Descargando...' : 'Descargar'}
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled
-                    title="Disponible próximamente"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-muted text-muted-foreground cursor-not-allowed"
-                  >
-                    <Download className="w-4 h-4" />
-                    Descargar .xlsx
-                  </button>
-                  <p className="text-xs text-muted-foreground mt-2">Disponible próximamente</p>
-                </>
-              )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={modalReporte !== null} onOpenChange={(open) => { if (!open) setModalReporte(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Descargar Reporte</DialogTitle>
