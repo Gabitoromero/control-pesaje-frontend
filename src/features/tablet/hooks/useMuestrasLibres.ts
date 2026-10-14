@@ -109,7 +109,7 @@ export function useMuestrasLibres({
       if (!sample || sample.id === undefined) return;
 
       try {
-        const updated = await updateMuestra(sample.id, data);
+        const updated = await updateMuestra(sample.id, { ...data, pesoNeto: sample.pesoNeto });
         const normalized = normalizeMuestra(updated);
         setMuestras((prev) => prev.map((m, i) => (i === index ? normalized : m)));
       } catch (e) {

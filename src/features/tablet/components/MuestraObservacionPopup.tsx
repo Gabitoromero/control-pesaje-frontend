@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import axios from 'axios';
+import { X, Trash2, AlertCircle } from 'lucide-react';
 import type { Muestra } from '../../../shared/types/domain';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { PESO_DECIMALS } from '../../../shared/constants';
@@ -13,6 +14,27 @@ export interface MuestraObservacionPopupProps {
   onClose: () => void;
 }
 
+/**
+ * Maps a failed save/delete request to a user-facing message. The raw backend
+ * text (validation payloads, DB errors) is never shown; it stays in the console.
+ */
+function getPopupErrorMessage(err: unknown, fallback: string): string {
+  if (!axios.isAxiosError(err)) return fallback;
+  if (!err.response) return 'Sin conexión con el servidor. Intentá de nuevo.';
+
+  const { status, data } = err.response;
+  if (status === 400) {
+    const issues: Array<{ path?: unknown[] }> = data?.error?.details ?? [];
+    return issues.some((issue) => issue.path?.includes('observacion'))
+      ? 'La observación no puede estar vacía.'
+      : 'Los datos ingresados no son válidos.';
+  }
+  if (typeof data?.error?.message === 'string' && /completed or aborted/i.test(data.error.message)) {
+    return 'La pasada ya está cerrada, no se puede modificar la muestra.';
+  }
+  return fallback;
+}
+
 function PopupContent({
   muestra,
   index,
@@ -22,14 +44,18 @@ function PopupContent({
 }: Omit<MuestraObservacionPopupProps, 'isOpen'>) {
   const [observacion, setObservacion] = useState(muestra.observacion ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { confirm } = useDialog();
 
   const isOk = muestra.estadoValidacion === 'ok';
 
   const handleSave = async () => {
     setIsSaving(true);
+    setErrorMessage(null);
     try {
       await onSave(index, observacion);
+    } catch (err) {
+      setErrorMessage(getPopupErrorMessage(err, 'No se pudo guardar la observación. Intentá de nuevo.'));
     } finally {
       setIsSaving(false);
     }
@@ -43,7 +69,12 @@ function PopupContent({
       variant: 'destructive',
     });
     if (!confirmed) return;
-    await onDelete(index);
+    setErrorMessage(null);
+    try {
+      await onDelete(index);
+    } catch (err) {
+      setErrorMessage(getPopupErrorMessage(err, 'No se pudo eliminar la muestra. Intentá de nuevo.'));
+    }
   };
 
   return (
@@ -111,6 +142,16 @@ function PopupContent({
             />
           </div>
         </div>
+
+        {errorMessage && (
+          <div
+            role="alert"
+            className="mx-4 mb-4 flex items-start gap-2 rounded-lg border border-danger/40 bg-danger-muted px-3 py-2 text-sm text-danger"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex items-center gap-2 p-4 border-t border-border">

@@ -112,7 +112,7 @@ export function usePasadaState({
     }
 
     try {
-      const updated = await updateMuestra(sampleId, data);
+      const updated = await updateMuestra(sampleId, { ...data, pesoNeto: sampleToUpdate.pesoNeto });
       const normalized = normalizeMuestra(updated);
       setMuestras((prev) => prev.map((m, i) => (i === index ? normalized : m)));
     } catch (error) {
