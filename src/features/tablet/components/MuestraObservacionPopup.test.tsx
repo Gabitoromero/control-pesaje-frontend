@@ -139,6 +139,129 @@ describe('MuestraObservacionPopup', () => {
     expect(onSave).toHaveBeenCalledWith(1, '');
   });
 
+  it('shows a friendly message (not the raw backend text) when the pasada is already closed', async () => {
+    const user = userEvent.setup();
+    const apiError = Object.assign(new Error('Request failed with status code 422'), {
+      isAxiosError: true,
+      response: { status: 422, data: { success: false, error: { message: 'Cannot update sample of a completed or aborted pasada' } } },
+    });
+    onSave.mockRejectedValueOnce(apiError);
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /confirmar/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/la pasada ya está cerrada/i);
+    expect(alert).not.toHaveTextContent(/cannot update sample/i);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirmar/i })).toBeEnabled();
+  });
+
+  it('tells the user the observation cannot be empty on a 400 validation error', async () => {
+    const user = userEvent.setup();
+    onSave.mockRejectedValueOnce(
+      Object.assign(new Error('Request failed with status code 400'), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            success: false,
+            error: { message: 'Validation error', details: [{ path: ['observacion'], message: 'Too small' }] },
+          },
+        },
+      })
+    );
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /confirmar/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/la observación no puede estar vacía/i);
+    expect(alert).not.toHaveTextContent(/validation error/i);
+  });
+
+  it('shows a connection message when the server cannot be reached', async () => {
+    const user = userEvent.setup();
+    onSave.mockRejectedValueOnce(
+      Object.assign(new Error('Network Error'), { isAxiosError: true })
+    );
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /confirmar/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/sin conexión con el servidor/i);
+  });
+
+  it('shows a generic message (not the raw error) when onDelete rejects', async () => {
+    const user = userEvent.setup();
+    onDelete.mockRejectedValueOnce(new Error('boom'));
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /eliminar muestra/i }));
+    await user.click(await screen.findByRole('button', { name: /^eliminar$/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/no se pudo eliminar la muestra/i);
+    expect(alert).not.toHaveTextContent('boom');
+  });
+
+  it('clears a previous error when Confirm is retried', async () => {
+    const user = userEvent.setup();
+    onSave.mockRejectedValueOnce(new Error('fallo'));
+    renderWithProviders(
+      <MuestraObservacionPopup
+        muestra={makeMuestra()}
+        index={0}
+        isOpen
+        onSave={onSave}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /confirmar/i }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /confirmar/i }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('calls onClose without saving when Cancel is clicked', async () => {
     const user = userEvent.setup();
     renderWithProviders(
