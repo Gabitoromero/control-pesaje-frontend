@@ -324,7 +324,7 @@ describe('useMuestrasLibres', () => {
         await result.current.updateSample(0, { observacion: 'nota editada' });
       });
 
-      expect(updateMuestra).toHaveBeenCalledWith(100, { observacion: 'nota editada' });
+      expect(updateMuestra).toHaveBeenCalledWith(100, { observacion: 'nota editada', pesoNeto: 15 });
       expect(result.current.muestras[0].observacion).toBe('nota editada');
       expect(result.current.muestras).toHaveLength(1);
     });
