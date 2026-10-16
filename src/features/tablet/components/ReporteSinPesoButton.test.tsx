@@ -16,7 +16,7 @@ describe('ReporteSinPesoButton', () => {
     const onClick = vi.fn();
     render(<ReporteSinPesoButton {...baseProps} onClick={onClick} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'No veo el peso' }));
+    await userEvent.click(screen.getByRole('button', { name: 'No veo el peso: enviar reporte' }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
@@ -27,7 +27,7 @@ describe('ReporteSinPesoButton', () => {
 
   it('shows the remaining seconds while cooling down', () => {
     render(<ReporteSinPesoButton {...baseProps} estado="enfriamiento" segundosRestantes={42} deshabilitado />);
-    expect(screen.getByRole('button', { name: 'Podrá reportar nuevamente en 42 s' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reportar de nuevo en 42 s' })).toBeDisabled();
   });
 
   it('shows why it is disabled and does not call onClick', async () => {
@@ -42,7 +42,7 @@ describe('ReporteSinPesoButton', () => {
     );
 
     expect(screen.getByText('Sin conexión con el servidor')).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: 'No veo el peso' });
+    const button = screen.getByRole('button', { name: 'No veo el peso: enviar reporte' });
     expect(button).toBeDisabled();
     await userEvent.click(button);
     expect(onClick).not.toHaveBeenCalled();
@@ -58,6 +58,18 @@ describe('ReporteSinPesoButton', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-live', 'polite');
     expect(status).toHaveTextContent('Sin conexión con el servidor');
+  });
+
+  it('shows the alert emoji and explains the diagnostic report in its title', () => {
+    render(<ReporteSinPesoButton {...baseProps} />);
+    const button = screen.getByRole('button');
+    expect(button).toHaveTextContent('⚠️ No veo el peso');
+    expect(button).toHaveAttribute('title', expect.stringMatching(/reporte de diagn/i));
+  });
+
+  it('applies the className passed by the caller to its root', () => {
+    const { container } = render(<ReporteSinPesoButton {...baseProps} className="absolute top-0 right-0" />);
+    expect(container.firstChild).toHaveClass('absolute', 'top-0', 'right-0');
   });
 
   it.each([

@@ -333,30 +333,41 @@ export const TabletWorkspace: React.FC = () => {
 
         {/* Balanza Panel */}
         <div className="bg-card rounded-xl shadow-sm border border-border p-5 flex flex-col items-center justify-center min-h-0 overflow-y-auto gap-3">
-          <div className="flex items-center justify-center gap-4">
-            <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
-            <div className="text-center">
-              <span className="text-6xl font-black text-foreground tabular-nums">
-                {pesoNeto.toFixed(PESO_DECIMALS)}
-              </span>
-              <span className="text-2xl text-muted-foreground ml-2">kg</span>
-            </div>
-          </div>
-
-          {etapaActiva && hasTolerancia ? (
-            <ToleranceDisplay
-              pesoNeto={pesoNeto}
-              pesoMinimo={pesoMinimo!}
-              pesoIdeal={pesoIdeal!}
-              pesoMaximo={pesoMaximo!}
+          <div data-testid="bloque-peso" className="relative w-full flex flex-col items-center gap-3">
+            <ReporteSinPesoButton
+              estado={reporte.estado}
+              segundosRestantes={reporte.segundosRestantes}
+              deshabilitado={reporte.deshabilitado}
+              motivoDeshabilitado={reporte.motivoDeshabilitado}
+              onClick={reporte.reportar}
               variant="primary"
+              className="absolute top-0 right-0"
             />
-          ) : etapaActiva === null ? (
-            <div className="w-full flex items-center justify-center gap-2 text-success font-semibold">
-              <CheckCircle2 className="w-6 h-6" />
-              Listo para finalizar
+            <div className="flex items-center justify-center gap-4">
+              <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-primary' : 'text-muted-foreground/40'}`} />
+              <div className="text-center">
+                <span className="text-6xl font-black text-foreground tabular-nums">
+                  {pesoNeto.toFixed(PESO_DECIMALS)}
+                </span>
+                <span className="text-2xl text-muted-foreground ml-2">kg</span>
+              </div>
             </div>
-          ) : null}
+
+            {etapaActiva && hasTolerancia ? (
+              <ToleranceDisplay
+                pesoNeto={pesoNeto}
+                pesoMinimo={pesoMinimo!}
+                pesoIdeal={pesoIdeal!}
+                pesoMaximo={pesoMaximo!}
+                variant="primary"
+              />
+            ) : etapaActiva === null ? (
+              <div className="w-full flex items-center justify-center gap-2 text-success font-semibold">
+                <CheckCircle2 className="w-6 h-6" />
+                Listo para finalizar
+              </div>
+            ) : null}
+          </div>
 
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
@@ -386,14 +397,6 @@ export const TabletWorkspace: React.FC = () => {
             Registrar Muestra
           </button>
           <ToleranceStatus tolerance={tolerance} />
-          <ReporteSinPesoButton
-            estado={reporte.estado}
-            segundosRestantes={reporte.segundosRestantes}
-            deshabilitado={reporte.deshabilitado}
-            motivoDeshabilitado={reporte.motivoDeshabilitado}
-            onClick={reporte.reportar}
-            variant="primary"
-          />
         </div>
 
         {/* Muestras List */}

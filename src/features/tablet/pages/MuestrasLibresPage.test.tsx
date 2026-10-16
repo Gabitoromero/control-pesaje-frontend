@@ -443,12 +443,30 @@ describe('MuestrasLibresPage', () => {
   // ── Non-positive weight guard ─────────────────────────────────────────────
 
   describe('"No veo el peso" report button', () => {
+    it('renders inside the weight block, not after the Registrar Muestra button', async () => {
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue());
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      const button = await screen.findByRole('button', { name: 'No veo el peso: enviar reporte' });
+      const block = screen.getByTestId('bloque-peso');
+      expect(block).toContainElement(button);
+      expect(block).toHaveTextContent('MINIMO');
+      expect(button.closest('div')).toHaveClass('absolute', 'top-0', 'right-0');
+      const registrar = screen.getByRole('button', { name: /registrar muestra de calidad/i });
+      expect(block).not.toContainElement(registrar);
+      let after = registrar.nextElementSibling;
+      while (after) {
+        expect(after).not.toContainElement(button);
+        after = after.nextElementSibling;
+      }
+    });
+
     it('renders the button and reports with pantalla "muestras-libres"', async () => {
       const enviarReporteSinPeso = vi.fn(() => Promise.resolve({ ok: true, code: 'sent' } as const));
       vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ enviarReporteSinPeso }));
       renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
 
-      await userEvent.click(await screen.findByRole('button', { name: 'No veo el peso' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'No veo el peso: enviar reporte' }));
 
       expect(enviarReporteSinPeso).toHaveBeenCalledWith('muestras-libres');
     });
@@ -460,7 +478,7 @@ describe('MuestrasLibresPage', () => {
       );
       renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
 
-      const button = await screen.findByRole('button', { name: 'No veo el peso' });
+      const button = await screen.findByRole('button', { name: 'No veo el peso: enviar reporte' });
       expect(button).toBeDisabled();
       expect(screen.getByText('Sin conexión con el servidor')).toBeInTheDocument();
       expect(enviarReporteSinPeso).not.toHaveBeenCalled();

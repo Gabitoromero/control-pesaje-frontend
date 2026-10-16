@@ -225,25 +225,36 @@ export function MuestrasLibresPage() {
       <div className="flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[860fr_340fr] gap-4">
         {/* Weighing zone */}
         <div className="bg-card rounded-xl shadow-sm border border-border p-5 flex flex-col items-center justify-center min-h-0 overflow-y-auto gap-3">
-          <div className="flex items-center justify-center gap-4">
-            <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-warning' : 'text-muted-foreground/40'}`} />
-            <div className="text-center">
-              <span className="text-6xl font-black text-foreground tabular-nums">
-                {pesoNeto.toFixed(PESO_DECIMALS)}
-              </span>
-              <span className="text-2xl text-muted-foreground ml-2">kg</span>
-            </div>
-          </div>
-
-          {selectedEtapa && hasTolerancia && (
-            <ToleranceDisplay
-              pesoNeto={pesoNeto}
-              pesoMinimo={pesoMinimo!}
-              pesoIdeal={pesoIdeal!}
-              pesoMaximo={pesoMaximo!}
+          <div data-testid="bloque-peso" className="relative w-full flex flex-col items-center gap-3">
+            <ReporteSinPesoButton
+              estado={reporte.estado}
+              segundosRestantes={reporte.segundosRestantes}
+              deshabilitado={reporte.deshabilitado}
+              motivoDeshabilitado={reporte.motivoDeshabilitado}
+              onClick={reporte.reportar}
               variant="warning"
+              className="absolute top-0 right-0"
             />
-          )}
+            <div className="flex items-center justify-center gap-4">
+              <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-warning' : 'text-muted-foreground/40'}`} />
+              <div className="text-center">
+                <span className="text-6xl font-black text-foreground tabular-nums">
+                  {pesoNeto.toFixed(PESO_DECIMALS)}
+                </span>
+                <span className="text-2xl text-muted-foreground ml-2">kg</span>
+              </div>
+            </div>
+
+            {selectedEtapa && hasTolerancia && (
+              <ToleranceDisplay
+                pesoNeto={pesoNeto}
+                pesoMinimo={pesoMinimo!}
+                pesoIdeal={pesoIdeal!}
+                pesoMaximo={pesoMaximo!}
+                variant="warning"
+              />
+            )}
+          </div>
 
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
@@ -273,14 +284,6 @@ export function MuestrasLibresPage() {
             Registrar Muestra de Calidad
           </button>
           <ToleranceStatus tolerance={tolerance} />
-          <ReporteSinPesoButton
-            estado={reporte.estado}
-            segundosRestantes={reporte.segundosRestantes}
-            deshabilitado={reporte.deshabilitado}
-            motivoDeshabilitado={reporte.motivoDeshabilitado}
-            onClick={reporte.reportar}
-            variant="warning"
-          />
         </div>
 
         {/* Samples panel — filtered to the currently-selected etapa */}
