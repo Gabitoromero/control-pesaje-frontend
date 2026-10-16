@@ -5,6 +5,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { MuestrasLibresPage } from './MuestrasLibresPage';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
+import { makeBalanzaHookValue } from '../../../test/balanzaHookValue';
 import { getLinea } from '../../../api/lineas';
 import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 import type { User } from '../../../shared/types/auth';
@@ -111,7 +112,7 @@ describe('MuestrasLibresPage', () => {
     updateSampleMock.mockClear();
     setSelectedEtapaIdMock.mockClear();
     vi.mocked(useMuestrasLibresContext).mockReturnValue({ ...baseContextValue });
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 12.345, isConnected: true, hardwareId: undefined, unidad: undefined });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto: 12.345, isConnected: true, hardwareId: undefined, unidad: undefined }));
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta as never);
     vi.mocked(useToleranceConfig).mockReturnValue({ status: 'ready', toleranciaPct: 20, isStale: false });
   });
@@ -274,7 +275,7 @@ describe('MuestrasLibresPage', () => {
       selectedEtapaId: 10,
     });
     // pesoNeto=25 > upperBound=19.2 → blocked.
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 25.0, isConnected: true, hardwareId: undefined, unidad: undefined });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto: 25.0, isConnected: true, hardwareId: undefined, unidad: undefined }));
 
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
 
@@ -313,7 +314,7 @@ describe('MuestrasLibresPage', () => {
       selectedEtapa: etapaSpray,
       selectedEtapaId: 10,
     });
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 0.005, isConnected: true, hardwareId: undefined, unidad: undefined });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto: 0.005, isConnected: true, hardwareId: undefined, unidad: undefined }));
 
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
 
@@ -343,7 +344,7 @@ describe('MuestrasLibresPage', () => {
       selectedEtapa: etapaNarrow,
       selectedEtapaId: 10,
     });
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined }));
   };
 
   it('el popup muestra el porcentaje configurado en formato es-AR ("12,5%") y no "20%"', async () => {
@@ -441,6 +442,31 @@ describe('MuestrasLibresPage', () => {
 
   // ── Non-positive weight guard ─────────────────────────────────────────────
 
+  describe('"No veo el peso" report button', () => {
+    it('renders the button and reports with pantalla "muestras-libres"', async () => {
+      const enviarReporteSinPeso = vi.fn(() => Promise.resolve({ ok: true, code: 'sent' } as const));
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ enviarReporteSinPeso }));
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'No veo el peso' }));
+
+      expect(enviarReporteSinPeso).toHaveBeenCalledWith('muestras-libres');
+    });
+
+    it('is disabled with a visible reason while the socket is down', async () => {
+      const enviarReporteSinPeso = vi.fn();
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(
+        makeBalanzaHookValue({ socketConectado: false, enviarReporteSinPeso }),
+      );
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+
+      const button = await screen.findByRole('button', { name: 'No veo el peso' });
+      expect(button).toBeDisabled();
+      expect(screen.getByText('Sin conexión con el servidor')).toBeInTheDocument();
+      expect(enviarReporteSinPeso).not.toHaveBeenCalled();
+    });
+  });
+
   describe('non-positive weight guard', () => {
     const etapaSinTolerancia = {
       ...etapaAmasado,
@@ -456,7 +482,7 @@ describe('MuestrasLibresPage', () => {
         selectedEtapa: etapa,
         selectedEtapaId: 10,
       });
-      vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined }));
     };
 
     const clickRegistrar = async () => {

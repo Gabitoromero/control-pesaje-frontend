@@ -7,6 +7,7 @@ import { renderWithAuth } from '../../../test/render';
 import { MuestrasLibresPage } from './MuestrasLibresPage';
 import { useMuestrasLibresContext } from '../context/MuestrasLibresContext';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
+import { makeBalanzaHookValue } from '../../../test/balanzaHookValue';
 import type { User } from '../../../shared/types/auth';
 import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
 
@@ -90,7 +91,7 @@ describe('MuestrasLibresPage tolerance (real hook + msw)', () => {
       isRegistering: false,
     });
     // With 12.5% the limits are [12.25, 18], so 22 is blocked; the popup echoes the backend percentage.
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto: 22, isConnected: true, hardwareId: undefined, unidad: undefined });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto: 22, isConnected: true, hardwareId: undefined, unidad: undefined }));
 
     renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
 

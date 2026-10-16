@@ -15,6 +15,8 @@ import { LineaObservacionBanner } from '../../../components/LineaObservacionBann
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { ToleranceStatus } from '../components/ToleranceStatus';
+import { ReporteSinPesoButton } from '../components/ReporteSinPesoButton';
+import { useReporteSinPeso } from '../hooks/useReporteSinPeso';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getArticulo } from '../../../api/articulos';
@@ -47,7 +49,8 @@ export const TabletWorkspace: React.FC = () => {
   // Heartbeat para mantener sesión viva en backend
   useActividadHeartbeat(lineaId);
 
-  const { pesoNeto, isConnected, hardwareId, unidad } = useBalanzaWebSocket(lineaId);
+  const { pesoNeto, isConnected, hardwareId, unidad, socketConectado, enviarReporteSinPeso } = useBalanzaWebSocket(lineaId);
+  const reporte = useReporteSinPeso({ socketConectado, enviar: enviarReporteSinPeso, pantalla: 'tablet' });
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
   // Global admin-configurable tolerance. Called above every early return to
@@ -383,6 +386,14 @@ export const TabletWorkspace: React.FC = () => {
             Registrar Muestra
           </button>
           <ToleranceStatus tolerance={tolerance} />
+          <ReporteSinPesoButton
+            estado={reporte.estado}
+            segundosRestantes={reporte.segundosRestantes}
+            deshabilitado={reporte.deshabilitado}
+            motivoDeshabilitado={reporte.motivoDeshabilitado}
+            onClick={reporte.reportar}
+            variant="primary"
+          />
         </div>
 
         {/* Muestras List */}

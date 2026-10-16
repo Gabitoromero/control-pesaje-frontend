@@ -7,6 +7,7 @@ import { vi, describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } 
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
+import { makeBalanzaHookValue } from '../../../test/balanzaHookValue';
 import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
 
 // Partial mock: real implementation by default (msw-backed), overridden per test
@@ -145,12 +146,12 @@ describe('TabletWorkspace', () => {
     vi.mocked(useToleranceConfig).mockReset();
     vi.mocked(useToleranceConfig).mockImplementation(realUseToleranceConfig);
     // Default WebSocket mock state: connected with weight 15.000
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({
       pesoNeto: 15.0,
       isConnected: true,
       hardwareId: undefined,
       unidad: undefined,
-    });
+    }));
   });
 
   it('navega a /tablet/pasadas sin cerrar sesión al hacer click en Volver', async () => {
@@ -199,12 +200,12 @@ describe('TabletWorkspace', () => {
   });
 
   it('muestra el badge "Fuera de Rango" cuando el peso está fuera de tolerancia', async () => {
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({
       pesoNeto: 5.0,
       isConnected: true,
       hardwareId: undefined,
       unidad: undefined,
-    });
+    }));
 
     renderWithAuth(<TabletWorkspace />, {
       user: operarioUser,
@@ -267,12 +268,12 @@ describe('TabletWorkspace', () => {
 
   it('muestra "Sin señal" y mantiene la página accesible cuando la balanza se desconecta', async () => {
     // Set connection status to disconnected
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({
       pesoNeto: 0,
       isConnected: false,
       hardwareId: undefined,
       unidad: undefined,
-    });
+    }));
 
     renderWithAuth(<TabletWorkspace />, {
       user: operarioUser,
@@ -459,12 +460,12 @@ describe('TabletWorkspace', () => {
     );
 
     // pesoNeto=25 > upperBound=19.2 → blocked.
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({
       pesoNeto: 25.0,
       isConnected: true,
       hardwareId: undefined,
       unidad: undefined,
-    });
+    }));
 
     let muestraPosted = false;
     server.use(
@@ -536,12 +537,12 @@ describe('TabletWorkspace', () => {
       })
     );
 
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({
       pesoNeto: 0.005,
       isConnected: true,
       hardwareId: undefined,
       unidad: undefined,
-    });
+    }));
 
     renderWithAuth(<TabletWorkspace />, {
       user: operarioUser,
@@ -997,7 +998,7 @@ describe('TabletWorkspace', () => {
   };
 
   const setPeso = (pesoNeto: number) =>
-    vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined }));
 
   const renderWorkspace = () =>
     renderWithAuth(<TabletWorkspace />, {
@@ -1136,6 +1137,39 @@ describe('TabletWorkspace', () => {
 
   // ── Non-positive weight guard ─────────────────────────────────────────────
 
+  describe('"No veo el peso" report button', () => {
+    it('renders the button and reports with pantalla "tablet"', async () => {
+      const enviarReporteSinPeso = vi.fn(() => Promise.resolve({ ok: true, code: 'sent' } as const));
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ enviarReporteSinPeso }));
+      renderWithAuth(<TabletWorkspace />, {
+        user: operarioUser,
+        activeLineaId: 1,
+        initialEntries: ['/tablet?pasadaId=101'],
+      });
+
+      await userEvent.click(await screen.findByRole('button', { name: 'No veo el peso' }));
+
+      expect(enviarReporteSinPeso).toHaveBeenCalledWith('tablet');
+    });
+
+    it('is disabled with a visible reason while the socket is down', async () => {
+      const enviarReporteSinPeso = vi.fn();
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(
+        makeBalanzaHookValue({ socketConectado: false, enviarReporteSinPeso }),
+      );
+      renderWithAuth(<TabletWorkspace />, {
+        user: operarioUser,
+        activeLineaId: 1,
+        initialEntries: ['/tablet?pasadaId=101'],
+      });
+
+      const button = await screen.findByRole('button', { name: 'No veo el peso' });
+      expect(button).toBeDisabled();
+      expect(screen.getByText('Sin conexión con el servidor')).toBeInTheDocument();
+      expect(enviarReporteSinPeso).not.toHaveBeenCalled();
+    });
+  });
+
   describe('non-positive weight guard', () => {
     const useEtapa = (tolerance: boolean) => {
       server.use(
@@ -1182,7 +1216,7 @@ describe('TabletWorkspace', () => {
     };
 
     const setPeso = (pesoNeto: number) =>
-      vi.mocked(useBalanzaWebSocket).mockReturnValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined });
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined }));
 
     const clickRegistrar = async () => {
       await screen.findAllByText('Amasado');

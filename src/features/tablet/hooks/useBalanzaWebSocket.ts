@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { getSocket } from '../../../services/websocket';
 import { useAuth } from '../../auth/context/AuthContext';
 import type { UnidadPeso } from '../../../shared/types/domain';
@@ -19,17 +20,45 @@ export interface BalanzaStatusPayload {
 // must not leave the last weight on screen, so it resets to 0.
 export const PESO_STALE_TIMEOUT_MS = 5000;
 
+// How long to wait for the backend ack of a "No veo el peso" report before
+// giving up, so the button never stays in "sending" (e.g. against an old backend).
+export const REPORTE_ACK_TIMEOUT_MS = 5000;
+
+export type ReportePantalla = 'tablet' | 'muestras-libres';
+
+// Ack contract v1 of `reportar-sin-peso`. Anything else is treated as an error.
+const reportAckSchema = z.union([
+  z.object({ ok: z.literal(true), code: z.literal('sent') }),
+  z.object({ ok: z.literal(false), code: z.literal('cooldown'), retryAfterMs: z.number().finite().nonnegative() }),
+  z.object({ ok: z.literal(false), code: z.enum(['no-linea', 'invalid-payload', 'forbidden', 'error']) }),
+]);
+
+export type ReportAck = z.infer<typeof reportAckSchema>;
+// 'timeout' and 'sin-conexion' are produced by the client, never by the backend.
+export type ReportResult = ReportAck | { ok: false; code: 'timeout' | 'sin-conexion' };
+
 export function useBalanzaWebSocket(lineaId: number | null) {
   const [pesoNeto, setPesoNeto] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [hardwareId, setHardwareId] = useState<string | undefined>(undefined);
   const [unidad, setUnidad] = useState<UnidadPeso | undefined>(undefined);
+  const [socketConectado, setSocketConectado] = useState<boolean>(() => getSocket().connected);
   const { logout, user } = useAuth();
+
+  // Last frame received, kept apart from `pesoNeto` so the 5 s stale reset to 0
+  // does not erase the evidence a "No veo el peso" report needs.
+  const lastFrameValueRef = useRef<number | null>(null);
+  const lastFrameAtRef = useRef<number | null>(null);
+  // True once join-linea was done and the server answered with a balanza-status.
+  const enSalaRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!lineaId) return;
 
     const socket = getSocket();
+    lastFrameValueRef.current = null;
+    lastFrameAtRef.current = null;
+    enSalaRef.current = false;
     let staleTimer: ReturnType<typeof setTimeout> | undefined;
 
     const clearStaleTimer = () => {
@@ -43,6 +72,7 @@ export function useBalanzaWebSocket(lineaId: number | null) {
 
     // Join room when connected
     const onConnect = () => {
+      setSocketConectado(true);
       console.log(`[Balanza WebSocket] Connected to backend. Emitting 'join-linea' with id:`, lineaId);
       socket.emit('join-linea', lineaId);
     };
@@ -50,6 +80,8 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     const onDisconnect = () => {
       console.log('[Balanza WebSocket] Disconnected from backend');
       clearStaleTimer();
+      setSocketConectado(false);
+      enSalaRef.current = false;
       setIsConnected(false);
       setPesoNeto(0);
       setHardwareId(undefined);
@@ -58,6 +90,7 @@ export function useBalanzaWebSocket(lineaId: number | null) {
 
     const onBalanzaStatus = (data: BalanzaStatusPayload) => {
       console.log(`[Balanza WebSocket] Received 'balanza-status':`, data);
+      enSalaRef.current = true;
       setIsConnected(data.isConnected);
       setHardwareId(data.hardwareId);
       setUnidad(data.unidad);
@@ -71,6 +104,8 @@ export function useBalanzaWebSocket(lineaId: number | null) {
       // A malformed frame must neither reach the screen nor arm a reset toast.
       if (!Number.isFinite(data.pesoNeto)) return;
 
+      lastFrameValueRef.current = data.pesoNeto;
+      lastFrameAtRef.current = Date.now();
       setPesoNeto(data.pesoNeto);
       clearStaleTimer();
       staleTimer = setTimeout(() => {
@@ -123,5 +158,33 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     };
   }, [lineaId, logout, user]);
 
-  return { pesoNeto, isConnected, hardwareId, unidad };
+  // Never rejects: every failure is a ReportResult the UI can show.
+  const enviarReporteSinPeso = (pantalla: ReportePantalla): Promise<ReportResult> => {
+    const socket = getSocket();
+    if (!socket.connected) return Promise.resolve({ ok: false, code: 'sin-conexion' });
+
+    const now = Date.now();
+    const payload = {
+      v: 1,
+      lineaId: lineaId || null,
+      ultimoPeso: lastFrameValueRef.current,
+      ultimoPesoHaceMs: lastFrameAtRef.current === null ? null : now - lastFrameAtRef.current,
+      unidad: unidad ?? null,
+      socketConectado,
+      balanzaConectada: isConnected,
+      enSala: enSalaRef.current,
+      pantalla,
+      clientTs: now,
+    };
+
+    return new Promise((resolve) => {
+      socket.timeout(REPORTE_ACK_TIMEOUT_MS).emit('reportar-sin-peso', payload, (err: Error | null, res: unknown) => {
+        if (err) return resolve({ ok: false, code: 'timeout' });
+        const parsed = reportAckSchema.safeParse(res);
+        resolve(parsed.success ? parsed.data : { ok: false, code: 'error' });
+      });
+    });
+  };
+
+  return { pesoNeto, isConnected, hardwareId, unidad, socketConectado, enviarReporteSinPeso };
 }

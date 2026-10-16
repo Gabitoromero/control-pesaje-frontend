@@ -11,6 +11,8 @@ import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { ToleranceStatus } from '../components/ToleranceStatus';
+import { ReporteSinPesoButton } from '../components/ReporteSinPesoButton';
+import { useReporteSinPeso } from '../hooks/useReporteSinPeso';
 import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import {
@@ -40,7 +42,8 @@ export function MuestrasLibresPage() {
   const navigate = useNavigate();
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
 
-  const { pesoNeto, isConnected, hardwareId, unidad } = useBalanzaWebSocket(activeLineaId ?? 0);
+  const { pesoNeto, isConnected, hardwareId, unidad, socketConectado, enviarReporteSinPeso } = useBalanzaWebSocket(activeLineaId ?? 0);
+  const reporte = useReporteSinPeso({ socketConectado, enviar: enviarReporteSinPeso, pantalla: 'muestras-libres' });
   const {
     muestras,
     etapas,
@@ -270,6 +273,14 @@ export function MuestrasLibresPage() {
             Registrar Muestra de Calidad
           </button>
           <ToleranceStatus tolerance={tolerance} />
+          <ReporteSinPesoButton
+            estado={reporte.estado}
+            segundosRestantes={reporte.segundosRestantes}
+            deshabilitado={reporte.deshabilitado}
+            motivoDeshabilitado={reporte.motivoDeshabilitado}
+            onClick={reporte.reportar}
+            variant="warning"
+          />
         </div>
 
         {/* Samples panel — filtered to the currently-selected etapa */}
