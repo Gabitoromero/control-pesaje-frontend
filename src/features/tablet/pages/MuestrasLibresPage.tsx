@@ -233,7 +233,7 @@ export function MuestrasLibresPage() {
               motivoDeshabilitado={reporte.motivoDeshabilitado}
               onClick={reporte.reportar}
               variant="warning"
-              className="absolute top-0 right-0"
+              className="self-end min-[720px]:absolute min-[720px]:top-0 min-[720px]:right-0"
             />
             <div className="flex items-center justify-center gap-4">
               <Scale className={`w-12 h-12 flex-shrink-0 ${isConnected ? 'text-warning' : 'text-muted-foreground/40'}`} />
