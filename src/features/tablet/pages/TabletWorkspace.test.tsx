@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
@@ -9,6 +9,7 @@ import { http, HttpResponse } from 'msw';
 import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { makeBalanzaHookValue } from '../../../test/balanzaHookValue';
 import { useToleranceConfig } from '../../../hooks/useToleranceConfig';
+import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 
 // Partial mock: real implementation by default (msw-backed), overridden per test
 // to force loading / unavailable / stale states without waiting for real retries.
@@ -164,6 +165,32 @@ describe('TabletWorkspace', () => {
     const btnVolver = await screen.findByRole('button', { name: /volver/i });
     await userEvent.click(btnVolver);
     expect(navigateMock).toHaveBeenCalledWith('/tablet/pasadas');
+  });
+
+  it('si el latido informa sesión perdida avisa al operario, limpia la línea y va a la selección de línea', async () => {
+    const { authValue } = renderWithAuth(<TabletWorkspace />, {
+      user: operarioUser,
+      activeLineaId: 1,
+      initialEntries: ['/tablet?pasadaId=101'],
+    });
+    await screen.findByText('Línea 1 — Envasado A');
+
+    const onSessionLost = vi.mocked(useActividadHeartbeat).mock.calls.at(-1)?.[1];
+    expect(onSessionLost).toBeTypeOf('function');
+    act(() => {
+      onSessionLost!();
+    });
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Sesión cerrada')).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalledWith('/tablet/seleccion-linea', expect.anything());
+
+    await userEvent.click(within(dialog).getByRole('button'));
+
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith('/tablet/seleccion-linea', { replace: true }),
+    );
+    expect(authValue.closeLineSession).toHaveBeenCalledTimes(1);
   });
 
   it('redirige a /tablet/seleccion-linea si activeLineaId es null', () => {

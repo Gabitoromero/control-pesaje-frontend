@@ -7,6 +7,7 @@ import { useBalanzaWebSocket } from '../hooks/useBalanzaWebSocket';
 import { usePasadaState} from '../hooks/usePasadaState';
 //import  type { EtapaConEstado } from '../hooks/usePasadaState';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
+import { useSesionPerdida } from '../hooks/useSesionPerdida';
 import { useStageAdvanceSignal } from '../hooks/useStageAdvanceSignal';
 import { StageProgressPanel } from '../components/StageProgressPanel';
 import { StageAdvanceFlash } from '../components/StageAdvanceFlash';
@@ -47,7 +48,8 @@ export const TabletWorkspace: React.FC = () => {
   const lineaId = activeLineaId ?? 0;
 
   // Heartbeat para mantener sesión viva en backend
-  useActividadHeartbeat(lineaId);
+  const handleSesionPerdida = useSesionPerdida();
+  useActividadHeartbeat(lineaId, handleSesionPerdida);
 
   const { pesoNeto, isConnected, hardwareId, unidad, socketConectado, enviarReporteSinPeso } = useBalanzaWebSocket(lineaId);
   const reporte = useReporteSinPeso({ socketConectado, enviar: enviarReporteSinPeso, pantalla: 'tablet' });

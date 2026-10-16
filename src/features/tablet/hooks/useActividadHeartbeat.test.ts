@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useActividadHeartbeat, resolveHeartbeatInterval } from './useActividadHeartbeat';
+import { AxiosError } from 'axios';
 import { actualizarActividad } from '../../../api/auth';
 
 vi.mock('../../../api/auth', () => ({
@@ -27,9 +28,11 @@ describe('useActividadHeartbeat', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    vi.mocked(actualizarActividad).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -60,5 +63,80 @@ describe('useActividadHeartbeat', () => {
     
     vi.advanceTimersByTime(120000);
     expect(actualizarActividad).not.toHaveBeenCalled();
+  });
+  describe('sesión perdida', () => {
+    const httpError = (status: number) =>
+      new AxiosError('fail', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status,
+        statusText: '',
+        data: {},
+        headers: {},
+        config: {} as never,
+      });
+
+    beforeEach(() => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    it('llama a onSessionLost una sola vez con 404 y deja de enviar latidos', async () => {
+      vi.mocked(actualizarActividad).mockRejectedValue(httpError(404));
+      const onSessionLost = vi.fn();
+      renderHook(() => useActividadHeartbeat(5, onSessionLost));
+
+      await vi.advanceTimersByTimeAsync(120000);
+      expect(onSessionLost).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(240000);
+      expect(actualizarActividad).toHaveBeenCalledTimes(1);
+      expect(onSessionLost).toHaveBeenCalledTimes(1);
+    });
+
+    it('con 500 no llama a onSessionLost y sigue reintentando', async () => {
+      vi.mocked(actualizarActividad).mockRejectedValue(httpError(500));
+      const onSessionLost = vi.fn();
+      renderHook(() => useActividadHeartbeat(5, onSessionLost));
+
+      await vi.advanceTimersByTimeAsync(240000);
+      expect(onSessionLost).not.toHaveBeenCalled();
+      expect(actualizarActividad).toHaveBeenCalledTimes(2);
+      expect(console.error).toHaveBeenCalled();
+    });
+
+    it('con error de red no llama a onSessionLost y sigue reintentando', async () => {
+      vi.mocked(actualizarActividad).mockRejectedValue(new Error('Network Error'));
+      const onSessionLost = vi.fn();
+      renderHook(() => useActividadHeartbeat(5, onSessionLost));
+
+      await vi.advanceTimersByTimeAsync(240000);
+      expect(onSessionLost).not.toHaveBeenCalled();
+      expect(actualizarActividad).toHaveBeenCalledTimes(2);
+    });
+
+    it('sin callback un 404 conserva el comportamiento anterior (log y sigue latiendo)', async () => {
+      vi.mocked(actualizarActividad).mockRejectedValue(httpError(404));
+      renderHook(() => useActividadHeartbeat(5));
+
+      await vi.advanceTimersByTimeAsync(240000);
+      expect(actualizarActividad).toHaveBeenCalledTimes(2);
+      expect(console.error).toHaveBeenCalled();
+    });
+
+    it('no llama a onSessionLost si el 404 llega después de desmontar', async () => {
+      let rejectCall: (e: unknown) => void = () => {};
+      vi.mocked(actualizarActividad).mockReturnValue(
+        new Promise<void>((_, reject) => {
+          rejectCall = reject;
+        }),
+      );
+      const onSessionLost = vi.fn();
+      const { unmount } = renderHook(() => useActividadHeartbeat(5, onSessionLost));
+
+      await vi.advanceTimersByTimeAsync(120000);
+      unmount();
+      rejectCall(httpError(404));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onSessionLost).not.toHaveBeenCalled();
+    });
   });
 });

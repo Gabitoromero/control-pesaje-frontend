@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import { getLinea } from '../../../api/lineas';
 import { MuestrasLibresProvider } from '../context/MuestrasLibresContext';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
+import { useSesionPerdida } from '../hooks/useSesionPerdida';
 import type { RutaPasadaEtapa } from '../../../shared/types/domain';
 
 export function MuestrasLibresLayout() {
@@ -19,7 +20,8 @@ export function MuestrasLibresLayout() {
   // any child route (pasadas list or free quality samples).
   // Called before the guard so the Rules of Hooks hold; the hook no-ops when
   // activeLineaId is null.
-  useActividadHeartbeat(activeLineaId);
+  const handleSesionPerdida = useSesionPerdida();
+  useActividadHeartbeat(activeLineaId, handleSesionPerdida);
 
   if (!activeLineaId || !user) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
