@@ -6,7 +6,8 @@ export interface Dispositivo {
   nombre: string;
   lineaId: number | null;
   lineaNombre: string | null;
-  estado: 'Conectado' | 'Desconectado';
+  /** Conectado: socket in the línea room. Encendido: no socket but a fresh beacon. Desconectado: neither. */
+  estado: 'Conectado' | 'Encendido' | 'Desconectado';
   ultimaConexionAt: string | null;
   unidad: UnidadPeso | null;
 }

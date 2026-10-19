@@ -152,7 +152,9 @@ export const DispositivosConectadosPage: React.FC = () => {
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                           device.estado === 'Conectado'
                             ? 'bg-success-muted text-success'
-                            : 'bg-muted text-muted-foreground'
+                            : device.estado === 'Encendido'
+                              ? 'bg-warning/10 text-warning'
+                              : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {device.estado}

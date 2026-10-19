@@ -78,6 +78,28 @@ describe('DispositivosConectadosPage', () => {
     expect(screen.getByText('Desconectado')).toBeInTheDocument();
   });
 
+  it('renders Encendido estado with the warning colors, distinct from Conectado and Desconectado', async () => {
+    const mockDevices = [
+      {
+        hardwareId: 'rpi-powered-003',
+        nombre: 'RPI Powered',
+        lineaId: 7,
+        lineaNombre: 'Línea B',
+        estado: 'Encendido' as const,
+        ultimaConexionAt: null,
+        unidad: 'kg' as const,
+      },
+    ];
+    vi.mocked(dispositivosApi.getConectados).mockResolvedValue(mockDevices);
+
+    renderWithProviders(<DispositivosConectadosPage />);
+
+    const badge = await screen.findByText('Encendido');
+    expect(badge).toHaveClass('text-warning');
+    expect(badge).not.toHaveClass('text-success');
+    expect(badge).not.toHaveClass('text-muted-foreground');
+  });
+
   it('wraps the table in a horizontal-scroll container so narrow viewports scroll instead of breaking the layout', async () => {
     const mockDevices = [
       {
