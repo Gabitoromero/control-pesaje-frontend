@@ -762,6 +762,96 @@ describe('RutaFormPage — Artículos Asignados', () => {
   });
 });
 
+describe('RutaFormPage — create persists locally selected articulos', () => {
+  const fillValidRuta = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+    const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
+    await userEvent.type(nombreInput, 'Ruta con artículos');
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
+    const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
+    const pesosIdeal = document.querySelectorAll('input[name$=".pesoIdeal"]')[0] as HTMLInputElement;
+    await userEvent.clear(pesosMin);
+    await userEvent.type(pesosMin, '10');
+    await userEvent.clear(pesosMax);
+    await userEvent.type(pesosMax, '20');
+    await userEvent.clear(pesosIdeal);
+    await userEvent.type(pesosIdeal, '15');
+  };
+
+  const addLocalArticulo = async (label: string) => {
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+    // The etapa combobox is already set, so the only "Seleccione..." left is the articulo one
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: label }));
+    await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
+  };
+
+  it('24. create: after the ruta is created every local articulo is associated to the new ruta', async () => {
+    const pivotPayloads: Record<string, unknown>[] = [];
+    server.use(
+      http.post('http://localhost:3000/api/rutas-pasadas', () =>
+        HttpResponse.json({ success: true, data: { id: 99, nombre: 'Ruta con artículos' } }, { status: 201 })
+      ),
+      http.post('http://localhost:3000/api/rutas-pasadas-articulos', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        pivotPayloads.push(body);
+        return HttpResponse.json({ success: true, data: { id: 500 + pivotPayloads.length } }, { status: 201 });
+      })
+    );
+
+    renderWithProviders(<RutaFormPage />);
+    await fillValidRuta();
+    await addLocalArticulo('[Harina 000] MarcaA');
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+    await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/dashboard/rutas'));
+    expect(pivotPayloads).toHaveLength(2);
+    expect(pivotPayloads).toEqual(
+      expect.arrayContaining([
+        { rutaPasada: 99, articulo: 1 },
+        { rutaPasada: 99, articulo: 3 },
+      ])
+    );
+  });
+
+  it('25. create: when some articulos fail the ruta stays created and the failed ones are listed', async () => {
+    server.use(
+      http.post('http://localhost:3000/api/rutas-pasadas', () =>
+        HttpResponse.json({ success: true, data: { id: 99, nombre: 'Ruta con artículos' } }, { status: 201 })
+      ),
+      http.post('http://localhost:3000/api/rutas-pasadas-articulos', async ({ request }) => {
+        const body = (await request.json()) as { articulo: number };
+        if (body.articulo === 3) {
+          return HttpResponse.json({ success: false, error: { message: 'Ya está asignado' } }, { status: 400 });
+        }
+        return HttpResponse.json({ success: true, data: { id: 501 } }, { status: 201 });
+      })
+    );
+
+    renderWithProviders(<RutaFormPage />);
+    await fillValidRuta();
+    await addLocalArticulo('[Harina 000] MarcaA');
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+    await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('La ruta se creó, pero no se pudieron asignar algunos artículos')).toBeInTheDocument();
+    expect(within(dialog).getByText(/\[Sal fina\] MarcaC/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/\[Harina 000\] MarcaA/)).not.toBeInTheDocument();
+    // The ruta exists, so the user lands on its edit page to retry
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/dashboard/rutas/99'));
+  });
+});
+
 describe('RutaFormPage — Auto-Expand on Validation Errors', () => {
   it('19. Etapas section auto-expands when etapas validation errors appear (forceOpen)', async () => {
     // Create mode: default etapa has etapa=0 (invalid — schema requires min 1)

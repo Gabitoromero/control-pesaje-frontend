@@ -284,12 +284,30 @@ export const RutaFormPage = () => {
     }
   }, [ruta, reset]);
 
+  // The create endpoint does not take articulos: once the ruta exists, associate the locally selected ones.
+  // A failed association never rolls back the ruta; the failed articulos are reported instead.
   const createMutation = useMutation({
-    mutationFn: createRuta,
-    onSuccess: () => {
+    mutationFn: async ({ payload, articulos }: { payload: Parameters<typeof createRuta>[0]; articulos: ArticuloRutaPasadaItem[] }) => {
+      const nueva = await createRuta(payload);
+      const results = await Promise.allSettled(articulos.map(a => addArticuloARuta(nueva.id as number, a.articulo.id)));
+      const fallidos = articulos.filter((_, i) => results[i].status === 'rejected');
+      return { nueva, fallidos };
+    },
+    onSuccess: ({ nueva, fallidos }) => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
-      toast.success('Ruta creada exitosamente');
-      navigate('/dashboard/rutas');
+      queryClient.invalidateQueries({ queryKey: ['ruta-articulos', String(nueva.id)] });
+      if (fallidos.length === 0) {
+        toast.success('Ruta creada exitosamente');
+        navigate('/dashboard/rutas');
+        return;
+      }
+      alertError({
+        title: 'La ruta se creó, pero no se pudieron asignar algunos artículos',
+        description: `Artículos sin asignar:\n${fallidos
+          .map(a => `- [${a.articulo.codigo}]${a.articulo.nombre ? ` ${a.articulo.nombre}` : ''}`)
+          .join('\n')}\n\nPodés volver a agregarlos desde la edición de la ruta.`,
+      });
+      navigate(`/dashboard/rutas/${nueva.id}`);
     },
     onError: (err: unknown) => {
       alertError({
@@ -466,7 +484,7 @@ export const RutaFormPage = () => {
     if (isEditing) {
       updateMutation.mutate({ id: Number(id), data: payload, accion: 'actualizada' });
     } else {
-      createMutation.mutate(payload);
+      createMutation.mutate({ payload, articulos: articulosLocal });
     }
   };
 
