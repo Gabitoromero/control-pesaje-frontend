@@ -10,6 +10,7 @@ import { SeleccionLineaPage } from './features/tablet/pages/SeleccionLineaPage';
 import { GestionPasadasPage } from './features/tablet/pages/GestionPasadasPage';
 import { MuestrasLibresLayout } from './features/tablet/pages/MuestrasLibresLayout';
 import { MuestrasLibresPage } from './features/tablet/pages/MuestrasLibresPage';
+import { HistorialPage } from './features/tablet/pages/HistorialPage';
 
 import { ArticulosPage } from './features/dashboard/pages/ArticulosPage';
 import { BalanzasPage } from './features/dashboard/pages/BalanzasPage';
@@ -31,6 +32,7 @@ function App() {
   const { isAuthenticated, user } = useAuth();
   const isAdmin = user?.rol === UsuarioRol.ADMINISTRADOR;
   const isJefe = user?.rol === UsuarioRol.JEFE || isAdmin;
+  const canSeeHistorial = isJefe || user?.rol === UsuarioRol.OPERARIO;
 
   const getDefaultRoute = () => {
     if (!isAuthenticated) return "/login";
@@ -55,6 +57,11 @@ function App() {
         <Route element={<MuestrasLibresLayout />}>
           <Route path="/tablet/pasadas" element={<GestionPasadasPage />} />
           <Route path="/tablet/muestras-libres" element={<MuestrasLibresPage />} />
+          {/* Own history: reachable only from Planta (switch in the tablet header) by operario, jefe and administrador */}
+          <Route
+            path="/tablet/historial"
+            element={canSeeHistorial ? <HistorialPage /> : <Navigate to={getDefaultRoute()} replace />}
+          />
         </Route>
 
         {/* Tablet workspace (after Layer 2 activated) */}
