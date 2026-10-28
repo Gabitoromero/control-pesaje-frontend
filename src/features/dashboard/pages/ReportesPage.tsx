@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { downloadReportePasadasMuestras, downloadReporteRutasPasada } from '@/api/reportes';
+import {
+  downloadReporteMuestras,
+  downloadReportePasadas,
+  downloadReporteRutasPasada,
+} from '@/api/reportes';
+
+// Keep in sync with MAX_RANGE_DAYS in the backend reporte.controller.
+const MAX_RANGE_DAYS = 90;
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+type LoadingPhase = 'generando' | 'descargando';
 
 interface ReporteBase {
   id: string;
@@ -11,7 +21,7 @@ interface ReporteBase {
 
 interface ReporteConRango extends ReporteBase {
   requiresDateRange: true;
-  download: (desde: string, hasta: string) => Promise<void>;
+  download: (desde: string, hasta: string, onResponseStart?: () => void) => Promise<void>;
 }
 
 interface ReporteDirecto extends ReporteBase {
@@ -23,11 +33,19 @@ type ReporteDefinicion = ReporteConRango | ReporteDirecto;
 
 const REPORTES: ReporteDefinicion[] = [
   {
-    id: 'reporte-pasadas-muestras',
-    titulo: 'Reporte de Pasadas y Muestras',
-    descripcion: 'Reporte de pasadas y muestras consolidado.',
+    id: 'reporte-muestras',
+    titulo: 'Reporte de Muestras',
+    descripcion:
+      'Todas las muestras del rango en una única hoja, con línea, balanza, código y artículo.',
     requiresDateRange: true,
-    download: downloadReportePasadasMuestras,
+    download: downloadReporteMuestras,
+  },
+  {
+    id: 'reporte-pasadas',
+    titulo: 'Reporte de Pasadas',
+    descripcion: 'Pasadas del rango con una hoja por línea de producción y su hoja de etapas.',
+    requiresDateRange: true,
+    download: downloadReportePasadas,
   },
   {
     id: 'reporte-rutas-pasada',
@@ -45,6 +63,7 @@ export const ReportesPage: React.FC = () => {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<LoadingPhase>('generando');
 
   // Validation
   const validateDates = () => {
@@ -57,10 +76,10 @@ export const ReportesPage: React.FC = () => {
     if (dHasta < dDesde) {
         return 'La fecha "Hasta" debe ser mayor o igual a "Desde".';
     }
-    const diffTime = dHasta.getTime() - dDesde.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    if (diffDays > 5) {
-      return 'El rango de fechas no puede ser mayor a 5 días.';
+    // Both days are included in the range (same criterion as the backend).
+    const rangeDays = Math.round((dHasta.getTime() - dDesde.getTime()) / DAY_MS) + 1;
+    if (rangeDays > MAX_RANGE_DAYS) {
+      return `El rango de fechas no puede ser mayor a ${MAX_RANGE_DAYS} días.`;
     }
     return null;
   };
@@ -72,8 +91,9 @@ export const ReportesPage: React.FC = () => {
     if (validationError || !modalReporte) return;
 
     try {
+      setPhase('generando');
       setLoading(true);
-      await modalReporte.download(desde, hasta);
+      await modalReporte.download(desde, hasta, () => setPhase('descargando'));
       setModalReporte(null);
     } catch (error) {
       console.error('Error al descargar el reporte', error);
@@ -126,11 +146,15 @@ export const ReportesPage: React.FC = () => {
           );
         })}
       </div>
-      <Dialog open={modalReporte !== null} onOpenChange={(open) => { if (!open) setModalReporte(null); }}>
+      <Dialog
+        open={modalReporte !== null}
+        onOpenChange={(open) => { if (!open && !loading) setModalReporte(null); }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Descargar Reporte</DialogTitle>
           </DialogHeader>
+          {modalReporte && <p className="text-sm text-muted-foreground">{modalReporte.titulo}</p>}
           <form onSubmit={handleDownload} className="flex flex-col gap-4 mt-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="desde" className="text-sm font-medium">Desde</label>
@@ -138,6 +162,7 @@ export const ReportesPage: React.FC = () => {
                 id="desde"
                 type="date"
                 value={desde}
+                disabled={loading}
                 onChange={(e) => setDesde(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -148,6 +173,7 @@ export const ReportesPage: React.FC = () => {
                 id="hasta"
                 type="date"
                 value={hasta}
+                disabled={loading}
                 onChange={(e) => setHasta(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -155,6 +181,28 @@ export const ReportesPage: React.FC = () => {
 
             {validationError && (desde || hasta) && (
               <p className="text-sm text-red-500">{validationError}</p>
+            )}
+
+            {loading && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-4"
+              >
+                <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                <div className="flex flex-col gap-1 text-sm">
+                  <span className="font-semibold text-foreground">
+                    {phase === 'generando'
+                      ? 'Generando el reporte en el servidor...'
+                      : 'Reporte listo, descargando el archivo...'}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {phase === 'generando'
+                      ? 'El servidor recibió la solicitud y está procesando los datos. Con rangos largos puede demorar varios minutos; no cierres esta ventana.'
+                      : 'La descarga comenzará en unos instantes.'}
+                  </span>
+                </div>
+              </div>
             )}
 
             <button
