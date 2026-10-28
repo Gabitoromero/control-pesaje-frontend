@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import type { Control, UseFormRegister, FieldErrors, UseFieldArrayRemove, UseFieldArrayMove } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
+import type { Control, UseFormRegister, UseFormSetValue, FieldErrors, UseFieldArrayRemove, UseFieldArrayMove } from 'react-hook-form';
 import type { Resolver } from 'react-hook-form';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,6 +29,7 @@ const SortableEtapaItem = ({
   index,
   register,
   control,
+  setValue,
   errors,
   etapasOptions,
   remove,
@@ -38,6 +39,7 @@ const SortableEtapaItem = ({
   id: string;
   index: number;
   register: UseFormRegister<RutaFormValues>;
+  setValue: UseFormSetValue<RutaFormValues>;
   control: Control<RutaFormValues>;
   errors: FieldErrors<RutaFormValues>;
   etapasOptions: { id?: number; nombre: string }[];
@@ -56,6 +58,8 @@ const SortableEtapaItem = ({
     isDragging,
     isOver,
   } = useSortable({ id });
+
+  const toleranciaPropia = useWatch({ control, name: `etapas.${index}.toleranciaPorDefecto` }) === false;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -197,11 +201,61 @@ const SortableEtapaItem = ({
             </div>
           </div>
         </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Tolerancia</label>
+          <div className="flex flex-wrap items-start gap-4">
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <Controller
+                name={`etapas.${index}.toleranciaPorDefecto`}
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <input
+                    type="checkbox"
+                    checked={value !== false}
+                    onChange={(e) => {
+                      onChange(e.target.checked);
+                      // Re-checking "por defecto" discards the own percentage
+                      if (e.target.checked) setValue(`etapas.${index}.toleranciaPct`, null);
+                    }}
+                    className="h-4 w-4 accent-primary"
+                  />
+                )}
+              />
+              Tolerancia por defecto
+            </label>
+            {toleranciaPropia ? (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={MIN_TOLERANCIA_PCT}
+                    max={MAX_TOLERANCIA_PCT}
+                    aria-label="Tolerancia propia (%)"
+                    {...register(`etapas.${index}.toleranciaPct`, {
+                      setValueAs: (v) => (v === '' || v == null ? null : Number(v)),
+                    })}
+                    className="w-24 bg-background border border-border rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring dark:[color-scheme:dark]"
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+                {errors.etapas?.[index]?.toleranciaPct && (
+                  <span className="text-destructive text-xs">{errors.etapas[index]?.toleranciaPct?.message}</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground self-center">
+                Usa la tolerancia global configurada en Muestras.
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-import { rutaSchema } from './RutaFormPage.schemas.js';
+import { rutaSchema, MIN_TOLERANCIA_PCT, MAX_TOLERANCIA_PCT } from './RutaFormPage.schemas.js';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
@@ -242,6 +296,7 @@ export const RutaFormPage = () => {
   const {
     register,
     control,
+    setValue,
     handleSubmit,
     reset,
     formState: { errors },
@@ -257,6 +312,8 @@ export const RutaFormPage = () => {
           pesoMaximo: 0,
           pesoIdeal: 0,
           cantidadMuestrasRequeridas: 1,
+          toleranciaPorDefecto: true,
+          toleranciaPct: null,
         }
       ],
     },
@@ -279,6 +336,8 @@ export const RutaFormPage = () => {
           pesoMaximo: e.pesoMaximo,
           pesoIdeal: e.pesoIdeal,
           cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
+          toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
+          toleranciaPct: e.toleranciaPct ?? null,
         })),
       });
     }
@@ -473,6 +532,9 @@ export const RutaFormPage = () => {
       pesoIdeal: e.pesoIdeal,
       pesoMaximo: e.pesoMaximo,
       cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
+      // "por defecto" validates against the global tolerance: any own percentage is discarded
+      toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
+      toleranciaPct: e.toleranciaPorDefecto === false ? (e.toleranciaPct ?? null) : null,
     }));
 
     const payload = {
@@ -558,6 +620,8 @@ export const RutaFormPage = () => {
                 pesoMaximo: 0,
                 pesoIdeal: 0,
                 cantidadMuestrasRequeridas: 1,
+                toleranciaPorDefecto: true,
+                toleranciaPct: null,
               })}
               className="bg-success hover:bg-success/90 text-white px-3 py-1.5 rounded-md flex items-center gap-2 text-sm"
             >
@@ -574,6 +638,7 @@ export const RutaFormPage = () => {
                     id={field.id}
                     index={index}
                     register={register}
+                    setValue={setValue}
                     control={control}
                     errors={errors}
                     etapasOptions={etapasOptions}

@@ -852,6 +852,103 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
   });
 });
 
+describe('RutaFormPage — tolerancia por etapa', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const capturePut = (): { payload: any } => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const holder: { payload: any } = { payload: null };
+    server.use(
+      http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
+        holder.payload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 1, ...holder.payload } });
+      })
+    );
+    return holder;
+  };
+
+  const openEdit = async () => {
+    paramsMock = { id: '1' };
+    renderWithProviders(<RutaFormPage />);
+    const container = await screen.findByTestId('etapas-container');
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
+    await waitFor(() => expect(within(container).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2));
+    return container;
+  };
+
+  it('26. every etapa shows the "Tolerancia por defecto" checkbox checked and no own input', async () => {
+    const container = await openEdit();
+    const checks = within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i });
+    expect(checks).toHaveLength(2);
+    checks.forEach((c) => expect(c).toBeChecked());
+    expect(within(container).queryByLabelText('Tolerancia propia (%)')).not.toBeInTheDocument();
+  });
+
+  it('27. unchecking shows the input for an own percentage and saving sends it for that etapa only', async () => {
+    const holder = capturePut();
+    const container = await openEdit();
+
+    await userEvent.click(within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i })[0]);
+    const input = within(container).getByLabelText('Tolerancia propia (%)');
+    await userEvent.type(input, '7.5');
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    await waitFor(() => expect(holder.payload).not.toBeNull());
+
+    expect(holder.payload.etapas[0].toleranciaPorDefecto).toBe(false);
+    expect(holder.payload.etapas[0].toleranciaPct).toBe(7.5);
+    expect(holder.payload.etapas[1].toleranciaPorDefecto).toBe(true);
+    expect(holder.payload.etapas[1].toleranciaPct).toBeNull();
+  });
+
+  it('28. re-checking "por defecto" discards the own percentage', async () => {
+    const holder = capturePut();
+    const container = await openEdit();
+
+    const first = within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i })[0];
+    await userEvent.click(first);
+    await userEvent.type(within(container).getByLabelText('Tolerancia propia (%)'), '9');
+    await userEvent.click(first);
+    expect(within(container).queryByLabelText('Tolerancia propia (%)')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    await waitFor(() => expect(holder.payload).not.toBeNull());
+
+    expect(holder.payload.etapas[0].toleranciaPorDefecto).toBe(true);
+    expect(holder.payload.etapas[0].toleranciaPct).toBeNull();
+  });
+
+  it('29. an own percentage is required and limited to 0-50 (nothing is sent otherwise)', async () => {
+    const holder = capturePut();
+    const container = await openEdit();
+
+    await userEvent.click(within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i })[0]);
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    expect(await within(container).findByText('Requerido')).toBeInTheDocument();
+
+    await userEvent.type(within(container).getByLabelText('Tolerancia propia (%)'), '51');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    expect(await within(container).findByText('Debe estar entre 0 y 50')).toBeInTheDocument();
+    expect(holder.payload).toBeNull();
+  });
+});
+
+describe('RutaFormPage Validation Schemas — tolerancia', () => {
+  const etapa = { etapa: 1, pesoMinimo: 10, pesoMaximo: 20, pesoIdeal: 15, cantidadMuestrasRequeridas: 1 };
+
+  it('accepts etapas without tolerance fields and with the default active', () => {
+    expect(etapaSchema.safeParse(etapa).success).toBe(true);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: true, toleranciaPct: null }).success).toBe(true);
+  });
+
+  it('accepts 0 and 50 as own percentage, rejects values outside the range', () => {
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: 0 }).success).toBe(true);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: 50 }).success).toBe(true);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: 50.5 }).success).toBe(false);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: -1 }).success).toBe(false);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: null }).success).toBe(false);
+  });
+});
+
 describe('RutaFormPage — Auto-Expand on Validation Errors', () => {
   it('19. Etapas section auto-expands when etapas validation errors appear (forceOpen)', async () => {
     // Create mode: default etapa has etapa=0 (invalid — schema requires min 1)
