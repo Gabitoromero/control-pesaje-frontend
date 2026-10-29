@@ -346,18 +346,18 @@ export const RutaFormPage = () => {
     },
   });
 
-  const handleAddArticulo = () => {
-    if (!selectedArticuloId || selectedArticuloId === 0) return;
+  const handleAddArticulo = (articuloId: number) => {
+    if (!articuloId || addArticuloMutation.isPending) return;
 
     if (isEditing) {
       // In edit mode: call the API directly
-      addArticuloMutation.mutate({ rutaId: Number(id), articuloId: selectedArticuloId });
+      addArticuloMutation.mutate({ rutaId: Number(id), articuloId });
     } else {
       // In create mode: manage locally until the ruta is persisted
-      const alreadyAssigned = articulosLocal.some(a => a.articulo.id === selectedArticuloId);
+      const alreadyAssigned = articulosLocal.some(a => a.articulo.id === articuloId);
       if (alreadyAssigned) return;
 
-      const articuloOption = articulosOptions.find(a => a.id === selectedArticuloId);
+      const articuloOption = articulosOptions.find(a => a.id === articuloId);
       if (!articuloOption) return;
 
       const localItem: ArticuloRutaPasadaItem = {
@@ -576,11 +576,11 @@ export const RutaFormPage = () => {
           count={articulosMostrados.length}
         >
           {/* Selector to add a new articulo */}
-          <div className="flex gap-2 mb-4">
-            <div className="flex-1">
+          <div className="mb-4">
+            <div className="min-w-0">
               <SearchableCombobox 
                 value={selectedArticuloId} 
-                onChange={(val) => setSelectedArticuloId(val)}
+                onChange={(val) => handleAddArticulo(val)}
                 options={articulosOptions
                   .filter(a => !articulosAsignadosIds.has(a.id!))
                   .map(a => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo }))
@@ -588,15 +588,6 @@ export const RutaFormPage = () => {
                 placeholder="Buscar artículo..." 
               />
             </div>
-            <button
-              type="button"
-              onClick={handleAddArticulo}
-              disabled={!selectedArticuloId || addArticuloMutation.isPending}
-              aria-label="Agregar artículo"
-              className="bg-success hover:bg-success/90 text-white px-3 py-2 rounded-md flex items-center gap-2 text-sm disabled:opacity-50"
-            >
-              <Plus size={16} /> Agregar
-            </button>
           </div>
 
           {/* List of assigned articulos */}

@@ -564,7 +564,6 @@ describe('RutaFormPage Component', () => {
       // The article combobox shows "Seleccione..." — click it to open, then select "Sal fina"
       await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
       await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
-      await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
 
       const dialog = await screen.findByRole('alertdialog');
       expect(within(dialog).getByText('No se pudo agregar el artículo')).toBeInTheDocument();
@@ -685,8 +684,6 @@ describe('RutaFormPage — Artículos Asignados', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
 
-    const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
-    await userEvent.click(addBtn);
 
     await waitFor(() => {
       expect(pivotPostPayload).toBeDefined();
@@ -743,8 +740,6 @@ describe('RutaFormPage — Artículos Asignados', () => {
     });
     await userEvent.click(screen.getByRole('option', { name: '[Harina 000] MarcaA' }));
 
-    const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
-    await userEvent.click(addBtn);
 
     // Should appear in the list without any API call
     await waitFor(() => {
