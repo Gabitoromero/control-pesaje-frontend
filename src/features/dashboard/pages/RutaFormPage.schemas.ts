@@ -7,10 +7,10 @@ export const MAX_TOLERANCIA_PCT = 50;
 export const etapaSchema = z.object({
   id: z.number().optional(),
   etapa: z.coerce.number().min(1, 'Requerido'),
-  pesoMinimo: z.coerce.number().gt(0, 'Debe ser mayor a 0'),
-  pesoMaximo: z.coerce.number().gt(0, 'Debe ser mayor a 0'),
-  pesoIdeal: z.coerce.number().gt(0, 'Debe ser mayor a 0'),
-  cantidadMuestrasRequeridas: z.coerce.number().min(1, 'Mínimo 1'),
+  pesoMinimo: z.coerce.number({ error: 'Requerido' }).gt(0, 'Debe ser mayor a 0'),
+  pesoMaximo: z.coerce.number({ error: 'Requerido' }).gt(0, 'Debe ser mayor a 0'),
+  pesoIdeal: z.coerce.number({ error: 'Requerido' }).gt(0, 'Debe ser mayor a 0'),
+  cantidadMuestrasRequeridas: z.coerce.number({ error: 'Requerido' }).min(1, 'Mínimo 1'),
   // undefined is treated as "por defecto" (uses the global tolerance)
   toleranciaPorDefecto: z.boolean().optional(),
   toleranciaPct: z.number().nullable().optional(),

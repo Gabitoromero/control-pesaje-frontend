@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import type { Control, UseFormRegister, UseFormSetValue, FieldErrors, UseFieldArrayRemove, UseFieldArrayMove } from 'react-hook-form';
 import type { Resolver } from 'react-hook-form';
@@ -91,7 +91,7 @@ const SortableEtapaItem = ({
 
       <div className="flex-1 flex flex-col gap-5">
         <div className="flex flex-col md:flex-row gap-5 items-start">
-          <div className="flex-[1.3] flex flex-col gap-1.5 w-full">
+          <div data-field={`etapas.${index}.etapa`} className="flex-[1.3] flex flex-col gap-1.5 w-full">
             <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Etapa</label>
             <Controller
               name={`etapas.${index}.etapa`}
@@ -107,7 +107,7 @@ const SortableEtapaItem = ({
 
           <div className="flex-1 flex flex-col gap-1.5 w-full">
             <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Muestras Requeridas</label>
-            <div className="flex items-center gap-2">
+            <div data-field={`etapas.${index}.cantidadMuestrasRequeridas`} className="flex items-center gap-2 rounded-md">
               <Controller
                 name={`etapas.${index}.cantidadMuestrasRequeridas`}
                 control={control}
@@ -161,7 +161,7 @@ const SortableEtapaItem = ({
         <div className="flex flex-col gap-2">
           <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Rango de Peso (kg)</label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
+            <div data-field={`etapas.${index}.pesoMinimo`} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-amber-500">Mínimo</span>
@@ -172,9 +172,12 @@ const SortableEtapaItem = ({
                 {...register(`etapas.${index}.pesoMinimo`, { valueAsNumber: true })}
                 className="w-full bg-background border border-amber-500/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
+              {errors.etapas?.[index]?.pesoMinimo && (
+                <span className="mt-1 block text-destructive text-xs">{errors.etapas[index]?.pesoMinimo?.message}</span>
+              )}
             </div>
             
-            <div className="bg-primary/10 border border-primary/30 rounded-lg p-2.5">
+            <div data-field={`etapas.${index}.pesoIdeal`} className="bg-primary/10 border border-primary/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-primary">Ideal</span>
@@ -185,9 +188,12 @@ const SortableEtapaItem = ({
                 {...register(`etapas.${index}.pesoIdeal`, { valueAsNumber: true })}
                 className="w-full bg-background border border-primary/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
+              {errors.etapas?.[index]?.pesoIdeal && (
+                <span className="mt-1 block text-destructive text-xs">{errors.etapas[index]?.pesoIdeal?.message}</span>
+              )}
             </div>
 
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-2.5">
+            <div data-field={`etapas.${index}.pesoMaximo`} className="bg-destructive/10 border border-destructive/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-destructive">Máximo</span>
@@ -198,6 +204,9 @@ const SortableEtapaItem = ({
                 {...register(`etapas.${index}.pesoMaximo`, { valueAsNumber: true })}
                 className="w-full bg-background border border-destructive/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-destructive dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
+              {errors.etapas?.[index]?.pesoMaximo && (
+                <span className="mt-1 block text-destructive text-xs">{errors.etapas[index]?.pesoMaximo?.message}</span>
+              )}
             </div>
           </div>
         </div>
@@ -226,7 +235,7 @@ const SortableEtapaItem = ({
             </label>
             {toleranciaPropia ? (
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
+                <div data-field={`etapas.${index}.toleranciaPct`} className="flex items-center gap-2 rounded-md">
                   <input
                     type="number"
                     step="0.01"
@@ -255,6 +264,7 @@ const SortableEtapaItem = ({
     </div>
   );
 };
+import { focusFirstFormError } from './focusFirstFormError';
 import { rutaSchema, MIN_TOLERANCIA_PCT, MAX_TOLERANCIA_PCT } from './RutaFormPage.schemas.js';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -301,6 +311,8 @@ export const RutaFormPage = () => {
     reset,
     formState: { errors },
   } = useForm<RutaFormValues>({
+    // focusFirstFormError takes over: it opens the target in view and pulses it
+    shouldFocusError: false,
     resolver: zodResolver(rutaSchema) as unknown as Resolver<RutaFormValues>,
     defaultValues: {
       nombre: '',
@@ -318,6 +330,9 @@ export const RutaFormPage = () => {
       ],
     },
   });
+
+  const focusTimer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(focusTimer.current), []);
 
   const { fields, append, remove, swap } = useFieldArray({
     control,
@@ -523,6 +538,12 @@ export const RutaFormPage = () => {
     }
   };
 
+  // The Etapas section may still be expanding (300 ms) when the errors arrive; wait so the scroll lands on the final layout.
+  const onInvalid = (invalid: FieldErrors<RutaFormValues>) => {
+    window.clearTimeout(focusTimer.current);
+    focusTimer.current = window.setTimeout(() => focusFirstFormError(invalid), 350);
+  };
+
   const onSubmit = (data: RutaFormValues) => {
     const etapas = data.etapas.map((e, index) => ({
       ...(e.id != null ? { id: e.id } : {}),
@@ -579,13 +600,14 @@ export const RutaFormPage = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
         <div className="bg-card border border-border rounded-lg shadow p-6">
           <h2 className="text-lg font-medium mb-4 text-foreground">Información General</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground">Nombre</label>
               <input
+                data-field="nombre"
                 {...register('nombre')}
                 className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
               />

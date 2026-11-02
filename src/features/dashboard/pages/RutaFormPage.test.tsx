@@ -66,6 +66,25 @@ describe('RutaFormPage Validation Schemas', () => {
       }
     });
 
+    it('reports an empty numeric input (NaN) in Spanish for every numeric field', () => {
+      const result = etapaSchema.safeParse({
+        etapa: 1,
+        pesoMinimo: NaN,
+        pesoIdeal: NaN,
+        pesoMaximo: NaN,
+        cantidadMuestrasRequeridas: NaN,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((i) => [i.path[0], i.message])).toEqual([
+          ['pesoMinimo', 'Requerido'],
+          ['pesoMaximo', 'Requerido'],
+          ['pesoIdeal', 'Requerido'],
+          ['cantidadMuestrasRequeridas', 'Requerido'],
+        ]);
+      }
+    });
+
     it('should fail if required fields are missing/NaN', () => {
       const invalidEtapa = {
         etapa: 1,
@@ -156,6 +175,30 @@ describe('RutaFormPage Component', () => {
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
     
     expect(await screen.findByText('Nombre es requerido')).toBeInTheDocument();
+  });
+
+  it('2b. invalid submit scrolls to and pulses the first invalid field', async () => {
+    const scrollIntoView = vi.fn();
+    const animate = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    HTMLElement.prototype.animate = animate;
+
+    renderWithProviders(<RutaFormPage />);
+
+    await userEvent.type(document.querySelector('input[name="nombre"]') as HTMLInputElement, 'Ruta con pesos 0');
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    // Weights keep their default of 0, so the first invalid field is the minimum of the first etapa
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    // cmdk also calls scrollIntoView on its own items, so only look at the form fields
+    const scrolledFields = () =>
+      (scrollIntoView.mock.contexts as HTMLElement[]).map((el) => el.dataset.field).filter(Boolean);
+    await waitFor(() => expect(scrolledFields()).toEqual(['etapas.0.pesoMinimo']), { timeout: 2000 });
+    expect(animate.mock.calls[0][1]).toMatchObject({ iterations: 3 });
+    // Each weight field explains what is wrong, not just the pulse
+    expect(screen.getAllByText('Debe ser mayor a 0')).toHaveLength(3);
   });
 
   it('3. ≥1 etapa required', async () => {
