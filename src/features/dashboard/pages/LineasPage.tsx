@@ -449,7 +449,9 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.dispositivoHardwareId}
                   onChange={(val) => setFormData({ ...formData, dispositivoHardwareId: (val as string) || '' })}
-                  options={dispositivos.map((device) => ({ id: device.hardwareId, nombre: `${device.nombre} (${device.hardwareId.slice(0, 8)})` }))}
+                  options={[...dispositivos]
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))
+                    .map((device) => ({ id: device.hardwareId, nombre: `${device.nombre} (${device.hardwareId.slice(0, 8)})` }))}
                   placeholder="Buscar dispositivo..."
                   clearable
                 />
@@ -459,7 +461,7 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null}
                   onChange={(val) => setFormData({ ...formData, rutaPasadaActiva: val ? String(val) : '' })}
-                  options={rutas}
+                  options={[...rutas].sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))}
                   placeholder="Buscar ruta..."
                   clearable
                 />
