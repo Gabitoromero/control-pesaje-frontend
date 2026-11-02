@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk';
 import { X } from 'lucide-react';
-import { computePopoverPlacement, LIST_MAX } from './popoverPlacement';
 
-export const SearchableCombobox = ({
+export const SearchableCombobox = ({ 
   value, 
   onChange, 
   options, 
@@ -18,35 +17,10 @@ export const SearchableCombobox = ({
   clearable?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<{ side: 'top' | 'bottom'; listMaxHeight: number }>({
-    side: 'bottom',
-    listMaxHeight: LIST_MAX,
-  });
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const updatePlacement = useCallback(() => {
-    if (!containerRef.current) return;
-    setPlacement(computePopoverPlacement(containerRef.current.getBoundingClientRect(), window.innerHeight));
-  }, []);
-
-  useLayoutEffect(() => {
-    if (open) updatePlacement();
-  }, [open, updatePlacement]);
-
-  useEffect(() => {
-    if (!open) return;
-    window.addEventListener('resize', updatePlacement);
-    window.addEventListener('scroll', updatePlacement, true);
-    return () => {
-      window.removeEventListener('resize', updatePlacement);
-      window.removeEventListener('scroll', updatePlacement, true);
-    };
-  }, [open, updatePlacement]);
-
   const selectedLabel = options.find((o) => o.id === value)?.nombre || 'Seleccione...';
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div className="relative w-full">
       <div className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-1.5 text-sm shadow-sm focus-within:ring-1 focus-within:ring-ring text-foreground">
         <button
           type="button"
@@ -70,16 +44,13 @@ export const SearchableCombobox = ({
         )}
       </div>
       {open && (
-        <div
-          data-side={placement.side}
-          className={`absolute z-50 w-full ${placement.side === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'} rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95`}
-        >
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
           <Command>
             <CommandInput 
               placeholder={placeholder} 
               className="flex h-10 w-full rounded-md bg-transparent py-3 px-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 text-foreground" 
             />
-            <CommandList style={{ maxHeight: placement.listMaxHeight }} className="overflow-y-auto overflow-x-hidden p-1 bg-popover">
+            <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden p-1 bg-popover">
               <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">No se encontraron resultados.</CommandEmpty>
               <CommandGroup>
                 {options.map((opt) => (
