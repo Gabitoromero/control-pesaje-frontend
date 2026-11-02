@@ -823,7 +823,6 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     // The etapa combobox is already set, so the only "Seleccione..." left is the articulo one
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await userEvent.click(screen.getByRole('option', { name: label }));
-    await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
   };
 
   it('24. create: after the ruta is created every local articulo is associated to the new ruta', async () => {
@@ -844,7 +843,6 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     await addLocalArticulo('[Harina 000] MarcaA');
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
-    await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
@@ -877,7 +875,6 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     await addLocalArticulo('[Harina 000] MarcaA');
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
-    await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
