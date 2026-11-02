@@ -28,14 +28,17 @@ export function HistorialPage() {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
 
-  // Debounce the search box; any filter change goes back to the first page.
+  // Debounce the search box; a changed search goes back to the first page.
+  // Skipped while the term equals the applied one, so the timer armed on mount doesn't reset the page.
   useEffect(() => {
+    const term = busqueda.trim();
+    if (term === q) return;
     const id = setTimeout(() => {
-      setQ(busqueda.trim());
+      setQ(term);
       setPage(1);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [busqueda]);
+  }, [busqueda, q]);
 
   const { data: etapas = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
   const { data: articulos = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });

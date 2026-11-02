@@ -113,6 +113,18 @@ describe('HistorialPage', () => {
     await waitFor(() => expect(lastParams()).toMatchObject({ q: 'alfajor', page: 1 }));
   });
 
+  it('keeps the current page when the (unchanged) search debounce fires after mounting', async () => {
+    vi.mocked(getHistorial).mockResolvedValue(response({ total: 45 }));
+    renderWithAuth(<HistorialPage />, { user });
+    await userEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+    await screen.findByText('Página 2 de 3');
+
+    // the debounce is 300 ms: wait past it without touching the search box
+    await new Promise(resolve => setTimeout(resolve, 450));
+
+    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument();
+  });
+
   it('paginates: next/previous buttons and disabled bounds', async () => {
     vi.mocked(getHistorial).mockResolvedValue(response({ total: 45 }));
     renderWithAuth(<HistorialPage />, { user });
