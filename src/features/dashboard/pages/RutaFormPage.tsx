@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import type { Control, UseFormRegister, FieldErrors, UseFieldArrayRemove, UseFieldArrayMove } from 'react-hook-form';
+import { useEffect, useRef, useState } from 'react';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
+import type { Control, UseFormRegister, UseFormSetValue, FieldErrors, UseFieldArrayRemove, UseFieldArrayMove } from 'react-hook-form';
 import type { Resolver } from 'react-hook-form';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,6 +29,7 @@ const SortableEtapaItem = ({
   index,
   register,
   control,
+  setValue,
   errors,
   etapasOptions,
   remove,
@@ -38,6 +39,7 @@ const SortableEtapaItem = ({
   id: string;
   index: number;
   register: UseFormRegister<RutaFormValues>;
+  setValue: UseFormSetValue<RutaFormValues>;
   control: Control<RutaFormValues>;
   errors: FieldErrors<RutaFormValues>;
   etapasOptions: { id?: number; nombre: string }[];
@@ -56,6 +58,8 @@ const SortableEtapaItem = ({
     isDragging,
     isOver,
   } = useSortable({ id });
+
+  const toleranciaPropia = useWatch({ control, name: `etapas.${index}.toleranciaPorDefecto` }) === false;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -87,7 +91,7 @@ const SortableEtapaItem = ({
 
       <div className="flex-1 flex flex-col gap-5">
         <div className="flex flex-col md:flex-row gap-5 items-start">
-          <div className="flex-[1.3] flex flex-col gap-1.5 w-full">
+          <div data-field={`etapas.${index}.etapa`} className="flex-[1.3] flex flex-col gap-1.5 w-full">
             <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Etapa</label>
             <Controller
               name={`etapas.${index}.etapa`}
@@ -103,7 +107,7 @@ const SortableEtapaItem = ({
 
           <div className="flex-1 flex flex-col gap-1.5 w-full">
             <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Muestras Requeridas</label>
-            <div className="flex items-center gap-2">
+            <div data-field={`etapas.${index}.cantidadMuestrasRequeridas`} className="flex items-center gap-2 rounded-md">
               <Controller
                 name={`etapas.${index}.cantidadMuestrasRequeridas`}
                 control={control}
@@ -157,7 +161,7 @@ const SortableEtapaItem = ({
         <div className="flex flex-col gap-2">
           <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Rango de Peso (kg)</label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
+            <div data-field={`etapas.${index}.pesoMinimo`} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-amber-500">Mínimo</span>
@@ -168,9 +172,12 @@ const SortableEtapaItem = ({
                 {...register(`etapas.${index}.pesoMinimo`, { valueAsNumber: true })}
                 className="w-full bg-background border border-amber-500/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
+              {errors.etapas?.[index]?.pesoMinimo && (
+                <span className="mt-1 block text-destructive text-xs">{errors.etapas[index]?.pesoMinimo?.message}</span>
+              )}
             </div>
             
-            <div className="bg-primary/10 border border-primary/30 rounded-lg p-2.5">
+            <div data-field={`etapas.${index}.pesoIdeal`} className="bg-primary/10 border border-primary/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-primary">Ideal</span>
@@ -181,9 +188,12 @@ const SortableEtapaItem = ({
                 {...register(`etapas.${index}.pesoIdeal`, { valueAsNumber: true })}
                 className="w-full bg-background border border-primary/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
+              {errors.etapas?.[index]?.pesoIdeal && (
+                <span className="mt-1 block text-destructive text-xs">{errors.etapas[index]?.pesoIdeal?.message}</span>
+              )}
             </div>
 
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-2.5">
+            <div data-field={`etapas.${index}.pesoMaximo`} className="bg-destructive/10 border border-destructive/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-destructive"></span>
                 <span className="text-[10px] font-bold tracking-widest uppercase text-destructive">Máximo</span>
@@ -194,14 +204,68 @@ const SortableEtapaItem = ({
                 {...register(`etapas.${index}.pesoMaximo`, { valueAsNumber: true })}
                 className="w-full bg-background border border-destructive/30 rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-destructive dark:[color-scheme:dark] [&::-webkit-inner-spin-button]:opacity-50 [&::-webkit-outer-spin-button]:opacity-50"
               />
+              {errors.etapas?.[index]?.pesoMaximo && (
+                <span className="mt-1 block text-destructive text-xs">{errors.etapas[index]?.pesoMaximo?.message}</span>
+              )}
             </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Tolerancia</label>
+          <div className="flex flex-wrap items-start gap-4">
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <Controller
+                name={`etapas.${index}.toleranciaPorDefecto`}
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <input
+                    type="checkbox"
+                    checked={value !== false}
+                    onChange={(e) => {
+                      onChange(e.target.checked);
+                      // Re-checking "por defecto" discards the own percentage
+                      if (e.target.checked) setValue(`etapas.${index}.toleranciaPct`, null);
+                    }}
+                    className="h-4 w-4 accent-primary"
+                  />
+                )}
+              />
+              Tolerancia por defecto
+            </label>
+            {toleranciaPropia ? (
+              <div className="flex flex-col gap-1">
+                <div data-field={`etapas.${index}.toleranciaPct`} className="flex items-center gap-2 rounded-md">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={MIN_TOLERANCIA_PCT}
+                    max={MAX_TOLERANCIA_PCT}
+                    aria-label="Tolerancia propia (%)"
+                    {...register(`etapas.${index}.toleranciaPct`, {
+                      setValueAs: (v) => (v === '' || v == null ? null : Number(v)),
+                    })}
+                    className="w-24 bg-background border border-border rounded text-foreground font-mono text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring dark:[color-scheme:dark]"
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+                {errors.etapas?.[index]?.toleranciaPct && (
+                  <span className="text-destructive text-xs">{errors.etapas[index]?.toleranciaPct?.message}</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground self-center">
+                Usa la tolerancia global configurada en Muestras.
+              </span>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-import { rutaSchema } from './RutaFormPage.schemas.js';
+import { focusFirstFormError } from './focusFirstFormError';
+import { rutaSchema, MIN_TOLERANCIA_PCT, MAX_TOLERANCIA_PCT } from './RutaFormPage.schemas.js';
 import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
@@ -242,10 +306,13 @@ export const RutaFormPage = () => {
   const {
     register,
     control,
+    setValue,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm<RutaFormValues>({
+    // focusFirstFormError takes over: it opens the target in view and pulses it
+    shouldFocusError: false,
     resolver: zodResolver(rutaSchema) as unknown as Resolver<RutaFormValues>,
     defaultValues: {
       nombre: '',
@@ -257,10 +324,15 @@ export const RutaFormPage = () => {
           pesoMaximo: 0,
           pesoIdeal: 0,
           cantidadMuestrasRequeridas: 1,
+          toleranciaPorDefecto: true,
+          toleranciaPct: null,
         }
       ],
     },
   });
+
+  const focusTimer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(focusTimer.current), []);
 
   const { fields, append, remove, swap } = useFieldArray({
     control,
@@ -279,17 +351,37 @@ export const RutaFormPage = () => {
           pesoMaximo: e.pesoMaximo,
           pesoIdeal: e.pesoIdeal,
           cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
+          toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
+          toleranciaPct: e.toleranciaPct ?? null,
         })),
       });
     }
   }, [ruta, reset]);
 
+  // The create endpoint does not take articulos: once the ruta exists, associate the locally selected ones.
+  // A failed association never rolls back the ruta; the failed articulos are reported instead.
   const createMutation = useMutation({
-    mutationFn: createRuta,
-    onSuccess: () => {
+    mutationFn: async ({ payload, articulos }: { payload: Parameters<typeof createRuta>[0]; articulos: ArticuloRutaPasadaItem[] }) => {
+      const nueva = await createRuta(payload);
+      const results = await Promise.allSettled(articulos.map(a => addArticuloARuta(nueva.id as number, a.articulo.id)));
+      const fallidos = articulos.filter((_, i) => results[i].status === 'rejected');
+      return { nueva, fallidos };
+    },
+    onSuccess: ({ nueva, fallidos }) => {
       queryClient.invalidateQueries({ queryKey: ['rutas'] });
-      toast.success('Ruta creada exitosamente');
-      navigate('/dashboard/rutas');
+      queryClient.invalidateQueries({ queryKey: ['ruta-articulos', String(nueva.id)] });
+      if (fallidos.length === 0) {
+        toast.success('Ruta creada exitosamente');
+        navigate('/dashboard/rutas');
+        return;
+      }
+      alertError({
+        title: 'La ruta se creó, pero no se pudieron asignar algunos artículos',
+        description: `Artículos sin asignar:\n${fallidos
+          .map(a => `- [${a.articulo.codigo}]${a.articulo.nombre ? ` ${a.articulo.nombre}` : ''}`)
+          .join('\n')}\n\nPodés volver a agregarlos desde la edición de la ruta.`,
+      });
+      navigate(`/dashboard/rutas/${nueva.id}`);
     },
     onError: (err: unknown) => {
       alertError({
@@ -346,18 +438,18 @@ export const RutaFormPage = () => {
     },
   });
 
-  const handleAddArticulo = () => {
-    if (!selectedArticuloId || selectedArticuloId === 0) return;
+  const handleAddArticulo = (articuloId: number) => {
+    if (!articuloId || addArticuloMutation.isPending) return;
 
     if (isEditing) {
       // In edit mode: call the API directly
-      addArticuloMutation.mutate({ rutaId: Number(id), articuloId: selectedArticuloId });
+      addArticuloMutation.mutate({ rutaId: Number(id), articuloId });
     } else {
       // In create mode: manage locally until the ruta is persisted
-      const alreadyAssigned = articulosLocal.some(a => a.articulo.id === selectedArticuloId);
+      const alreadyAssigned = articulosLocal.some(a => a.articulo.id === articuloId);
       if (alreadyAssigned) return;
 
-      const articuloOption = articulosOptions.find(a => a.id === selectedArticuloId);
+      const articuloOption = articulosOptions.find(a => a.id === articuloId);
       if (!articuloOption) return;
 
       const localItem: ArticuloRutaPasadaItem = {
@@ -446,6 +538,12 @@ export const RutaFormPage = () => {
     }
   };
 
+  // The Etapas section may still be expanding (300 ms) when the errors arrive; wait so the scroll lands on the final layout.
+  const onInvalid = (invalid: FieldErrors<RutaFormValues>) => {
+    window.clearTimeout(focusTimer.current);
+    focusTimer.current = window.setTimeout(() => focusFirstFormError(invalid), 350);
+  };
+
   const onSubmit = (data: RutaFormValues) => {
     const etapas = data.etapas.map((e, index) => ({
       ...(e.id != null ? { id: e.id } : {}),
@@ -455,6 +553,9 @@ export const RutaFormPage = () => {
       pesoIdeal: e.pesoIdeal,
       pesoMaximo: e.pesoMaximo,
       cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
+      // "por defecto" validates against the global tolerance: any own percentage is discarded
+      toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
+      toleranciaPct: e.toleranciaPorDefecto === false ? (e.toleranciaPct ?? null) : null,
     }));
 
     const payload = {
@@ -466,7 +567,7 @@ export const RutaFormPage = () => {
     if (isEditing) {
       updateMutation.mutate({ id: Number(id), data: payload, accion: 'actualizada' });
     } else {
-      createMutation.mutate(payload);
+      createMutation.mutate({ payload, articulos: articulosLocal });
     }
   };
 
@@ -499,13 +600,14 @@ export const RutaFormPage = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
         <div className="bg-card border border-border rounded-lg shadow p-6">
           <h2 className="text-lg font-medium mb-4 text-foreground">Información General</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground">Nombre</label>
               <input
+                data-field="nombre"
                 {...register('nombre')}
                 className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
               />
@@ -540,6 +642,8 @@ export const RutaFormPage = () => {
                 pesoMaximo: 0,
                 pesoIdeal: 0,
                 cantidadMuestrasRequeridas: 1,
+                toleranciaPorDefecto: true,
+                toleranciaPct: null,
               })}
               className="bg-success hover:bg-success/90 text-white px-3 py-1.5 rounded-md flex items-center gap-2 text-sm"
             >
@@ -556,6 +660,7 @@ export const RutaFormPage = () => {
                     id={field.id}
                     index={index}
                     register={register}
+                    setValue={setValue}
                     control={control}
                     errors={errors}
                     etapasOptions={etapasOptions}
@@ -576,11 +681,11 @@ export const RutaFormPage = () => {
           count={articulosMostrados.length}
         >
           {/* Selector to add a new articulo */}
-          <div className="flex gap-2 mb-4">
-            <div className="flex-1">
+          <div className="mb-4">
+            <div className="min-w-0">
               <SearchableCombobox 
                 value={selectedArticuloId} 
-                onChange={(val) => setSelectedArticuloId(val)}
+                onChange={(val) => handleAddArticulo(val)}
                 options={articulosOptions
                   .filter(a => !articulosAsignadosIds.has(a.id!))
                   .map(a => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo }))
@@ -588,15 +693,6 @@ export const RutaFormPage = () => {
                 placeholder="Buscar artículo..." 
               />
             </div>
-            <button
-              type="button"
-              onClick={handleAddArticulo}
-              disabled={!selectedArticuloId || addArticuloMutation.isPending}
-              aria-label="Agregar artículo"
-              className="bg-success hover:bg-success/90 text-white px-3 py-2 rounded-md flex items-center gap-2 text-sm disabled:opacity-50"
-            >
-              <Plus size={16} /> Agregar
-            </button>
           </div>
 
           {/* List of assigned articulos */}
