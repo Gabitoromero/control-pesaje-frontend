@@ -20,16 +20,18 @@ const operario = {
   puedeTomarMuestrasLibres: false,
 };
 
-describe('Planta mode switch in the shared tablet layouts', () => {
-  it('is rendered once by MuestrasLibresLayout (pasadas, muestras libres, historial)', () => {
+// The switch lives in the header of Gestión de Pasadas and Mi historial only (see TabletPlantaHeader),
+// so the layouts that wrap muestras libres and the workspace must not show it.
+describe('Planta mode switch is not part of the shared tablet layouts', () => {
+  it('MuestrasLibresLayout does not render it', () => {
     renderWithAuth(<MuestrasLibresLayout />, { user: operario, activeLineaId: 1 });
 
-    expect(screen.getAllByRole('group', { name: 'Vista de Planta' })).toHaveLength(1);
+    expect(screen.queryByRole('group', { name: 'Vista de Planta' })).not.toBeInTheDocument();
   });
 
-  it('is rendered once by TabletLayout (workspace)', () => {
+  it('TabletLayout (workspace) does not render it', () => {
     renderWithAuth(<TabletLayout />, { user: operario, activeLineaId: 1 });
 
-    expect(screen.getAllByRole('group', { name: 'Vista de Planta' })).toHaveLength(1);
+    expect(screen.queryByRole('group', { name: 'Vista de Planta' })).not.toBeInTheDocument();
   });
 });

@@ -6,6 +6,9 @@ import { HistorialPage } from './HistorialPage';
 import { getHistorial, type HistorialResponse } from '../../../api/historial';
 
 vi.mock('../../../api/historial', () => ({ getHistorial: vi.fn() }));
+vi.mock('../../../api/lineas', () => ({
+  getLinea: vi.fn().mockResolvedValue({ id: 1, nombre: 'Línea Envasado Norte', activo: true }),
+}));
 vi.mock('../../../api/etapas', () => ({
   getEtapas: vi.fn().mockResolvedValue([
     { id: 1, nombre: 'Mezcla' },
@@ -100,6 +103,16 @@ describe('HistorialPage', () => {
 
     await userEvent.type(screen.getByLabelText('Desde'), '2026-10-01');
     await waitFor(() => expect(lastParams()).toMatchObject({ desde: '2026-10-01' }));
+  });
+
+  it('shows the línea name, the avatar, the switch and a logout button in the header', async () => {
+    renderWithAuth(<HistorialPage />, { user, activeLineaId: 1 });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Línea Envasado Norte' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Usuario operario1' })).toBeInTheDocument();
+    expect(screen.queryByText('operario1')).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Vista de Planta' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
   });
 
   it('sends the search term after typing and resets to page 1', async () => {

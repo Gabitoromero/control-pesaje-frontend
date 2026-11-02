@@ -5,7 +5,6 @@ import { getLinea } from '../../../api/lineas';
 import { MuestrasLibresProvider } from '../context/MuestrasLibresContext';
 import { useActividadHeartbeat } from '../hooks/useActividadHeartbeat';
 import { useSesionPerdida } from '../hooks/useSesionPerdida';
-import { PlantaModeSwitch } from '../components/PlantaModeSwitch';
 import type { RutaPasadaEtapa } from '../../../shared/types/domain';
 
 export function MuestrasLibresLayout() {
@@ -36,7 +35,6 @@ export function MuestrasLibresLayout() {
       usuarioId={user.id}
       etapas={etapas}
     >
-      <PlantaModeSwitch />
       <Outlet context={{ etapas }} />
     </MuestrasLibresProvider>
   );

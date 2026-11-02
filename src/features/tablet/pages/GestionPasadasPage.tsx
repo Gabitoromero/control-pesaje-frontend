@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, Plus, Loader2, X, Check, AlertTriangle, FlaskConical } from 'lucide-react';
+import { Plus, Loader2, X, Check, AlertTriangle, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getPasadas, iniciarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
@@ -9,15 +9,14 @@ import { getBalanzas } from '../../../api/balanzas';
 import type { Pasada, Balanza } from '../../../shared/types/domain';
 import { PasadaCard } from '../components/PasadaCard';
 import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
-import { resetSocket } from '../../../services/websocket';
-import { useDialog } from '../../../components/dialogs/useDialog';
+import { TabletPlantaHeader } from '../components/TabletPlantaHeader';
+import { useTabletLogout } from '../hooks/useTabletLogout';
 import { CONFIRM_LOGOUT_MESSAGE } from '../constants/logoutGuard';
 
 
 export const GestionPasadasPage: React.FC = () => {
-  const { user, closeLineSession, activeLineaId, logout } = useAuth();
+  const { user, activeLineaId } = useAuth();
   const navigate = useNavigate();
-  const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
   const [observacionIniciar, setObservacionIniciar] = React.useState('');
@@ -126,34 +125,8 @@ export const GestionPasadasPage: React.FC = () => {
     return byFlatId || byUsuarioNumber || byUsuarioObject;
   });
 
-  // Task 3.9: when the user explicitly clicks "Cerrar sesión" while a line
-  // session is active, ask for confirmation via the in-app dialog before
-  // actually tearing the session down. Without an active line session we
-  // proceed directly (there is nothing to lose).
-  const handleLogout = async () => {
-    if (activeLineaId) {
-      const ok = await confirm({
-        title: 'Cerrar sesión',
-        description: CONFIRM_LOGOUT_MESSAGE,
-        confirmText: 'Cerrar sesión',
-        cancelText: 'Cancelar',
-        variant: 'destructive',
-      });
-      if (!ok) return;
-    }
-    if (user?.rol === 'jefe' || user?.rol === 'administrador') {
-      // Don't closeLineSession here — the guard above would fire a
-      // <Navigate> to /tablet/seleccion-linea as soon as activeLineaId
-      // becomes null, overriding this navigate('/dashboard').
-      // DashboardLayout already handles orphaned sessions on mount.
-      navigate('/dashboard');
-    } else {
-      resetSocket();
-      closeLineSession().finally(() => {
-        logout();
-      });
-    }
-  };
+  // Task 3.9: "Cerrar sesión" asks for confirmation while a line session is active (see useTabletLogout).
+  const handleLogout = useTabletLogout();
 
   // Task 2.3 / 4.2: Iniciar nueva pasada — the articulo is frozen server-side
   // from the línea's assignment; only the balanza is selected here.
@@ -181,22 +154,7 @@ export const GestionPasadasPage: React.FC = () => {
 
   return (
     <div data-testid="tablet-page-root" className="h-screen bg-background flex flex-col font-sans text-foreground relative overflow-hidden">
-      <header className="bg-card border-b border-border p-4 md:px-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Gestión de Pasadas</h1>
-            <p className="text-muted-foreground text-sm">{linea?.nombre ?? `Línea ${activeLineaId}`} - {user?.nombreUsuario}</p>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium bg-muted/50 hover:bg-muted px-4 py-2 rounded-lg"
-          title="Cerrar sesión"
-        >
-          <LogOut size={16} />
-          <span className="hidden sm:inline">Cerrar sesión</span>
-        </button>
-      </header>
+      <TabletPlantaHeader lineaNombre={linea?.nombre ?? `Línea ${activeLineaId}`} onLogout={handleLogout} />
 
       <main data-testid="tablet-page-scroll" className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
         {linea?.observacion && (

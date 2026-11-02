@@ -8,9 +8,9 @@ export const PASADAS_PATH = '/tablet/pasadas';
 const ROLES_CON_HISTORIAL: string[] = [UsuarioRol.OPERARIO, UsuarioRol.JEFE, UsuarioRol.ADMINISTRADOR];
 
 /**
- * Header switch between the pasadas/muestras flow and the user's own history.
- * Rendered once by the tablet layouts, centered over the page header (next to the avatar),
- * so individual pages don't duplicate it.
+ * Switch between the pasadas list and the user's own history.
+ * Only TabletPlantaHeader renders it, so it shows up in Gestión de Pasadas and Mi historial
+ * and nowhere else (muestras libres and the workspace have their own headers without it).
  */
 export function PlantaModeSwitch() {
   const { user } = useAuth();
@@ -37,15 +37,13 @@ export function PlantaModeSwitch() {
   );
 
   return (
-    <div className="fixed top-3 inset-x-0 z-30 flex justify-center pointer-events-none">
-      <div
-        role="group"
-        aria-label="Vista de Planta"
-        className="pointer-events-auto flex items-center gap-1 bg-card border border-border rounded-full p-1 shadow-sm"
-      >
-        {option('Pasadas', !enHistorial, PASADAS_PATH)}
-        {option('Mi historial', enHistorial, HISTORIAL_PATH)}
-      </div>
+    <div
+      role="group"
+      aria-label="Vista de Planta"
+      className="flex items-center gap-1 bg-card border border-border rounded-full p-1 shadow-sm"
+    >
+      {option('Pasadas', !enHistorial, PASADAS_PATH)}
+      {option('Mi historial', enHistorial, HISTORIAL_PATH)}
     </div>
   );
 }

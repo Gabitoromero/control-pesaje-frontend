@@ -155,7 +155,7 @@ describe('GestionPasadasPage', () => {
 
   // ── Header: nombre de línea, no el id ────────────────────────────────────
 
-  it('muestra el nombre de la línea (no el id) junto al usuario en el header', async () => {
+  it('muestra el nombre de la línea (no el id) como título y al usuario solo como avatar', async () => {
     vi.mocked(getLinea).mockResolvedValue({
       ...lineaConRuta,
       nombre: 'Línea Envasado Norte',
@@ -163,8 +163,11 @@ describe('GestionPasadasPage', () => {
 
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
-    expect(await screen.findByText('Línea Envasado Norte - operario1')).toBeInTheDocument();
-    expect(screen.queryByText(/^Línea 1 -/)).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Línea Envasado Norte' })).toBeInTheDocument();
+    expect(screen.queryByText('Gestión de Pasadas')).not.toBeInTheDocument();
+    expect(screen.queryByText('operario1')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Usuario operario1' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Vista de Planta' })).toBeInTheDocument();
   });
 
   it('usa el fallback "Línea {id}" mientras la query de línea todavía no resolvió', () => {
@@ -172,7 +175,7 @@ describe('GestionPasadasPage', () => {
 
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
-    expect(screen.getByText('Línea 1 - operario1')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Línea 1' })).toBeInTheDocument();
   });
 
   it('redirige si activeLineaId es null', () => {

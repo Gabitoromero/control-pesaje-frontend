@@ -6,8 +6,10 @@ import { getHistorial } from '../../../api/historial';
 import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { PESO_DECIMALS } from '../../../shared/constants';
-import { getAvatarInitials } from '../utils/avatarInitials';
+import { getLinea } from '../../../api/lineas';
 import { HistorialKpis } from '../components/HistorialKpis';
+import { TabletPlantaHeader } from '../components/TabletPlantaHeader';
+import { useTabletLogout } from '../hooks/useTabletLogout';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -19,7 +21,8 @@ const formatFecha = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 
 export function HistorialPage() {
-  const { user } = useAuth();
+  const { activeLineaId } = useAuth();
+  const handleLogout = useTabletLogout();
   const [etapaId, setEtapaId] = useState('');
   const [articuloId, setArticuloId] = useState('');
   const [desde, setDesde] = useState('');
@@ -42,6 +45,11 @@ export function HistorialPage() {
 
   const { data: etapas = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
   const { data: articulos = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });
+  const { data: linea } = useQuery({
+    queryKey: ['linea', activeLineaId],
+    queryFn: () => getLinea(activeLineaId!),
+    enabled: !!activeLineaId,
+  });
 
   const params = {
     etapaId: etapaId ? Number(etapaId) : undefined,
@@ -68,18 +76,7 @@ export function HistorialPage() {
 
   return (
     <div data-testid="tablet-page-root" className="h-screen bg-background flex flex-col font-sans text-foreground overflow-hidden">
-      <header className="bg-card border-b border-border p-4 md:px-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Mi historial</h1>
-          <p className="text-muted-foreground text-sm">Tus muestras anteriores</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
-            {getAvatarInitials(user?.nombreUsuario)}
-          </div>
-          <span className="hidden sm:block text-sm font-medium">{user?.nombreUsuario}</span>
-        </div>
-      </header>
+      <TabletPlantaHeader lineaNombre={linea?.nombre ?? `Línea ${activeLineaId}`} onLogout={handleLogout} />
 
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto space-y-6">
         <HistorialKpis kpis={data?.kpis} />
