@@ -16,7 +16,10 @@ vi.mock('../../../api/etapas', () => ({
   ]),
 }));
 vi.mock('../../../api/articulos', () => ({
-  getArticulos: vi.fn().mockResolvedValue([{ id: 7, codigo: 'ALF-01', nombre: 'Alfajor Triple' }]),
+  getArticulos: vi.fn().mockResolvedValue([
+    { id: 9, codigo: 'ALF-10', nombre: 'Alfajor Chico' },
+    { id: 7, codigo: 'ALF-2', nombre: 'Alfajor Triple' },
+  ]),
 }));
 
 const user = { id: 3, legajo: 'O1', nombreUsuario: 'operario1', rol: 'operario' as const, puedeTomarMuestrasLibres: true };
@@ -95,14 +98,32 @@ describe('HistorialPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
     await screen.findByText('Página 2 de 3');
 
-    await userEvent.selectOptions(screen.getByLabelText('Etapa'), '2');
+    await userEvent.click(screen.getByRole('button', { name: 'Todas las etapas' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Horneado' }));
     await waitFor(() => expect(lastParams()).toMatchObject({ etapaId: 2, page: 1 }));
 
-    await userEvent.selectOptions(screen.getByLabelText('Artículo'), '7');
+    await userEvent.click(screen.getByRole('button', { name: 'Todos los artículos' }));
+    await userEvent.click(screen.getByRole('option', { name: '[ALF-2] Alfajor Triple' }));
     await waitFor(() => expect(lastParams()).toMatchObject({ etapaId: 2, articuloId: 7 }));
 
     await userEvent.type(screen.getByLabelText('Desde'), '2026-10-01');
     await waitFor(() => expect(lastParams()).toMatchObject({ desde: '2026-10-01' }));
+  });
+
+  it('uses the shared combobox for the selectors: naturally sorted, "[código] nombre" and clearable', async () => {
+    renderWithAuth(<HistorialPage />, { user });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Todos los artículos' }));
+    expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual([
+      '[ALF-2] Alfajor Triple',
+      '[ALF-10] Alfajor Chico',
+    ]);
+    await userEvent.click(screen.getByRole('option', { name: '[ALF-10] Alfajor Chico' }));
+    await waitFor(() => expect(lastParams()).toMatchObject({ articuloId: 9 }));
+
+    await userEvent.click(screen.getByRole('button', { name: '[ALF-10] Alfajor Chico' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar selección' }));
+    await waitFor(() => expect(lastParams().articuloId).toBeUndefined());
   });
 
   it('shows the línea name, the avatar, the switch and a logout button in the header', async () => {
