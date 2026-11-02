@@ -17,6 +17,7 @@ import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import {
   isToleranceBlocked,
+  resolveEffectiveTolerance,
   formatTolerancePct,
   isNonPositiveWeight,
   NON_POSITIVE_WEIGHT_ALERT,
@@ -60,7 +61,7 @@ export function MuestrasLibresPage() {
   // Global admin-configurable tolerance. Called above the `etapas.length === 0`
   // early return to keep the hooks order stable. No fallback value: Registrar
   // is blocked until a value was obtained at least once.
-  const tolerance = useToleranceConfig();
+  const globalTolerance = useToleranceConfig();
 
   // Topbar display info (linea nombre + ruta nombre) — same query key as
   // MuestrasLibresLayout/GestionPasadasPage, so react-query dedupes the fetch.
@@ -112,6 +113,8 @@ export function MuestrasLibresPage() {
     setSelectedSampleIndex(null);
   };
 
+  // Tolerance of the selected etapa-ruta: its own percentage, or the global one by default.
+  const tolerance = resolveEffectiveTolerance(globalTolerance, selectedEtapa);
   const pesoMinimo = selectedEtapa?.pesoMinimo;
   const pesoIdeal = selectedEtapa?.pesoIdeal;
   const pesoMaximo = selectedEtapa?.pesoMaximo;

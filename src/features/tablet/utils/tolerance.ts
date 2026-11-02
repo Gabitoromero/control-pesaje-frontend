@@ -1,3 +1,5 @@
+import type { ToleranceState } from '../../../hooks/useToleranceConfig';
+
 /**
  * Guard for the "Registrar Muestra" action.
  *
@@ -27,6 +29,23 @@ export const isToleranceBlocked = (
   const lowerBound = pesoMinimo - factor * pesoMinimo;
   const upperBound = pesoMaximo + factor * pesoMaximo;
   return pesoNeto < lowerBound || pesoNeto > upperBound;
+};
+
+/**
+ * Tolerance that applies to one etapa of a ruta: its own percentage when
+ * `toleranciaPorDefecto` is false, otherwise the global value. Etapas without
+ * the fields (rutas created before they existed) behave as "por defecto".
+ * An own percentage does not depend on the global config being available.
+ */
+export const resolveEffectiveTolerance = (
+  global: ToleranceState,
+  etapa: { toleranciaPorDefecto?: boolean; toleranciaPct?: number | null } | null | undefined,
+): ToleranceState => {
+  const own = etapa?.toleranciaPct;
+  if (etapa?.toleranciaPorDefecto === false && typeof own === 'number' && Number.isFinite(own) && own >= 0) {
+    return { status: 'ready', toleranciaPct: own, isStale: false };
+  }
+  return global;
 };
 
 const pctFormatter = new Intl.NumberFormat('es-AR', {

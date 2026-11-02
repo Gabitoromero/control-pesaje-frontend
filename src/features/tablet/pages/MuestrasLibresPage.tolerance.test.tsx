@@ -105,4 +105,44 @@ describe('MuestrasLibresPage tolerance (real hook + msw)', () => {
     expect(within(dialog).getByText(/más del 12,5% del rango permitido/)).toBeInTheDocument();
     expect(addSampleMock).not.toHaveBeenCalled();
   });
+
+  const renderWithEtapa = (etapa: RutaPasadaEtapa, pesoNeto: number) => {
+    vi.mocked(useMuestrasLibresContext).mockReturnValue({
+      muestras: [] as Muestra[],
+      etapas: [etapa],
+      selectedEtapaId: 10,
+      selectedEtapa: etapa,
+      setSelectedEtapaId: vi.fn(),
+      addSample: addSampleMock,
+      updateSample: vi.fn(),
+      removeSample: vi.fn(),
+      clearSession: vi.fn(),
+      isRegistering: false,
+    });
+    vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto, isConnected: true, hardwareId: undefined, unidad: undefined }));
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+  };
+
+  it('the etapa own percentage (5%) blocks a weight the global 12,5% would accept', async () => {
+    // 5% → limits [13.3, 16.8]; 17 is blocked. With the global 12,5% ([12.25, 18]) it would pass.
+    renderWithEtapa({ ...etapaNarrow, toleranciaPorDefecto: false, toleranciaPct: 5 }, 17);
+
+    await waitFor(() => expect(toleranceRequests).toBeGreaterThanOrEqual(1));
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/más del 5% del rango permitido/)).toBeInTheDocument();
+    expect(addSampleMock).not.toHaveBeenCalled();
+  });
+
+  it('an etapa with "tolerancia por defecto" keeps using the global percentage', async () => {
+    renderWithEtapa({ ...etapaNarrow, toleranciaPorDefecto: true, toleranciaPct: null }, 17);
+
+    await waitFor(() => expect(toleranceRequests).toBeGreaterThanOrEqual(1));
+    await waitFor(() => expect(screen.queryByText('Cargando tolerancia de peso...')).not.toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /registrar muestra de calidad/i }));
+
+    await waitFor(() => expect(addSampleMock).toHaveBeenCalled());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
 });
