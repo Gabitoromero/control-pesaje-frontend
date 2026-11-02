@@ -426,7 +426,9 @@ export const LineasPage = () => {
                   <SearchableCombobox
                     value={formData.idBalanza ? Number(formData.idBalanza) : null}
                     onChange={(val) => setFormData({ ...formData, idBalanza: val ? String(val) : '' })}
-                    options={balanzas.map((b) => ({ id: b.id, nombre: b.nombre }))}
+                    options={[...balanzas]
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))
+                      .map((b) => ({ id: b.id, nombre: b.nombre }))}
                     placeholder="Buscar balanza..."
                   />
                 )}
@@ -436,7 +438,9 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.articuloId ? Number(formData.articuloId) : null}
                   onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
-                  options={articulos.map((a) => ({ id: a.id, nombre: a.codigo || a.nombre || '' }))}
+                  options={[...articulos]
+                    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
+                    .map((a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo || '' }))}
                   placeholder="Buscar artículo..."
                 />
               </div>

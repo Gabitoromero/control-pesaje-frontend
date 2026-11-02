@@ -396,7 +396,7 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
       await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, 'Harina 000');
+      await selectComboboxOption(0, '[Harina 000] MarcaA');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByText('No se pudo crear la línea');
@@ -466,7 +466,7 @@ describe('LineasPage', () => {
 
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
       await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, 'Harina 000');
+      await selectComboboxOption(0, '[Harina 000] MarcaA');
       // Ruta Activa is now the last unselected combobox (Dispositivo before it stays empty)
       await selectComboboxOption(1, 'Ruta Alpha');
 
@@ -490,7 +490,7 @@ describe('LineasPage', () => {
 
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Ruta');
       await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, 'Harina 000');
+      await selectComboboxOption(0, '[Harina 000] MarcaA');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByRole('alertdialog');
@@ -556,7 +556,7 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
       // Index 1 is Articulo while Balanza (index 0) is still unselected.
-      await selectComboboxOption(1, 'Harina 000');
+      await selectComboboxOption(1, '[Harina 000] MarcaA');
 
       expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
     });
@@ -588,7 +588,7 @@ describe('LineasPage', () => {
       expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
 
       await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, 'Harina 000');
+      await selectComboboxOption(0, '[Harina 000] MarcaA');
 
       expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled();
     });
@@ -611,7 +611,7 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
       await selectComboboxOption(0, 'Balanza 2');
-      await selectComboboxOption(0, 'Azúcar');
+      await selectComboboxOption(0, '[Azúcar] MarcaB');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -670,7 +670,7 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
       await selectComboboxOption(0, 'Balanza 2');
-      await selectComboboxOption(0, 'Azúcar');
+      await selectComboboxOption(0, '[Azúcar] MarcaB');
       await userEvent.type(screen.getByLabelText(/observación/i), 'Línea reservada para temporada');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
@@ -698,7 +698,7 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Observación');
       await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, 'Harina 000');
+      await selectComboboxOption(0, '[Harina 000] MarcaA');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 

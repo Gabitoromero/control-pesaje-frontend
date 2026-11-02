@@ -27,7 +27,7 @@ export const SearchableCombobox = ({
 
   return (
     <div className="relative w-full">
-      <div className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-1.5 text-sm shadow-sm focus-within:ring-1 focus-within:ring-ring text-foreground">
+      <div className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-1.5 text-sm shadow-sm has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-ring text-foreground">
         <button
           ref={triggerRef}
           type="button"
