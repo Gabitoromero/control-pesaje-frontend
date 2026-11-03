@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { User, Lock, Sun, Moon } from 'lucide-react';
@@ -8,10 +8,7 @@ import { loginApi } from '../api/auth';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useTheme } from '../features/theme/ThemeContext';
 
-import SceneBoundary from '../components/three/SceneBoundary';
-import BalanzaFallback from '../components/three/BalanzaFallback';
-
-const BalanzaScene = lazy(() => import('../components/three/BalanzaScene'));
+import BalanzaHero from '../components/three/BalanzaHero';
 
 type Step = 'legajo' | 'pin';
 
@@ -154,14 +151,10 @@ const Login: React.FC = () => {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand to-brand-hover" />
 
         <div className="z-10 text-center max-w-lg">
-          {/* The brand "M" settles onto a plant-style platform scale (3D).
-              Falls back to the 2D animation while loading or without WebGL. */}
+          {/* Blueprint of the scale, then the 3D scene where the brand "M" drops.
+              Falls back to the 2D animation without WebGL. */}
           <div className="mb-8">
-            <SceneBoundary fallback={<BalanzaFallback />}>
-              <Suspense fallback={<BalanzaFallback />}>
-                <BalanzaScene dark={theme === 'dark'} />
-              </Suspense>
-            </SceneBoundary>
+            <BalanzaHero dark={theme === 'dark'} />
           </div>
           <motion.h1
             className="text-4xl lg:text-5xl font-bold mb-4 tracking-tight text-foreground"
