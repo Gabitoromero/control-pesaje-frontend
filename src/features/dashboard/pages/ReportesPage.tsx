@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ReporteDescargaProgreso, type ReporteDescargaFase } from '../components/ReporteDescargaProgreso';
 import {
   downloadReporteMuestras,
   downloadReportePasadas,
@@ -11,7 +12,6 @@ import {
 const MAX_RANGE_DAYS = 90;
 const DAY_MS = 1000 * 60 * 60 * 24;
 
-type LoadingPhase = 'generando' | 'descargando';
 
 interface ReporteBase {
   id: string;
@@ -63,7 +63,7 @@ export const ReportesPage: React.FC = () => {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [loading, setLoading] = useState(false);
-  const [phase, setPhase] = useState<LoadingPhase>('generando');
+  const [phase, setPhase] = useState<ReporteDescargaFase>('generando');
 
   // Validation
   const validateDates = () => {
@@ -155,64 +155,44 @@ export const ReportesPage: React.FC = () => {
             <DialogTitle>Descargar Reporte</DialogTitle>
           </DialogHeader>
           {modalReporte && <p className="text-sm text-muted-foreground">{modalReporte.titulo}</p>}
-          <form onSubmit={handleDownload} className="flex flex-col gap-4 mt-4">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="desde" className="text-sm font-medium">Desde</label>
-              <input
-                id="desde"
-                type="date"
-                value={desde}
-                disabled={loading}
-                onChange={(e) => setDesde(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="hasta" className="text-sm font-medium">Hasta</label>
-              <input
-                id="hasta"
-                type="date"
-                value={hasta}
-                disabled={loading}
-                onChange={(e) => setHasta(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            {validationError && (desde || hasta) && (
-              <p className="text-sm text-red-500">{validationError}</p>
-            )}
-
-            {loading && (
-              <div
-                role="status"
-                aria-live="polite"
-                className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-4"
-              >
-                <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
-                <div className="flex flex-col gap-1 text-sm">
-                  <span className="font-semibold text-foreground">
-                    {phase === 'generando'
-                      ? 'Generando el reporte en el servidor...'
-                      : 'Reporte listo, descargando el archivo...'}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {phase === 'generando'
-                      ? 'El servidor recibió la solicitud y está procesando los datos. Con rangos largos puede demorar varios minutos; no cierres esta ventana.'
-                      : 'La descarga comenzará en unos instantes.'}
-                  </span>
-                </div>
+          {loading ? (
+            <ReporteDescargaProgreso fase={phase} />
+          ) : (
+            <form onSubmit={handleDownload} className="flex flex-col gap-4 mt-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="desde" className="text-sm font-medium">Desde</label>
+                <input
+                  id="desde"
+                  type="date"
+                  value={desde}
+                  onChange={(e) => setDesde(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
               </div>
-            )}
+              <div className="flex flex-col gap-2">
+                <label htmlFor="hasta" className="text-sm font-medium">Hasta</label>
+                <input
+                  id="hasta"
+                  type="date"
+                  value={hasta}
+                  onChange={(e) => setHasta(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={!!validationError || loading}
-              className="mt-4 inline-flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Descargando...' : 'Descargar'}
-            </button>
-          </form>
+              {validationError && (desde || hasta) && (
+                <p className="text-sm text-red-500">{validationError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={!!validationError}
+                className="mt-4 inline-flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Descargar
+              </button>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

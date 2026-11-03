@@ -169,7 +169,7 @@ describe('ReportesPage', () => {
     expect(submitButton()).toBeDisabled();
   });
 
-  it('shows a loading status through generation and download, then closes the dialog', async () => {
+  it('swaps the form for a stepper loading view through generation and download, then closes the dialog', async () => {
     let finish!: () => void;
     let onResponseStart: (() => void) | undefined;
     vi.mocked(downloadReportePasadas).mockImplementation((_d, _h, cb) => {
@@ -184,17 +184,30 @@ describe('ReportesPage', () => {
     await user.click(pasadasButton());
     await fillRange(user, '2026-10-01', '2026-10-03');
     expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Progreso de la descarga' })).toBeNull();
     await user.click(submitButton());
 
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('Generando el reporte en el servidor...');
-    const loadingButton = within(screen.getByRole('dialog')).getByRole('button', { name: 'Descargando...' });
-    expect(loadingButton).toBeDisabled();
-    expect(screen.getByLabelText('Desde')).toBeDisabled();
-    expect(screen.getByLabelText('Hasta')).toBeDisabled();
+    // the same dialog now shows only the progress: no date fields, no submit button
+    const dialog = screen.getByRole('dialog');
+    expect(await screen.findByRole('status')).toHaveTextContent('Generando el reporte en el servidor...');
+    expect(within(dialog).getByText('Descargar Reporte')).toBeInTheDocument();
+    expect(within(dialog).getByText('Reporte de Pasadas')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Desde')).toBeNull();
+    expect(screen.queryByLabelText('Hasta')).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: /descargar$|descargando/i })).toBeNull();
+
+    const steps = () => within(dialog).getAllByRole('listitem');
+    const states = () => steps().map((li) => li.getAttribute('data-state'));
+    expect(within(dialog).getByRole('list', { name: 'Progreso de la descarga' })).toBeInTheDocument();
+    expect(steps().map((li) => li.textContent)).toEqual(['Solicitud enviada', 'Generando reporte', 'Descargando archivo']);
+    expect(states()).toEqual(['hecho', 'actual', 'pendiente']);
+    expect(steps()[1]).toHaveAttribute('aria-current', 'step');
 
     act(() => onResponseStart?.());
     expect(await screen.findByRole('status')).toHaveTextContent('Reporte listo, descargando el archivo...');
+    expect(states()).toEqual(['hecho', 'hecho', 'actual']);
+    expect(steps()[2]).toHaveAttribute('aria-current', 'step');
+    expect(steps()[1]).not.toHaveAttribute('aria-current');
 
     await act(async () => finish());
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -229,6 +242,8 @@ describe('ReportesPage', () => {
     await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.any(String), error));
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Desde')).toHaveValue('2026-10-01');
+    expect(screen.queryByRole('list', { name: 'Progreso de la descarga' })).toBeNull();
     expect(submitButton()).not.toBeDisabled();
     spy.mockRestore();
   });
