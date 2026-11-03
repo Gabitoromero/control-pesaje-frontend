@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { handlers, usuariosMock, usuariosMockInactivos } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { UsuariosPage } from './UsuariosPage';
+import { getSectorColor } from '../../../lib/sectores';
 
 const server = setupServer(...handlers);
 
@@ -456,5 +457,74 @@ describe('UsuariosPage', () => {
     });
     expect(deleteRequested).toBe(false);
     expect(screen.getByRole('heading', { name: 'Editar Usuario' })).toBeInTheDocument();
+  });
+
+  describe('sector column and filter', () => {
+    const usuariosConSector = [
+      { id: 11, nombreApellido: 'Ofelia Oficial', nombreUsuario: 'ofelia', rol: 'operario', activo: true, legajo: '10001', datosAdicionales: { sector: 'OF' } },
+      { id: 12, nombreApellido: 'Dario Calidad', nombreUsuario: 'dario', rol: 'operario', activo: true, legajo: '10002', datosAdicionales: { sector: 'DD' } },
+      { id: 13, nombreApellido: 'Nadia Nosector', nombreUsuario: 'nadia', rol: 'operario', activo: true, legajo: '10003' },
+      { id: 14, nombreApellido: 'Marcos Mejora', nombreUsuario: 'marcos', rol: 'jefe', activo: true, legajo: '10004', datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
+    ];
+    const useSectorUsers = () =>
+      server.use(
+        http.get('http://localhost:3000/api/usuarios', () => HttpResponse.json({ success: true, data: usuariosConSector }))
+      );
+    const visible = (name: string) => screen.queryByText(name);
+
+    it('shows a Sector column with a badge in the sector color, or a muted "Sin sector" badge', async () => {
+      useSectorUsers();
+      renderWithProviders(<UsuariosPage />);
+
+      expect(await screen.findByRole('columnheader', { name: 'Sector' })).toBeInTheDocument();
+
+      const conSector = (await screen.findByText('Ofelia Oficial')).closest('tr')!;
+      const badge = within(conSector).getByText('Oficiales');
+      expect(badge).toHaveStyle({ backgroundColor: getSectorColor('OF') });
+
+      const sinSector = screen.getByText('Nadia Nosector').closest('tr')!;
+      const neutral = within(sinSector).getByText('Sin sector');
+      expect(neutral.style.backgroundColor).toBe('');
+      expect(neutral.className).toContain('text-muted-foreground');
+    });
+
+    it('filters the list by sector, including users without sector, and "Todos los sectores" restores it', async () => {
+      useSectorUsers();
+      renderWithProviders(<UsuariosPage />);
+      await screen.findByText('Ofelia Oficial');
+
+      const select = screen.getByLabelText('Filtrar por sector') as HTMLSelectElement;
+      expect(Array.from(select.options).map((o) => o.textContent)).toEqual([
+        'Todos los sectores', 'Oficiales', 'Supervisores', 'Control de Calidad', 'Mejora Continua', 'Sin sector',
+      ]);
+      expect(select.value).toBe('');
+
+      await userEvent.selectOptions(select, 'DD');
+      expect(visible('Dario Calidad')).toBeInTheDocument();
+      expect(visible('Ofelia Oficial')).toBeNull();
+      expect(visible('Nadia Nosector')).toBeNull();
+      expect(visible('Marcos Mejora')).toBeNull();
+
+      await userEvent.selectOptions(select, 'sin-sector');
+      expect(visible('Nadia Nosector')).toBeInTheDocument();
+      expect(visible('Dario Calidad')).toBeNull();
+
+      await userEvent.selectOptions(select, '');
+      ['Ofelia Oficial', 'Dario Calidad', 'Nadia Nosector', 'Marcos Mejora'].forEach((n) =>
+        expect(visible(n)).toBeInTheDocument()
+      );
+    });
+
+    it('combines the sector filter with the text search', async () => {
+      useSectorUsers();
+      renderWithProviders(<UsuariosPage />);
+      await screen.findByText('Ofelia Oficial');
+
+      await userEvent.selectOptions(screen.getByLabelText('Filtrar por sector'), 'OF');
+      await userEvent.type(screen.getByPlaceholderText('Buscar...'), 'Dario');
+
+      expect(screen.getByText('No hay usuarios activos.')).toBeInTheDocument();
+      expect(visible('Dario Calidad')).toBeNull();
+    });
   });
 });

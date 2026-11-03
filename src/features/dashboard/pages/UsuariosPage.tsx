@@ -11,7 +11,7 @@ import {
 } from '../../../api/usuarios';
 import { UsuarioRol } from '../../../shared/types';
 import type { SectorUsuario } from '../../../shared/types';
-import { SECTORES } from '../../../lib/sectores';
+import { SECTORES, getSectorColor, getSectorLabel } from '../../../lib/sectores';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -43,6 +43,14 @@ const EMPTY_FORM = {
   sector: '',
 };
 
+const FILTRO_SIN_SECTOR = 'sin-sector';
+
+// Only a known sector code counts; anything else is shown and filtered as "Sin sector".
+const sectorDe = (u: Usuario): string | null => {
+  const codigo = u.datosAdicionales?.sector ?? null;
+  return codigo && getSectorLabel(codigo) ? codigo : null;
+};
+
 const USUARIO_FIELDS: SearchField[] = [
   { value: 'nombreApellido', label: 'Nombre completo' },
   { value: 'nombreUsuario', label: 'Usuario' },
@@ -60,6 +68,7 @@ export const UsuariosPage = () => {
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombreApellido');
   const [query, setQuery] = useState('');
+  const [sector, setSector] = useState('');
 
   const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
     queryKey: ['usuarios'],
@@ -75,7 +84,10 @@ export const UsuariosPage = () => {
   const error = errorActivos || errorInactivos;
 
   const usuariosFiltrados = useMemo(() => {
-    const base = status === 'activo' ? activos : inactivos;
+    const todos = status === 'activo' ? activos : inactivos;
+    const base = sector
+      ? todos.filter((u) => (sector === FILTRO_SIN_SECTOR ? sectorDe(u) === null : sectorDe(u) === sector))
+      : todos;
     const q = query.trim().toLowerCase();
     let result = base;
     if (q) {
@@ -84,7 +96,7 @@ export const UsuariosPage = () => {
       );
     }
     return [...result].sort((a, b) => a.nombreApellido.localeCompare(b.nombreApellido));
-  }, [activos, inactivos, status, field, query]);
+  }, [activos, inactivos, status, sector, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createUsuario,
@@ -241,7 +253,22 @@ export const UsuariosPage = () => {
         onFieldChange={setField}
         query={query}
         onQueryChange={setQuery}
-      />
+      >
+        <select
+          aria-label="Filtrar por sector"
+          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+          value={sector}
+          onChange={(e) => setSector(e.target.value)}
+        >
+          <option value="">Todos los sectores</option>
+          {SECTORES.map((s) => (
+            <option key={s.codigo} value={s.codigo}>
+              {s.label}
+            </option>
+          ))}
+          <option value={FILTRO_SIN_SECTOR}>Sin sector</option>
+        </select>
+      </SearchToolbar>
 
       <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
@@ -252,6 +279,7 @@ export const UsuariosPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Usuario</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Legajo</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Rol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Sector</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
@@ -263,6 +291,20 @@ export const UsuariosPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{u.nombreUsuario}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{u.legajo || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{ROL_LABELS[u.rol] ?? u.rol}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {sectorDe(u) ? (
+                      <span
+                        className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+                        style={{ backgroundColor: getSectorColor(sectorDe(u)) }}
+                      >
+                        {getSectorLabel(sectorDe(u))}
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                        Sin sector
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {u.activo !== false ? 'Activo' : 'Inactivo'}
@@ -277,7 +319,7 @@ export const UsuariosPage = () => {
               ))}
               {usuariosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
+                  <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
                 </tr>
               )}
             </tbody>
