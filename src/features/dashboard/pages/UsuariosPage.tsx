@@ -10,6 +10,8 @@ import {
   type UsuarioCreate,
 } from '../../../api/usuarios';
 import { UsuarioRol } from '../../../shared/types';
+import type { SectorUsuario } from '../../../shared/types';
+import { SECTORES } from '../../../lib/sectores';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -38,6 +40,7 @@ const EMPTY_FORM = {
   rol: UsuarioRol.OPERARIO as string,
   pin: '',
   puedeTomarMuestrasLibres: false,
+  sector: '',
 };
 
 const USUARIO_FIELDS: SearchField[] = [
@@ -135,6 +138,7 @@ export const UsuariosPage = () => {
         rol: usuario.rol,
         pin: usuario.pin ?? '',
         puedeTomarMuestrasLibres: usuario.puedeTomarMuestrasLibres ?? false,
+        sector: usuario.datosAdicionales?.sector ?? '',
       });
     } else {
       setEditingUsuario(null);
@@ -149,6 +153,13 @@ export const UsuariosPage = () => {
     setFormData(EMPTY_FORM);
   };
 
+  // The API replaces datosAdicionales as a whole, so keep the stored keys when setting the sector.
+  // Without a chosen sector nothing is sent, leaving the stored value untouched.
+  const sectorPayload = (): Pick<UsuarioCreate, 'datosAdicionales'> =>
+    formData.sector
+      ? { datosAdicionales: { ...editingUsuario?.datosAdicionales, sector: formData.sector as SectorUsuario } }
+      : {};
+
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -158,6 +169,7 @@ export const UsuariosPage = () => {
       nombreUsuario: formData.nombreUsuario,
       rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
       puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
+      ...sectorPayload(),
       ...(formData.pin ? { pin: formData.pin } : {}),
     };
 
@@ -179,6 +191,7 @@ export const UsuariosPage = () => {
         rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
         puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
         activo: true,
+        ...sectorPayload(),
         ...(formData.pin ? { pin: formData.pin } : {}),
       },
     });
@@ -319,6 +332,21 @@ export const UsuariosPage = () => {
                   options={Object.entries(ROL_LABELS).map(([id, nombre]) => ({ id, nombre }))}
                   placeholder="Buscar rol..."
                 />
+              </div>
+
+              <div>
+                <label htmlFor="sector" className="block text-sm font-medium text-foreground">Sector</label>
+                <select
+                  id="sector"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={formData.sector}
+                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                >
+                  <option value="">Sin sector</option>
+                  {SECTORES.map((s) => (
+                    <option key={s.codigo} value={s.codigo}>{s.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

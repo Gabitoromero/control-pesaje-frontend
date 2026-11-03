@@ -162,6 +162,87 @@ describe('UsuariosPage', () => {
     });
   });
 
+  it('sector select lists the four sectors and sends the chosen code inside datosAdicionales on create', async () => {
+    let requestPayload: Record<string, unknown> | null = null;
+    server.use(
+      http.post('http://localhost:3000/api/usuarios', async ({ request }) => {
+        requestPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true, data: { id: 99, ...requestPayload } });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+    await screen.findByText('Admin Istrador');
+    await userEvent.click(screen.getByRole('button', { name: /nuevo usuario/i }));
+
+    const select = screen.getByLabelText('Sector');
+    const labels = within(select).getAllByRole('option').map((o) => o.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['Oficiales', 'Supervisores', 'Control de Calidad', 'Mejora Continua']));
+
+    await userEvent.type(screen.getByLabelText('Legajo'), '99999');
+    await userEvent.type(screen.getByLabelText('Nombre completo'), 'Test User');
+    await userEvent.type(screen.getByLabelText('Nombre de usuario'), 'testuser');
+    await userEvent.type(screen.getByLabelText(/PIN/), '1234');
+    await userEvent.selectOptions(select, 'DD');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect(requestPayload?.datosAdicionales).toEqual({ sector: 'DD' });
+    });
+  });
+
+  it('editing a user preselects the stored sector and keeps the other datosAdicionales keys on save', async () => {
+    let requestPayload: Record<string, unknown> | null = null;
+    server.use(
+      http.get('http://localhost:3000/api/usuarios', () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            { id: 7, nombreApellido: 'Sofía Sector', nombreUsuario: 'sofia', rol: 'operario', activo: true, legajo: '55555',
+              datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
+          ],
+        })
+      ),
+      http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
+        requestPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true, data: { id: 7, ...requestPayload } });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+    const row = (await screen.findByText('Sofía Sector')).closest('tr')!;
+    await userEvent.click(within(row).getByTitle('Editar'));
+
+    const select = screen.getByLabelText('Sector') as HTMLSelectElement;
+    expect(select.value).toBe('MC');
+
+    await userEvent.selectOptions(select, 'OF');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect(requestPayload?.datosAdicionales).toEqual({ sector: 'OF', preferenciasInterfaz: { tema: 'oscuro' } });
+    });
+  });
+
+  it('users without sector still save without sending datosAdicionales', async () => {
+    let requestPayload: Record<string, unknown> | null = null;
+    server.use(
+      http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
+        requestPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true, data: { id: 1, ...requestPayload } });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+    const row = (await screen.findByText('Admin Istrador')).closest('tr')!;
+    await userEvent.click(within(row).getByTitle('Editar'));
+    expect((screen.getByLabelText('Sector') as HTMLSelectElement).value).toBe('');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(requestPayload).not.toBeNull());
+    expect(requestPayload).not.toHaveProperty('datosAdicionales');
+  });
+
   it('"Eliminar Usuario" button is in modal footer for active usuario; NOT present in table row', async () => {
     renderWithProviders(<UsuariosPage />);
 
