@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { renderWithAuth } from '../../../test/render';
 import { TabletPlantaHeader } from './TabletPlantaHeader';
+import { getSectorColor } from '../../../lib/sectores';
 
 const operario = {
   id: 3,
@@ -41,5 +42,18 @@ describe('TabletPlantaHeader', () => {
     renderWithAuth(<TabletPlantaHeader lineaNombre="Línea 1" onLogout={vi.fn()} />, { user: operario });
 
     expect(screen.getByRole('group', { name: 'Vista de Planta' })).toBeInTheDocument();
+  });
+
+  it('colors the avatar with the user sector color and keeps the default look without sector', () => {
+    const { unmount } = renderWithAuth(<TabletPlantaHeader lineaNombre="Línea 1" onLogout={vi.fn()} />, {
+      user: { ...operario, sector: 'SU' },
+    });
+    expect(screen.getByRole('img', { name: 'Usuario operario1' })).toHaveStyle({ backgroundColor: getSectorColor('SU') });
+    unmount();
+
+    renderWithAuth(<TabletPlantaHeader lineaNombre="Línea 1" onLogout={vi.fn()} />, { user: operario });
+    const neutral = screen.getByRole('img', { name: 'Usuario operario1' });
+    expect(neutral.style.backgroundColor).toBe('');
+    expect(neutral.className).toContain('bg-secondary');
   });
 });

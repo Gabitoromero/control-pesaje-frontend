@@ -1,6 +1,7 @@
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { getSectorAvatarProps } from '../../../lib/sectores';
 import { PlantaModeSwitch } from './PlantaModeSwitch';
 
 /**
@@ -11,6 +12,7 @@ import { PlantaModeSwitch } from './PlantaModeSwitch';
  */
 export function TabletPlantaHeader({ lineaNombre, onLogout }: { lineaNombre: string; onLogout: () => void }) {
   const { user } = useAuth();
+  const sectorAvatar = getSectorAvatarProps(user?.sector);
 
   return (
     <header className="bg-card border-b border-border p-4 md:px-8 grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-3">
@@ -22,7 +24,9 @@ export function TabletPlantaHeader({ lineaNombre, onLogout }: { lineaNombre: str
         <div
           role="img"
           aria-label={`Usuario ${user?.nombreUsuario ?? ''}`.trim()}
-          className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm select-none"
+          title={sectorAvatar.title}
+          style={sectorAvatar.style}
+          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm select-none ${sectorAvatar.className}`}
         >
           {getAvatarInitials(user?.nombreUsuario)}
         </div>

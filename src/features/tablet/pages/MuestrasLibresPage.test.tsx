@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import { getSectorColor } from '../../../lib/sectores';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -559,5 +560,16 @@ describe('MuestrasLibresPage', () => {
       expect(addSampleMock).toHaveBeenCalledWith(15);
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
+  });
+
+  it('colors the avatar with the user sector color and keeps the default look without sector', async () => {
+    const { unmount } = renderWithAuth(<MuestrasLibresPage />, { user: { ...operarioUser, sector: 'SU' }, activeLineaId: 1 });
+    expect(await screen.findByText('OP')).toHaveStyle({ backgroundColor: getSectorColor('SU') });
+    unmount();
+
+    renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+    const neutral = await screen.findByText('OP');
+    expect(neutral.style.backgroundColor).toBe('');
+    expect(neutral.className).toContain('bg-secondary');
   });
 });

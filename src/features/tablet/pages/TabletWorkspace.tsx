@@ -27,6 +27,7 @@ import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { PESO_DECIMALS } from '../../../shared/constants';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { getSectorAvatarProps } from '../../../lib/sectores';
 import {
   isToleranceBlocked,
   resolveEffectiveTolerance,
@@ -39,6 +40,7 @@ import { useDialog } from '../../../components/dialogs/useDialog';
 
 export const TabletWorkspace: React.FC = () => {
   const { user, activeLineaId } = useAuth();
+  const sectorAvatar = getSectorAvatarProps(user?.sector);
   const { alertWarning } = useDialog();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -303,7 +305,11 @@ export const TabletWorkspace: React.FC = () => {
         </div>
         <div className="flex flex-nowrap items-center gap-4">
           <div className="hidden min-[700px]:flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${sectorAvatar.className}`}
+              style={sectorAvatar.style}
+              title={sectorAvatar.title}
+            >
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
             <div className="flex flex-col">

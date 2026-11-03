@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SECTORES, SECTOR_NEUTRAL_COLOR, getSectorColor, getSectorLabel } from './sectores';
+import { SECTORES, SECTOR_NEUTRAL_COLOR, getSectorAvatarProps, getSectorColor, getSectorLabel } from './sectores';
 
 describe('sectores config', () => {
   it('defines the four sectors with code, label and color, in order', () => {
@@ -27,5 +27,21 @@ describe('sectores config', () => {
     expect(getSectorColor(undefined)).toBe(SECTOR_NEUTRAL_COLOR);
     expect(getSectorColor('ZZ')).toBe(SECTOR_NEUTRAL_COLOR);
     expect(getSectorLabel(null)).toBeNull();
+  });
+
+  it('getSectorAvatarProps fills the avatar with the sector color and titles it with the label', () => {
+    const props = getSectorAvatarProps('SU');
+    expect(props.className).toContain('text-white');
+    expect(props.style).toEqual({ backgroundColor: getSectorColor('SU') });
+    expect(props.title).toBe('Supervisores');
+  });
+
+  it('getSectorAvatarProps keeps the neutral avatar look when there is no known sector', () => {
+    [undefined, null, '', 'XX'].forEach((codigo) => {
+      const props = getSectorAvatarProps(codigo);
+      expect(props.className).toBe('bg-secondary text-secondary-foreground');
+      expect(props.style).toBeUndefined();
+      expect(props.title).toBeUndefined();
+    });
   });
 });

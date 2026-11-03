@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { SectorUsuario } from '../shared/types';
 
 export interface SectorConfig {
@@ -25,3 +26,19 @@ export const getSectorColor = (codigo?: string | null): string =>
 
 export const getSectorLabel = (codigo?: string | null): string | null =>
   findSector(codigo)?.label ?? null;
+
+export interface SectorAvatarProps {
+  className: string;
+  style?: CSSProperties;
+  title?: string;
+}
+
+/**
+ * Color classes, inline style and tooltip for a user avatar: filled with the sector color when the
+ * user has a known sector, otherwise the neutral look the avatars always had.
+ */
+export const getSectorAvatarProps = (codigo?: string | null): SectorAvatarProps => {
+  const sector = findSector(codigo);
+  if (!sector) return { className: 'bg-secondary text-secondary-foreground' };
+  return { className: 'text-white', style: { backgroundColor: sector.color }, title: sector.label };
+};

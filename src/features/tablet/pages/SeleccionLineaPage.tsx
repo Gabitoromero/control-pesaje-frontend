@@ -10,10 +10,12 @@ import { getApiErrorMessage } from '../../../utils/errors';
 import { abrirSesionLinea } from '../../../api/auth';
 import type { Linea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { getSectorAvatarProps } from '../../../lib/sectores';
 import { getSocket } from '../../../services/websocket';
 
 export const SeleccionLineaPage: React.FC = () => {
   const { isAuthenticated, user, logout, openLineSession } = useAuth();
+  const sectorAvatar = getSectorAvatarProps(user?.sector);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activatingId, setActivatingId] = React.useState<number | null>(null);
@@ -79,7 +81,11 @@ export const SeleccionLineaPage: React.FC = () => {
         </h1>
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${sectorAvatar.className}`}
+              style={sectorAvatar.style}
+              title={sectorAvatar.title}
+            >
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
             <div className="flex flex-col">

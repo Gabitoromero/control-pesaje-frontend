@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import { getSectorColor } from '../../../lib/sectores';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
@@ -214,5 +215,16 @@ describe('SeleccionLineaPage', () => {
 
     // Wait for the new line name to appear, indicating a refetch
     expect(await screen.findByText('Línea 1 — Refetched')).toBeInTheDocument();
+  });
+
+  it('colors the avatar with the user sector color and keeps the default look without sector', async () => {
+    const { unmount } = renderWithAuth(<SeleccionLineaPage />, { user: { ...operarioUser, sector: 'SU' } });
+    expect(await screen.findByText('OP')).toHaveStyle({ backgroundColor: getSectorColor('SU') });
+    unmount();
+
+    renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+    const neutral = await screen.findByText('OP');
+    expect(neutral.style.backgroundColor).toBe('');
+    expect(neutral.className).toContain('bg-secondary');
   });
 });
