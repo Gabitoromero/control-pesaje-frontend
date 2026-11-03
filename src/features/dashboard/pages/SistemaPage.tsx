@@ -459,13 +459,37 @@ export function SistemaPage() {
 
         <Sub title="9. Reportes">
           <p>
-            Hoy hay un único reporte implementado: <strong>"Reporte de Pasadas y Muestras"</strong>,
-            con filtro de rango de fechas (Desde / Hasta). El rango máximo permitido es de{' '}
-            <strong>5 días</strong>; un rango mayor no se puede descargar.
+            Hay tres reportes en Excel (.xlsx), cada uno con su botón "Descargar":
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>Reporte de Muestras</strong>: una única hoja con todas las muestras del
+              rango, de todas las líneas juntas. Incluye línea, balanza, ruta, número y estado de
+              la pasada, código y artículo, etapa, fecha y hora, pesos y límites, validación,
+              observación y operario. En las muestras libres (sin pasada) balanza, código y
+              artículo salen con "-".
+            </li>
+            <li>
+              <strong>Reporte de Pasadas</strong>: una hoja de pasadas y una hoja de etapas por
+              cada línea de producción. Si en el rango no hay pasadas, el archivo trae una hoja
+              "Sin datos".
+            </li>
+            <li>
+              <strong>Reporte de Rutas de Pasada</strong>: la configuración actual de las rutas,
+              con sus etapas, pesos y artículos asignados. No pide rango de fechas.
+            </li>
+          </ul>
+          <p>
+            Muestras y Pasadas comparten el mismo selector de fechas (Desde / Hasta). El rango
+            máximo es de <strong>90 días</strong>, contando ambos extremos; con un rango mayor el
+            sistema avisa "El rango máximo es de 90 días" y no descarga nada.
           </p>
           <p>
-            El botón "Descargar .xlsx" está deshabilitado con la leyenda{' '}
-            <strong>"Disponible próximamente"</strong> — todavía no es una función operativa.
+            Con rangos largos el archivo puede tardar en generarse. Mientras tanto se muestra una
+            pantalla de carga con el mensaje "Generando el reporte en el servidor..." y, cuando el
+            archivo está listo, "Reporte listo, descargando el archivo...". Durante la carga los
+            campos de fecha quedan bloqueados y el diálogo no se puede cerrar: conviene esperar y
+            no volver a presionar el botón.
           </p>
         </Sub>
       </CollapsibleSection>
