@@ -110,5 +110,7 @@ describe('SistemaPage sector copy', () => {
     expect(text).toMatch(/sin sector/i);
     expect(text).toMatch(/Para quitarlo, elegí "Sin sector"/);
     expect(text).toMatch(/leyenda al pie de cada gráfico/);
+    expect(text).toMatch(/columna Sector de la tabla/);
+    expect(text).toMatch(/filtrar la lista por sector/);
   });
 });

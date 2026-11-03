@@ -536,6 +536,12 @@ export function SistemaPage() {
             ]}
           />
           <p>
+            La columna Sector de la tabla muestra el sector de cada usuario con una etiqueta del
+            color correspondiente ("Sin sector" en gris si no tiene), y el selector "Filtrar por
+            sector" de la barra de búsqueda permite filtrar la lista por sector o ver solo los
+            usuarios que todavía no tienen uno. Se combina con el estado y con el buscador.
+          </p>
+          <p>
             El color del avatar del menú lateral se toma al ingresar: si cambiás el sector de
             alguien que tiene la sesión abierta, lo ve actualizado cuando vuelva a ingresar.
           </p>
