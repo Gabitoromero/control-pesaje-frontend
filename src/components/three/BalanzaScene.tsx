@@ -1,11 +1,18 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useReducedMotion } from 'motion/react';
 import * as THREE from 'three';
 import {
+  CAMERA,
+  HEAD,
   HEAD_Y,
   HOUSING_TOP,
   KEYPAD,
+  KEY_SIZE,
+  KEY_Z,
+  LIP,
+  MOUNT,
+  PANEL_LCD,
   LCD_IDLE,
   LCD_WEIGHED,
   PANEL,
@@ -19,7 +26,17 @@ import {
   drawLcd,
   paintLcd,
 } from './balanzaModel';
-import { applyPose, createSim, stepSim } from './balanzaMotion';
+import {
+  applyPose,
+  beginSpin,
+  createSim,
+  createSpin,
+  dragSpin,
+  endSpin,
+  stepSim,
+  stepSpin,
+  type SpinState,
+} from './balanzaMotion';
 import { installStudioEnvironment } from './studioEnvironment';
 import { createMGeometry } from './mShape';
 
@@ -30,7 +47,15 @@ function Steel() {
   return <meshStandardMaterial color="#d3d7dc" roughness={0.28} metalness={0.85} />;
 }
 
-function Scene({ animate }: { animate: boolean }) {
+interface SceneProps {
+  animate: boolean;
+  /** The letter only starts falling once this is true. */
+  playing: boolean;
+  spin: SpinState;
+  onInvalidate: (invalidate: () => void) => void;
+}
+
+function Scene({ animate, playing, spin, onInvalidate }: SceneProps) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -74,6 +99,10 @@ function Scene({ animate }: { animate: boolean }) {
   );
 
   useEffect(() => {
+    onInvalidate(invalidate);
+  }, [invalidate, onInvalidate]);
+
+  useEffect(() => {
     const dispose = installStudioEnvironment(gl, scene);
     invalidate();
     return dispose;
@@ -93,16 +122,19 @@ function Scene({ animate }: { animate: boolean }) {
         lcdMaterial: lcd.material,
       },
       sim.current,
+      spin,
       animate,
     );
   });
 
   useFrame((_, delta) => {
-    if (!animate) return;
     const dt = Math.min(delta, 1 / 30);
     const st = sim.current;
 
-    if (stepSim(st, dt) && lcd.ctx) paintLcd(lcd.ctx, lcd.texture, LCD_WEIGHED);
+    if (animate && playing && stepSim(st, dt) && lcd.ctx) {
+      paintLcd(lcd.ctx, lcd.texture, LCD_WEIGHED);
+    }
+    stepSpin(spin, dt);
 
     applyPose(
       {
@@ -112,8 +144,12 @@ function Scene({ animate }: { animate: boolean }) {
         lcdMaterial: lcd.material,
       },
       st,
+      spin,
       animate,
     );
+
+    // Demand mode (reduced motion) only renders on request: keep coasting.
+    if (!animate && (spin.dragging || spin.velocity !== 0)) invalidate();
   });
 
   return (
@@ -135,27 +171,27 @@ function Scene({ animate }: { animate: boolean }) {
               <planeGeometry args={[PANEL.width, PANEL.height]} />
               <meshStandardMaterial color={PANEL_BLUE} roughness={0.5} />
             </mesh>
-            <mesh position={[-0.8, 0.02, 0.004]} material={lcd.material}>
-              <planeGeometry args={[1.15, 0.5]} />
+            <mesh position={[PANEL_LCD.x, PANEL_LCD.y, PANEL_LCD.z]} material={lcd.material}>
+              <planeGeometry args={[PANEL_LCD.width, PANEL_LCD.height]} />
             </mesh>
             {KEYPAD.map((key, i) => (
-              <mesh key={i} position={[key.x, key.y, 0.018]}>
-                <boxGeometry args={[0.17, 0.085, 0.035]} />
+              <mesh key={i} position={[key.x, key.y, KEY_Z]}>
+                <boxGeometry args={[...KEY_SIZE]} />
                 <meshStandardMaterial color={key.color} roughness={0.5} />
               </mesh>
             ))}
           </group>
 
           {/* Tray mounting block, tray and back lip */}
-          <mesh position={[0, HOUSING_TOP + 0.02, TRAY_Z]}>
-            <boxGeometry args={[2.5, 0.04, TRAY_DEPTH - 0.1]} />
+          <mesh position={[0, HOUSING_TOP + MOUNT.height / 2, TRAY_Z]}>
+            <boxGeometry args={[MOUNT.width, MOUNT.height, TRAY_DEPTH - 0.1]} />
             <meshStandardMaterial color="#2a2f36" roughness={0.8} />
           </mesh>
           <mesh geometry={trayGeometry} position={[0, TRAY_Y, TRAY_Z]}>
             <Steel />
           </mesh>
-          <mesh position={[0, TRAY_Y + 0.05, TRAY_Z - TRAY_DEPTH / 2 + 0.015]}>
-            <boxGeometry args={[TRAY_FLAT_WIDTH, 0.1, 0.03]} />
+          <mesh position={[0, TRAY_Y + LIP.height / 2, TRAY_Z - TRAY_DEPTH / 2 + LIP.thickness / 2]}>
+            <boxGeometry args={[TRAY_FLAT_WIDTH, LIP.height, LIP.thickness]} />
             <Steel />
           </mesh>
 
@@ -164,13 +200,13 @@ function Scene({ animate }: { animate: boolean }) {
             <cylinderGeometry args={[POLE.radius, POLE.radius, POLE.height, 16]} />
             <Steel />
           </mesh>
-          <group position={[POLE.x, HEAD_Y, POLE.z]} rotation={[-0.1, -0.15, 0]}>
+          <group position={[POLE.x, HEAD_Y, POLE.z]} rotation={HEAD.rotation}>
             <mesh>
-              <boxGeometry args={[1.7, 0.66, 0.17]} />
+              <boxGeometry args={[...HEAD.size]} />
               <meshStandardMaterial color={PANEL_BLUE} roughness={0.5} />
             </mesh>
-            <mesh position={[0, 0, 0.0865]} material={lcd.material}>
-              <planeGeometry args={[1.5, 0.5]} />
+            <mesh position={[0, 0, HEAD.lcd.z]} material={lcd.material}>
+              <planeGeometry args={[HEAD.lcd.width, HEAD.lcd.height]} />
             </mesh>
           </group>
 
@@ -186,12 +222,60 @@ function Scene({ animate }: { animate: boolean }) {
   );
 }
 
-const BalanzaScene = ({ dark = true }: { dark?: boolean }) => {
+interface BalanzaSceneProps {
+  dark?: boolean;
+  /** Fades the scene in; hidden scenes ignore input. */
+  visible?: boolean;
+  /** Starts the letter drop. */
+  playing?: boolean;
+  /** Called once the WebGL canvas exists. */
+  onReady?: () => void;
+}
+
+const BalanzaScene = ({ dark = true, visible = true, playing = true, onReady }: BalanzaSceneProps) => {
   const reducedMotion = useReducedMotion();
   const animate = !reducedMotion;
 
+  const [spin] = useState(createSpin);
+  const lastPointer = useRef<{ x: number; t: number } | null>(null);
+  const invalidateRef = useRef<(() => void) | null>(null);
+  const registerInvalidate = useMemo(
+    () => (fn: () => void) => {
+      invalidateRef.current = fn;
+    },
+    [],
+  );
+
+  const handleDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    lastPointer.current = { x: e.clientX, t: e.timeStamp };
+    beginSpin(spin);
+    invalidateRef.current?.();
+  };
+  const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const last = lastPointer.current;
+    if (!last) return;
+    dragSpin(spin, e.clientX - last.x, (e.timeStamp - last.t) / 1000);
+    lastPointer.current = { x: e.clientX, t: e.timeStamp };
+    invalidateRef.current?.();
+  };
+  const handleUp = () => {
+    lastPointer.current = null;
+    endSpin(spin);
+    invalidateRef.current?.();
+  };
+
   return (
-    <div className="relative w-full h-72 lg:h-80" aria-hidden="true">
+    <div
+      className={`absolute inset-0 touch-pan-y select-none transition-opacity duration-700 ${
+        visible ? 'opacity-100 cursor-grab active:cursor-grabbing' : 'opacity-0 pointer-events-none'
+      }`}
+      aria-hidden="true"
+      onPointerDown={handleDown}
+      onPointerMove={handleMove}
+      onPointerUp={handleUp}
+      onPointerCancel={handleUp}
+    >
       {/* Soft light behind the navy letter so it reads on dark backgrounds */}
       <div
         className={`pointer-events-none absolute inset-x-6 inset-y-2 rounded-full bg-[radial-gradient(closest-side,rgba(255,255,255,0.9),rgba(255,255,255,0))] transition-opacity ${
@@ -201,10 +285,13 @@ const BalanzaScene = ({ dark = true }: { dark?: boolean }) => {
       <Canvas
         dpr={[1, 1.5]}
         frameloop={animate ? 'always' : 'demand'}
-        camera={{ position: [0, 2.4, 7.6], fov: 30 }}
-        onCreated={({ camera }) => camera.lookAt(0, 1.45, 0)}
+        camera={{ position: CAMERA.position, fov: CAMERA.fov }}
+        onCreated={({ camera }) => {
+          camera.lookAt(...CAMERA.target);
+          onReady?.();
+        }}
       >
-        <Scene animate={animate} />
+        <Scene animate={animate} playing={playing} spin={spin} onInvalidate={registerInvalidate} />
       </Canvas>
     </div>
   );

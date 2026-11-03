@@ -39,6 +39,26 @@ export const TRAY_Z = -0.1;
 export const TRAY_DEPTH = 1.55;
 export const TRAY_FLAT_WIDTH = 2.76;
 
+/** Resting yaw of the whole scale (3/4 view) and the camera that frames it. */
+export const BASE_YAW = -0.35;
+export const CAMERA = {
+  position: [0, 2.4, 7.6] as [number, number, number],
+  target: [0, 1.45, 0] as [number, number, number],
+  fov: 30,
+};
+
+/** Dimensions of the small parts, shared by the 3D scene and the blueprint. */
+export const PANEL_LCD = { x: -0.8, y: 0.02, z: 0.004, width: 1.15, height: 0.5 } as const;
+export const KEY_SIZE = [0.17, 0.085, 0.035] as const;
+export const KEY_Z = 0.018;
+export const MOUNT = { width: 2.5, height: 0.04 } as const;
+export const LIP = { height: 0.1, thickness: 0.03 } as const;
+export const HEAD = {
+  size: [1.7, 0.66, 0.17] as [number, number, number],
+  rotation: [-0.1, -0.15, 0] as [number, number, number],
+  lcd: { width: 1.5, height: 0.5, z: 0.0865 },
+} as const;
+
 export const POLE = { x: 1.0, z: -0.98, height: 2.0, radius: 0.045 } as const;
 export const HEAD_Y = HOUSING_TOP + POLE.height + 0.3;
 

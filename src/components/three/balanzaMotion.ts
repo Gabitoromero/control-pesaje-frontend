@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TRAY_TOP } from './balanzaModel';
+import { BASE_YAW, TRAY_TOP } from './balanzaModel';
 
 export const LETTER_SCALE = 0.9;
 export const DROP_HEIGHT = 3.0;
@@ -10,7 +10,6 @@ const IMPACT_KEEP = 0.3;
 const STIFFNESS = 70;
 const DAMPING = 6;
 const SWAY_START = 2.2;
-const BASE_YAW = -0.35;
 const MAX_PRESS = 0.6;
 
 export interface SimState {
@@ -57,6 +56,55 @@ export function stepSim(st: SimState, dt: number): boolean {
   return landed;
 }
 
+/** Rotation about the vertical axis driven by the user's finger or mouse. */
+export interface SpinState {
+  /** Extra yaw added by the user (radians). */
+  yaw: number;
+  /** Angular velocity in rad/s, used for inertia after release. */
+  velocity: number;
+  dragging: boolean;
+  /** True from the first touch on: the idle sway no longer applies. */
+  touched: boolean;
+  /** True once the sway offset was folded into `yaw` at first touch. */
+  swayFolded: boolean;
+}
+
+const RAD_PER_PX = 0.012;
+const MAX_VELOCITY = 12;
+const SPIN_FRICTION = 2.5;
+
+export function createSpin(): SpinState {
+  return { yaw: 0, velocity: 0, dragging: false, touched: false, swayFolded: false };
+}
+
+export function beginSpin(spin: SpinState): void {
+  spin.dragging = true;
+  spin.touched = true;
+  spin.velocity = 0;
+}
+
+/** Apply a horizontal drag of `dx` pixels that took `dt` seconds. */
+export function dragSpin(spin: SpinState, dx: number, dt: number): void {
+  const delta = dx * RAD_PER_PX;
+  spin.yaw += delta;
+  if (dt > 0) {
+    const instant = THREE.MathUtils.clamp(delta / dt, -MAX_VELOCITY, MAX_VELOCITY);
+    spin.velocity = spin.velocity * 0.5 + instant * 0.5;
+  }
+}
+
+export function endSpin(spin: SpinState): void {
+  spin.dragging = false;
+}
+
+/** Coast with friction after release; the finger drives it while dragging. */
+export function stepSpin(spin: SpinState, dt: number): void {
+  if (spin.dragging || spin.velocity === 0) return;
+  spin.yaw += spin.velocity * dt;
+  spin.velocity *= Math.exp(-SPIN_FRICTION * dt);
+  if (Math.abs(spin.velocity) < 0.02) spin.velocity = 0;
+}
+
 export interface PoseTargets {
   root: THREE.Group | null;
   rig: THREE.Group | null;
@@ -65,7 +113,12 @@ export interface PoseTargets {
 }
 
 /** Write the simulation state onto the scene objects. */
-export function applyPose(targets: PoseTargets, st: SimState, animate: boolean): void {
+export function applyPose(
+  targets: PoseTargets,
+  st: SimState,
+  spin: SpinState,
+  animate: boolean,
+): void {
   const { root, rig, letter, lcdMaterial } = targets;
   const press = Math.max(-MAX_PRESS, Math.min(0, st.s));
 
@@ -78,7 +131,14 @@ export function applyPose(targets: PoseTargets, st: SimState, animate: boolean):
       LETTER_SCALE,
     );
   }
-  if (root) root.rotation.y = BASE_YAW + Math.sin(st.t * 0.7) * 0.28 * st.sway;
+
+  const swayOffset = Math.sin(st.t * 0.7) * 0.28 * st.sway;
+  if (spin.touched && !spin.swayFolded) {
+    // Hand the current sway angle over to the user so nothing jumps.
+    spin.yaw += swayOffset;
+    spin.swayFolded = true;
+  }
+  if (root) root.rotation.y = BASE_YAW + spin.yaw + (spin.touched ? 0 : swayOffset);
 
   const on = !animate
     ? 1
