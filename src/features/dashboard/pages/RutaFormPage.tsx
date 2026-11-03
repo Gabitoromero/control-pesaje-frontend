@@ -600,7 +600,7 @@ export const RutaFormPage = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+      <form onSubmit={e => handleSubmit(onSubmit, onInvalid)(e)} className="space-y-6">
         <div className="bg-card border border-border rounded-lg shadow p-6">
           <h2 className="text-lg font-medium mb-4 text-foreground">Información General</h2>
           <div className="space-y-4">
