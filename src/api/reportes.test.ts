@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import api from './axios';
 import {
-  downloadReportePasadasMuestras,
+  downloadReporteMuestras,
+  downloadReportePasadas,
   downloadReporteRutasPasada,
   todayLocalIso,
 } from './reportes';
@@ -58,10 +60,13 @@ describe('reportes API', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
   });
 
-  it('downloadReportePasadasMuestras keeps its filename and query params (regression)', async () => {
+  it.each([
+    ['muestras', downloadReporteMuestras],
+    ['pasadas', downloadReportePasadas],
+  ] as const)('download of the %s report uses its endpoint, shared params and filename', async (path, download) => {
     let query: URLSearchParams | undefined;
     server.use(
-      http.get(`${BASE}/reportes/pasadas-muestras`, ({ request }) => {
+      http.get(`${BASE}/reportes/${path}`, ({ request }) => {
         query = new URL(request.url).searchParams;
         return new HttpResponse(new Uint8Array([1]), {
           headers: { 'Content-Type': 'application/octet-stream' },
@@ -69,11 +74,35 @@ describe('reportes API', () => {
       }),
     );
 
-    await downloadReportePasadasMuestras('2026-10-01', '2026-10-03');
+    await download('2026-10-01', '2026-10-03');
 
     expect(query?.get('desde')).toBe('2026-10-01');
     expect(query?.get('hasta')).toBe('2026-10-03');
-    expect(downloads).toEqual(['reporte-2026-10-01.xlsx']);
+    expect(downloads).toEqual([`reporte-${path}-2026-10-01.xlsx`]);
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+  });
+
+  it('range reports disable the axios timeout so large ranges are not aborted', async () => {
+    const get = vi.spyOn(api, 'get').mockResolvedValue({ data: new Uint8Array([1]) });
+
+    await downloadReporteMuestras('2026-10-01', '2026-12-29');
+
+    expect(get).toHaveBeenCalledWith(
+      '/reportes/muestras',
+      expect.objectContaining({ timeout: 0, responseType: 'blob' }),
+    );
+  });
+
+  it('notifies once when the server starts sending the file', async () => {
+    vi.spyOn(api, 'get').mockImplementation(async (_url, config) => {
+      config?.onDownloadProgress?.({ loaded: 1, bytes: 1 } as never);
+      config?.onDownloadProgress?.({ loaded: 2, bytes: 1 } as never);
+      return { data: new Uint8Array([1]) };
+    });
+    const onStart = vi.fn();
+
+    await downloadReportePasadas('2026-10-01', '2026-10-03', onStart);
+
+    expect(onStart).toHaveBeenCalledTimes(1);
   });
 });

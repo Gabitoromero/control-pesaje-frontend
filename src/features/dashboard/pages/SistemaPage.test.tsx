@@ -81,3 +81,18 @@ describe('SistemaPage operator history copy', () => {
     expect(text).toMatch(/Tiene observación|ícono de mensaje/);
   });
 });
+
+describe('SistemaPage reports copy', () => {
+  it('documents the three reports, the 90-day range and the loading screen instead of the old single report', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/Reporte de Muestras/);
+    expect(text).toMatch(/Reporte de Pasadas/);
+    expect(text).toMatch(/Reporte de Rutas de Pasada/);
+    expect(text).toMatch(/90 días/);
+    expect(text).toMatch(/Generando el reporte en el servidor/);
+    expect(text).not.toMatch(/Reporte de Pasadas y Muestras/);
+    expect(text).not.toMatch(/Disponible próximamente/);
+    expect(text).not.toMatch(/rango máximo permitido es de 5 días/);
+  });
+});

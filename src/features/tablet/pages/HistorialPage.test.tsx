@@ -160,7 +160,7 @@ describe('HistorialPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '[ALF-10] Alfajor Chico' }));
     await userEvent.click(screen.getByRole('button', { name: 'Quitar selección' }));
-    await waitFor(() => expect(lastParams().articuloId).toBeUndefined());
+    await waitFor(() => expect(lastParams()?.articuloId).toBeUndefined());
   });
 
   it('shows the línea name, the avatar, the switch and a logout button in the header', async () => {
