@@ -160,3 +160,38 @@ describe('Sidebar', () => {
     expect(nav!.compareDocumentPosition(version)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });
+
+describe('Sidebar — collapse and group state', () => {
+  it('shows a hide-menu button only when onToggleCollapse is provided', async () => {
+    const userEventSetup = userEvent.setup();
+    const onToggle = vi.fn();
+    const { unmount } = renderWithAuth(<Sidebar onToggleCollapse={onToggle} />, {
+      user: admin,
+      initialEntries: ['/dashboard'],
+    });
+
+    await userEventSetup.click(screen.getByRole('button', { name: /ocultar menú/i }));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    unmount();
+
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
+    expect(screen.queryByRole('button', { name: /ocultar menú/i })).not.toBeInTheDocument();
+  });
+
+  it('exposes the expanded state of each group via aria-expanded', async () => {
+    const userEventSetup = userEvent.setup();
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
+
+    const toggle = screen.getByRole('button', { name: /parametrización/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEventSetup.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('marks the link of the current page with aria-current', () => {
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard/articulos'] });
+    expect(screen.getByRole('link', { name: /artículos/i })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: /monitoreo/i })).not.toHaveAttribute('aria-current');
+  });
+});
+

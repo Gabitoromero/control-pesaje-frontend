@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithAuth } from '../test/render';
 import type { User } from '../shared/types/auth';
-import { vi, describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { DashboardLayout } from './DashboardLayout';
 import { useAdminSocket } from '../features/dashboard/hooks/useAdminSocket';
 const admin: User    = { id: 1, legajo: 'A1', nombreUsuario: 'admin',  rol: 'administrador', puedeTomarMuestrasLibres: true };
@@ -176,3 +176,71 @@ describe('DashboardLayout — banner de dispositivo sin asignar', () => {
     expect(useAdminSocket).not.toHaveBeenCalled();
   });
 });
+
+function stubLocalStorage() {
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+    clear: () => store.clear(),
+  });
+}
+
+describe('DashboardLayout — sidebar ocultable', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  beforeEach(() => {
+    stubLocalStorage();
+    vi.mocked(useAdminSocket).mockReturnValue({
+      unassignedDevices: [],
+      resolveDevice: vi.fn(),
+    });
+  });
+
+  it('oculta y vuelve a mostrar el sidebar de escritorio', async () => {
+    const userEventSetup = userEvent.setup();
+    const { container } = renderWithAuth(<DashboardLayout />, {
+      user: admin,
+      initialEntries: ['/dashboard'],
+    });
+
+    expect(container.querySelector('[inert]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /mostrar menú/i })).not.toBeInTheDocument();
+
+    await userEventSetup.click(screen.getByRole('button', { name: /ocultar menú/i }));
+
+    expect(container.querySelector('[inert]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /mostrar menú/i })).toBeInTheDocument();
+
+    await userEventSetup.click(screen.getByRole('button', { name: /mostrar menú/i }));
+
+    expect(container.querySelector('[inert]')).toBeNull();
+    expect(screen.getByRole('button', { name: /ocultar menú/i })).toBeInTheDocument();
+  });
+
+  it('recuerda la preferencia entre visitas', async () => {
+    const userEventSetup = userEvent.setup();
+    const first = renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
+    await userEventSetup.click(screen.getByRole('button', { name: /ocultar menú/i }));
+    expect(localStorage.getItem('sidebar:open')).toBe('false');
+    first.unmount();
+
+    renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
+    expect(screen.getByRole('button', { name: /mostrar menú/i })).toBeInTheDocument();
+  });
+
+  it('mantiene el drawer móvil independiente del sidebar de escritorio', async () => {
+    const userEventSetup = userEvent.setup();
+    renderWithAuth(<DashboardLayout />, { user: admin, initialEntries: ['/dashboard'] });
+    await userEventSetup.click(screen.getByRole('button', { name: /ocultar menú/i }));
+
+    const dialog = screen.getByRole('dialog', { hidden: true });
+    await userEventSetup.click(screen.getByRole('button', { name: /abrir menú/i }));
+    expect(dialog).toBeVisible();
+    expect(dialog.querySelector('[inert]')).toBeNull();
+  });
+});
+
