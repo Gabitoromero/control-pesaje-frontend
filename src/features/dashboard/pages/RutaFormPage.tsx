@@ -576,7 +576,7 @@ export const RutaFormPage = () => {
   if (isEditing && loadingRuta) return <div className="p-6 text-foreground">Cargando...</div>;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/dashboard/rutas')}
