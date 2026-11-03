@@ -55,7 +55,7 @@ export const PasadasActivasPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <h2 className="text-2xl font-bold mb-6 text-foreground">Pasadas Activas</h2>
       {pasadas.length === 0 ? (
         <p className="text-muted-foreground">No hay pasadas en curso en la planta.</p>

@@ -307,7 +307,7 @@ export const LineasPage = () => {
   if (error) return <div className="p-6 text-destructive">Error al cargar líneas</div>;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-foreground">Gestión de Líneas</h1>
         <button

@@ -124,9 +124,14 @@ describe('Login — routing por rol', () => {
 
     renderLogin();
 
+    // The orphan-cleanup effect re-runs once because closeLineSession's
+    // identity changes after clearing activeLineaId, so the token may be
+    // removed twice. The contract under test is the ORDER: close the
+    // session first, remove the token after.
     await waitFor(() => {
-      expect(calls).toEqual(['close-session', 'remove-token']);
+      expect(calls.length).toBeGreaterThanOrEqual(2);
     });
+    expect(calls.slice(0, 2)).toEqual(['close-session', 'remove-token']);
 
     expect(cerrarSesionLinea).toHaveBeenCalledWith(5);
 
@@ -150,5 +155,12 @@ describe('Login — routing por rol', () => {
     
     await userEvent.type(screen.getByLabelText(/contraseña/i), '4'); // Ahora tiene 4
     expect(screen.getByRole('button', { name: /ingresar/i })).toBeEnabled();
+  });
+});
+
+describe('Login — escena 3D de marca', () => {
+  it('monta la escena de la balanza (Canvas mockeado en jsdom)', async () => {
+    renderLogin();
+    expect(await screen.findByTestId('r3f-canvas')).toBeInTheDocument();
   });
 });

@@ -102,7 +102,7 @@ export const DispositivosConectadosPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <h2 className="text-2xl font-bold mb-6 text-foreground">Dispositivos Conectados (Raspberry Pi)</h2>
       {devices.length === 0 ? (
         <p className="text-muted-foreground">No hay dispositivos conectados.</p>

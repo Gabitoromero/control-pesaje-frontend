@@ -150,7 +150,7 @@ export function HistorialPage() {
     <div data-testid="tablet-page-root" className="h-screen bg-background flex flex-col font-sans text-foreground overflow-hidden">
       <TabletPlantaHeader lineaNombre={linea?.nombre ?? `Línea ${activeLineaId}`} onLogout={handleLogout} />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto space-y-6">
+      <main className="flex-1 w-full p-4 md:p-8 overflow-y-auto space-y-6">
         <HistorialKpis kpis={data?.kpis} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
