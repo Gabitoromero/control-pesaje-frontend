@@ -63,3 +63,17 @@ if (typeof ResizeObserver === 'undefined') {
     disconnect() {}
   };
 }
+
+/**
+ * jsdom has no WebGL. Replace R3F's `Canvas` with an inert placeholder so
+ * components embedding 3D scenes can render in tests. Children are not
+ * rendered: scene internals (useFrame, meshes) are never exercised here.
+ */
+vi.mock('@react-three/fiber', async importOriginal => {
+  const actual = await importOriginal<typeof import('@react-three/fiber')>();
+  const { createElement } = await import('react');
+  return {
+    ...actual,
+    Canvas: () => createElement('div', { 'data-testid': 'r3f-canvas' }),
+  };
+});
