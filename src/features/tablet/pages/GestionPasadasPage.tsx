@@ -157,7 +157,7 @@ export const GestionPasadasPage: React.FC = () => {
     <div data-testid="tablet-page-root" className="h-screen bg-background flex flex-col font-sans text-foreground relative overflow-hidden">
       <TabletPlantaHeader lineaNombre={linea?.nombre ?? `Línea ${activeLineaId}`} onLogout={handleLogout} />
 
-      <main data-testid="tablet-page-scroll" className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
+      <main data-testid="tablet-page-scroll" className="flex-1 w-full p-4 md:p-8 overflow-y-auto">
         {linea?.observacion && (
           <div className="mb-6">
             <LineaObservacionBanner observacion={linea.observacion} />
@@ -203,7 +203,7 @@ export const GestionPasadasPage: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-6">Inicia una nueva pasada utilizando el botón.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 min-[480px]:grid-cols-2 min-[840px]:grid-cols-1 min-[950px]:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 min-[480px]:grid-cols-2 min-[840px]:grid-cols-1 min-[950px]:grid-cols-2 min-[1400px]:grid-cols-3 min-[1800px]:grid-cols-4 gap-4">
                 {filteredPasadas.map((pasada) => (
                   <PasadaCard key={pasada.id} pasada={pasada} etapas={etapasRuta} />
                 ))}

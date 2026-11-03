@@ -63,7 +63,7 @@ export const SesionesActivasPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <h2 className="text-2xl font-bold mb-6 text-foreground">Sesiones Activas</h2>
       {sessions.length === 0 ? (
         <p className="text-muted-foreground">No hay sesiones activas en la planta.</p>

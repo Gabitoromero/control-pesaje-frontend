@@ -114,10 +114,10 @@ export const ReportesPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <h2 className="text-2xl font-bold mb-6 text-foreground">Reportes</h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(22rem,100%),1fr))] gap-6">
         {REPORTES.map((reporte) => {
           const isDownloading = downloadingId === reporte.id;
           return (
