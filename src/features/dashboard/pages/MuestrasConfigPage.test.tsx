@@ -84,6 +84,15 @@ describe('MuestrasConfigPage', () => {
     expect(screen.queryByText('Valor inicial del sistema')).not.toBeInTheDocument();
   });
 
+  it('explains that the global tolerance is the default used by etapas with "Tolerancia por defecto"', async () => {
+    useBackend(anaConfig);
+    renderPage();
+
+    await findInput();
+    expect(screen.getByText('Tolerancia global (valor por defecto)')).toBeInTheDocument();
+    expect(screen.getByTestId('tolerance-default-note')).toHaveTextContent(/Tolerancia por defecto/);
+  });
+
   it('shows "Valor inicial del sistema" when there is no updating user', async () => {
     useBackend({ ...anaConfig, updatedBy: null });
     renderPage();

@@ -1,5 +1,53 @@
 import { describe, it, expect } from 'vitest';
-import { isToleranceBlocked, formatTolerancePct, isNonPositiveWeight } from './tolerance';
+import { isToleranceBlocked, formatTolerancePct, isNonPositiveWeight, resolveEffectiveTolerance } from './tolerance';
+import type { ToleranceState } from '../../../hooks/useToleranceConfig';
+
+describe('resolveEffectiveTolerance', () => {
+  const global: ToleranceState = { status: 'ready', toleranciaPct: 20, isStale: false };
+  const unavailable: ToleranceState = { status: 'unavailable', isRetrying: false, retry: () => {} };
+
+  it('uses the global tolerance when the etapa uses the default', () => {
+    expect(resolveEffectiveTolerance(global, { toleranciaPorDefecto: true, toleranciaPct: null })).toBe(global);
+  });
+
+  it('uses the global tolerance for etapas without tolerance fields (existing rutas)', () => {
+    expect(resolveEffectiveTolerance(global, {})).toBe(global);
+    expect(resolveEffectiveTolerance(global, null)).toBe(global);
+    expect(resolveEffectiveTolerance(global, undefined)).toBe(global);
+  });
+
+  it('ignores a leftover own percentage while the default is active', () => {
+    expect(resolveEffectiveTolerance(global, { toleranciaPorDefecto: true, toleranciaPct: 5 })).toBe(global);
+  });
+
+  it('uses the own percentage when the default is off', () => {
+    expect(resolveEffectiveTolerance(global, { toleranciaPorDefecto: false, toleranciaPct: 5 })).toEqual({
+      status: 'ready',
+      toleranciaPct: 5,
+      isStale: false,
+    });
+  });
+
+  it('an own percentage works even when the global value is unavailable', () => {
+    expect(resolveEffectiveTolerance(unavailable, { toleranciaPorDefecto: false, toleranciaPct: 0 })).toEqual({
+      status: 'ready',
+      toleranciaPct: 0,
+      isStale: false,
+    });
+  });
+
+  it('falls back to the global state when the default is off but the percentage is missing', () => {
+    expect(resolveEffectiveTolerance(global, { toleranciaPorDefecto: false, toleranciaPct: null })).toBe(global);
+  });
+
+  it('changes the block threshold for that etapa only', () => {
+    const own = resolveEffectiveTolerance(global, { toleranciaPorDefecto: false, toleranciaPct: 5 });
+    const other = resolveEffectiveTolerance(global, { toleranciaPorDefecto: true });
+    // min 10 / max 20: weight 9 is 10% below min
+    expect(own.status === 'ready' && isToleranceBlocked(9, 10, 20, own.toleranciaPct)).toBe(true);
+    expect(other.status === 'ready' && isToleranceBlocked(9, 10, 20, other.toleranciaPct)).toBe(false);
+  });
+});
 
 describe('isToleranceBlocked', () => {
   it('does NOT block when pesoNeto is exactly pesoMinimo or pesoMaximo', () => {

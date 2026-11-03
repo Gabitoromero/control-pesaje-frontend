@@ -96,9 +96,13 @@ export function MuestrasConfigPage() {
 
       <section className="bg-card border border-border rounded-lg shadow p-6 space-y-4">
         <div>
-          <p className="text-sm text-muted-foreground">Tolerancia actual</p>
+          <p className="text-sm text-muted-foreground">Tolerancia global (valor por defecto)</p>
           <p data-testid="current-tolerance" className="text-3xl font-bold text-foreground">
             {formatTolerancePct(data.toleranciaPct)}%
+          </p>
+          <p data-testid="tolerance-default-note" className="text-sm text-muted-foreground mt-1">
+            Es el valor por defecto: se aplica a todas las etapas de ruta que tengan activada la opción
+            «Tolerancia por defecto». Cada etapa puede definir su propio porcentaje desde la página de la ruta.
           </p>
           <LastChange config={data} />
         </div>

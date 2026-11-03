@@ -1177,7 +1177,7 @@ describe('TabletWorkspace', () => {
       const block = screen.getByTestId('bloque-peso');
       expect(block).toContainElement(button);
       expect(block).toHaveTextContent('MINIMO');
-      expect(button.closest('div')).toHaveClass('absolute', 'top-0', 'right-0');
+      expect(button.closest('div')).toHaveClass('self-end', 'min-[720px]:absolute', 'min-[720px]:top-0', 'min-[720px]:right-0');
       const registrar = screen.getByRole('button', { name: /registrar muestra/i });
       expect(block).not.toContainElement(registrar);
       let after = registrar.nextElementSibling;

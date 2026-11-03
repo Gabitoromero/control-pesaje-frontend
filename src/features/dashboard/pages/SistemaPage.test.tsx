@@ -13,12 +13,23 @@ describe('SistemaPage tolerance copy', () => {
     expect(text).not.toMatch(/20\s*%\s*del rango/);
   });
 
-  it('tells operators the tolerance is a single global value that only an Administrator edits', () => {
+  it('tells operators the global tolerance is the default, edited only by an Administrator, and that an etapa can have its own', () => {
     const text = renderText();
 
-    expect(text).toMatch(/único valor para todas las líneas, etapas y artículos/);
+    expect(text).toMatch(/porcentaje global es el valor por defecto/);
     expect(text).toMatch(/lo edita solamente un Administrador/);
     expect(text).toMatch(/hasta 30 segundos/);
+    expect(text).toMatch(/su propia tolerancia/);
+    expect(text).not.toMatch(/único valor para todas las líneas, etapas y artículos/);
+  });
+
+  it('documents the per-etapa tolerance in the Rutas manual and states that the global one is only the default', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/Tolerancia por defecto/);
+    expect(text).toMatch(/Tolerancia propia \(%\)/);
+    expect(text).toMatch(/salvo a las etapas de una ruta que tengan su propia tolerancia/);
+    expect(text).not.toMatch(/no uno por etapa/);
   });
 
   it('explains to operators what happens when the tolerance cannot be read', () => {
@@ -53,5 +64,20 @@ describe('SistemaPage tolerance copy', () => {
 
     expect(text).toMatch(/más tres secciones exclusivas/);
     expect(text).not.toMatch(/más dos secciones exclusivas/);
+  });
+});
+
+describe('SistemaPage operator history copy', () => {
+  it('documents "Mi historial": the switch, own muestras only, KPIs, filters, colors and the observación toggle', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/8\. Mi historial/);
+    expect(text).toMatch(/interruptor "Pasadas \/ Mi historial"/);
+    expect(text).toMatch(/únicamente las muestras que tomaste vos/);
+    expect(text).toMatch(/Muestras OK/);
+    expect(text).toMatch(/de 20 en 20/);
+    expect(text).toMatch(/fondo verde/);
+    expect(text).toMatch(/fondo rojo/);
+    expect(text).toMatch(/Tiene observación|ícono de mensaje/);
   });
 });
