@@ -331,7 +331,7 @@ export const RutaFormPage = () => {
     },
   });
 
-  const focusTimer = useRef<number>();
+  const focusTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(focusTimer.current), []);
 
   const { fields, append, remove, swap } = useFieldArray({
