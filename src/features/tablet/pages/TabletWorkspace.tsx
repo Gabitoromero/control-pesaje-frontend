@@ -124,7 +124,7 @@ export const TabletWorkspace: React.FC = () => {
     lineaProduccionId: targetLineaId,
     etapas,
     initialMuestras: muestrasList,
-    onApiError: (_err: unknown) => {
+    onApiError: () => {
       // Errors handled silently at the UI level —
       // the page remains accessible even when API calls fail.
     },

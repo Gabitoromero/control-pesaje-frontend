@@ -66,3 +66,18 @@ describe('SistemaPage tolerance copy', () => {
     expect(text).not.toMatch(/más dos secciones exclusivas/);
   });
 });
+
+describe('SistemaPage operator history copy', () => {
+  it('documents "Mi historial": the switch, own muestras only, KPIs, filters, colors and the observación toggle', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/8\. Mi historial/);
+    expect(text).toMatch(/interruptor "Pasadas \/ Mi historial"/);
+    expect(text).toMatch(/únicamente las muestras que tomaste vos/);
+    expect(text).toMatch(/Muestras OK/);
+    expect(text).toMatch(/de 20 en 20/);
+    expect(text).toMatch(/fondo verde/);
+    expect(text).toMatch(/fondo rojo/);
+    expect(text).toMatch(/Tiene observación|ícono de mensaje/);
+  });
+});

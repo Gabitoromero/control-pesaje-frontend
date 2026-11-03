@@ -117,10 +117,10 @@ export function SistemaPage() {
         </p>
       </div>
 
-      <CollapsibleSection title="Manual — Rol Operario" count={7} defaultOpen>
+      <CollapsibleSection title="Manual — Rol Operario" count={8} defaultOpen>
         <p className="text-sm text-muted-foreground mb-5">
           Uso diario de la tablet asignada a cada línea de producción: ingreso, selección de
-          línea, registro de muestras de una pasada y muestras libres de calidad.
+          línea, registro de muestras de una pasada, muestras libres de calidad e historial propio.
         </p>
 
         <Nota>
@@ -285,6 +285,37 @@ export function SistemaPage() {
             Hay un límite duro de <strong>20 muestras por sesión</strong>. El botón final es{' '}
             <strong>"Finalizar Muestras"</strong> (no pide confirmación), limpia la sesión local y
             vuelve al listado de pasadas.
+          </p>
+        </Sub>
+
+        <Sub title="8. Mi historial">
+          <p>
+            Es el listado de tus propias muestras. Se abre con el interruptor "Pasadas / Mi
+            historial" del encabezado de la tablet, que aparece en Gestión de Pasadas y en el
+            propio historial (no en el espacio de trabajo ni en muestras libres). Cambiar de vista
+            solo cambia de pantalla: no se pierde ninguna pasada ni cierra tu sesión de línea.
+          </p>
+          <p>
+            Ves <strong>únicamente las muestras que tomaste vos</strong>, nunca las de otros
+            usuarios. Arriba hay dos indicadores, <strong>Muestras OK</strong> y{' '}
+            <strong>Fuera de rango</strong>, con el porcentaje y la cantidad sobre el total. Se
+            calculan sobre todo lo que muestran los filtros elegidos, no solo sobre la página
+            visible. Sin muestras para esos filtros muestran "Sin datos".
+          </p>
+          <p>
+            Podés filtrar por etapa, por artículo, por fecha (Desde / Hasta) o escribir en el
+            buscador, que busca en artículo, etapa, ruta y observación. La lista se muestra de 20
+            en 20, con los botones de página anterior y siguiente al pie.
+          </p>
+          <p>
+            Cada muestra es una tarjeta con artículo (o "Muestra libre"), etapa, ruta, fecha y peso
+            neto. El resultado se ve por el color: <strong>fondo verde</strong> si el peso estuvo
+            dentro del rango y <strong>fondo rojo</strong> si estuvo fuera de rango.
+          </p>
+          <p>
+            Si la muestra tiene observación, la tarjeta muestra un ícono de mensaje. Tocando la
+            tarjeta se despliega la observación debajo, dentro de la misma tarjeta, y se vuelve a
+            tocar para ocultarla. Las muestras sin observación no se despliegan.
           </p>
         </Sub>
       </CollapsibleSection>
