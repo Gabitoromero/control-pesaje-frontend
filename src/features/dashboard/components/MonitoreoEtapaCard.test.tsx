@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { MonitoreoEtapaCard } from './MonitoreoEtapaCard';
 import type { DashboardEtapa } from '../../../api/dashboard';
+import { getSectorColor, SECTOR_NEUTRAL_COLOR } from '../../../lib/sectores';
 
 const mockEtapa: DashboardEtapa = {
   etapa: { id: 1, nombre: 'Amasado' },
@@ -67,6 +68,43 @@ describe('MonitoreoEtapaCard', () => {
     // Second is normal (has rounded-full, doesn't have rotate-45)
     expect(points[1].className).toContain('rounded-full');
     expect(points[1].className).not.toContain('rotate-45');
+  });
+
+  it('fills every sample with its sector color, out-of-range ones included, and rings only the out-of-range ones in red', () => {
+    const etapaSectores: DashboardEtapa = {
+      ...mockEtapa,
+      timeSeries: [
+        { peso: 100, time: '2026-07-22T10:05:00.000Z', pasadaId: 1, estadoValidacion: 'ok', sector: 'OF' },
+        { peso: 80, time: '2026-07-22T10:06:00.000Z', pasadaId: 1, estadoValidacion: 'fuera_de_rango', sector: 'DD' },
+        { peso: 101, time: '2026-07-22T10:07:00.000Z', pasadaId: null, estadoValidacion: 'ok', sector: 'MC' },
+        { peso: 102, time: '2026-07-22T10:08:00.000Z', pasadaId: 1, estadoValidacion: 'ok', sector: null },
+      ],
+    };
+
+    const { container } = render(
+      <MonitoreoEtapaCard
+        etapa={etapaSectores}
+        rutaAsignadaAt="2026-07-22T10:00:00.000Z"
+        ahora="2026-07-22T10:20:00.000Z"
+      />
+    );
+
+    const points = Array.from(container.querySelectorAll<HTMLElement>('.border-2'));
+    expect(points).toHaveLength(4);
+
+    expect(points[0]).toHaveStyle({ backgroundColor: getSectorColor('OF') });
+    expect(points[1]).toHaveStyle({ backgroundColor: getSectorColor('DD') });
+    expect(points[2]).toHaveStyle({ backgroundColor: getSectorColor('MC') });
+    expect(points[3]).toHaveStyle({ backgroundColor: SECTOR_NEUTRAL_COLOR });
+
+    // Red is no longer a fill color
+    points.forEach((p) => expect(p.className).not.toContain('bg-destructive'));
+
+    // Only the out-of-range sample carries the ring
+    expect(points[1].dataset.fueraRango).toBe('true');
+    expect(points[1].style.boxShadow).not.toBe('');
+    expect(points[0].style.boxShadow).toBe('');
+    expect(points[2].style.boxShadow).toBe('');
   });
 
   it('displays the last weight with four decimal places', () => {

@@ -85,6 +85,7 @@ const Login: React.FC = () => {
         nombreUsuario: payload.nombreUsuario,
         rol: payload.rol,
         puedeTomarMuestrasLibres: payload.puedeTomarMuestrasLibres,
+        sector: payload.sector ?? null,
       };
 
       login({ token, user });

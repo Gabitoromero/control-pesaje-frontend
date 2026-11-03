@@ -1,5 +1,10 @@
 import type { DashboardEtapa } from '../../../api/dashboard';
 import { PESO_DECIMALS } from '../../../shared/constants';
+import { getSectorColor, getSectorLabel } from '../../../lib/sectores';
+
+// Thick bright red ring separated from the fill by a white gap, so it stays
+// distinguishable from the burgundy (DD) fill and from the other sector colors.
+const FUERA_RANGO_RING = '0 0 0 2px #ffffff, 0 0 0 5px #ff1f1f';
 
 interface MonitoreoEtapaCardProps {
   etapa: DashboardEtapa;
@@ -85,14 +90,22 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
             const isOk = muestra.estadoValidacion === 'ok';
             const isLibre = muestra.pasadaId === null;
             // Pasada samples: filled circle. Free samples: smaller, dimmed, diamond shape (rotate-45 + no border-radius/rounded).
-            const colorClass = isOk ? 'bg-success border-card' : 'bg-destructive border-card';
+            // Fill = sector of the user who weighed it; out-of-range samples add a red ring.
             const shapeClass = isLibre ? 'w-2.5 h-2.5 opacity-60 rotate-45' : 'w-3.5 h-3.5 rounded-full';
-            const label = `${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}${isLibre ? ' · muestra libre' : ''}`;
+            const sectorLabel = getSectorLabel(muestra.sector);
+            const label = `${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}${isLibre ? ' · muestra libre' : ''}${sectorLabel ? ` · ${sectorLabel}` : ''}`;
             return (
               <div
                 key={i}
-                className={`absolute border-2 ${colorClass} ${shapeClass}`}
-                style={{ left: `${normX}%`, top: `${Math.max(2, Math.min(98, normY))}%`, transform: 'translate(-50%, -50%)' }}
+                className={`absolute border-2 border-card ${shapeClass}`}
+                data-fuera-rango={isOk ? undefined : 'true'}
+                style={{
+                  left: `${normX}%`,
+                  top: `${Math.max(2, Math.min(98, normY))}%`,
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: getSectorColor(muestra.sector),
+                  boxShadow: isOk ? undefined : FUERA_RANGO_RING,
+                }}
                 title={label}
               />
             );

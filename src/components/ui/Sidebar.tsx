@@ -8,6 +8,7 @@ import {
 import { useTheme } from '../../features/theme/ThemeContext';
 import { UsuarioRol } from '../../shared/types';
 import { getAvatarInitials } from '../../features/tablet/utils/avatarInitials';
+import { getSectorColor, getSectorLabel } from '../../lib/sectores';
 
 export interface SidebarProps {
   onNavClick?: () => void;
@@ -59,7 +60,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick }) => {
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
+            <div
+              data-testid="sidebar-avatar"
+              className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${user?.sector ? 'text-white' : 'bg-secondary text-secondary-foreground'}`}
+              style={user?.sector ? { backgroundColor: getSectorColor(user.sector) } : undefined}
+              title={getSectorLabel(user?.sector) ?? undefined}
+            >
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
             <div className="flex flex-col min-w-0">

@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import { renderWithAuth } from '../../test/render';
 import type { User } from '../../shared/types/auth';
 import { Sidebar } from './Sidebar';
+import { getSectorColor } from '../../lib/sectores';
 
 const admin: User    = { id: 1, legajo: 'A1', nombreUsuario: 'admin',  rol: 'administrador', puedeTomarMuestrasLibres: true };
 const jefe: User     = { id: 2, legajo: 'J1', nombreUsuario: 'jefe1',  rol: 'jefe', puedeTomarMuestrasLibres: true };
@@ -15,6 +16,21 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /monitoreo/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /planta/i })).toBeInTheDocument();
     expect(screen.getByText('admin')).toBeInTheDocument();
+  });
+
+  it('colors the avatar with the user sector color, and keeps the default look without sector', () => {
+    const { unmount } = renderWithAuth(<Sidebar />, {
+      user: { ...admin, sector: 'SU' },
+      initialEntries: ['/dashboard'],
+    });
+    const avatar = screen.getByTestId('sidebar-avatar');
+    expect(avatar).toHaveStyle({ backgroundColor: getSectorColor('SU') });
+    unmount();
+
+    renderWithAuth(<Sidebar />, { user: admin, initialEntries: ['/dashboard'] });
+    const neutral = screen.getByTestId('sidebar-avatar');
+    expect(neutral.style.backgroundColor).toBe('');
+    expect(neutral.className).toContain('bg-secondary');
   });
 
   it('calls onNavClick when a navigation link is clicked', async () => {
