@@ -103,7 +103,7 @@ describe('SistemaPage sector copy', () => {
 
     expect(text).toMatch(/Oficiales, Supervisores, Control de Calidad o Mejora Continua/);
     expect(text).toMatch(/no cambia roles ni permisos/);
-    expect(text).toMatch(/color del avatar del menú lateral/);
+    expect(text).toMatch(/color del avatar \(en el menú lateral y en las pantallas de la tablet\)/);
     expect(text).toMatch(/color del sector de quien tomó la muestra/);
     expect(text).toMatch(/Oficiales naranja, Supervisores verde oscuro, Control de Calidad bordó y Mejora Continua morado/);
     expect(text).toMatch(/anillo rojo/);

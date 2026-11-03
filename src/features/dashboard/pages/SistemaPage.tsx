@@ -531,7 +531,7 @@ export function SistemaPage() {
               [
                 'Sector',
                 'No',
-                'Oficiales, Supervisores, Control de Calidad o Mejora Continua. Es solo una identificación visual: no cambia roles ni permisos. Define el color del avatar del menú lateral y el de los puntos del Monitoreo. Un usuario sin sector se muestra en gris. Para quitarlo, elegí "Sin sector".',
+                'Oficiales, Supervisores, Control de Calidad o Mejora Continua. Es solo una identificación visual: no cambia roles ni permisos. Define el color del avatar (en el menú lateral y en las pantallas de la tablet) y el de los puntos del Monitoreo. Un usuario sin sector se muestra en gris. Para quitarlo, elegí "Sin sector".',
               ],
             ]}
           />
@@ -542,8 +542,8 @@ export function SistemaPage() {
             usuarios que todavía no tienen uno. Se combina con el estado y con el buscador.
           </p>
           <p>
-            El color del avatar del menú lateral se toma al ingresar: si cambiás el sector de
-            alguien que tiene la sesión abierta, lo ve actualizado cuando vuelva a ingresar.
+            El color del avatar se toma al ingresar: si cambiás el sector de alguien que tiene la
+            sesión abierta, lo ve actualizado cuando vuelva a ingresar.
           </p>
           <p>
             Alta, edición, eliminación (borrado lógico) y reactivación. A diferencia de los
