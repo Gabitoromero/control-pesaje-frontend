@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2, MessageSquareText } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
-import { getHistorial } from '../../../api/historial';
+import { getHistorial, type HistorialItem as HistorialItemData } from '../../../api/historial';
 import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { PESO_DECIMALS } from '../../../shared/constants';
@@ -23,6 +23,62 @@ const naturalCompare = (a: string, b: string) => a.localeCompare(b, undefined, {
 
 const formatFecha = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+
+function HistorialItem({ m }: { m: HistorialItemData }) {
+  const [open, setOpen] = useState(false);
+  const tieneObservacion = m.observacion !== null && m.observacion !== '';
+  const ok = m.estadoValidacion === 'ok';
+
+  const row = (
+    <>
+      <div className="flex flex-col">
+        <span className="font-medium">
+          {m.articulo ? `${m.articulo.codigo}${m.articulo.nombre ? ` — ${m.articulo.nombre}` : ''}` : 'Muestra libre'}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {m.etapa.nombre} · {m.rutaPasada.nombre} · {formatFecha(m.timestamp)}
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        {tieneObservacion && (
+          <span className="flex items-center gap-0.5 text-muted-foreground">
+            <MessageSquareText aria-hidden className="h-4 w-4" />
+            <ChevronDown aria-hidden className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+            <span className="sr-only">Tiene observación</span>
+          </span>
+        )}
+        <span className="font-medium">{m.pesoNeto.toFixed(PESO_DECIMALS)} kg</span>
+        <span className="sr-only">{ok ? 'Estado: OK' : 'Estado: fuera de rango'}</span>
+      </div>
+    </>
+  );
+  const rowClass = 'p-3 flex flex-wrap items-center justify-between gap-3';
+
+  return (
+    <li
+      data-estado={ok ? 'ok' : 'fuera_de_rango'}
+      className={`border rounded-xl ${ok ? 'bg-success/10 border-success/40' : 'bg-destructive/10 border-destructive/40'}`}
+    >
+      {tieneObservacion ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(o => !o)}
+          className={`${rowClass} w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+        >
+          {row}
+        </button>
+      ) : (
+        <div className={rowClass}>{row}</div>
+      )}
+      {tieneObservacion && open && (
+        <p className="px-3 pb-3 pt-2 text-sm text-muted-foreground border-t border-border whitespace-pre-wrap break-words">
+          {m.observacion}
+        </p>
+      )}
+    </li>
+  );
+}
 
 export function HistorialPage() {
   const { activeLineaId } = useAuth();
@@ -166,30 +222,7 @@ export function HistorialPage() {
         {data && data.items.length > 0 && (
           <ul className="space-y-2" aria-label="Listado de muestras">
             {data.items.map(m => (
-              <li
-                key={m.id}
-                className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3"
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium">
-                    {m.articulo ? `${m.articulo.codigo}${m.articulo.nombre ? ` — ${m.articulo.nombre}` : ''}` : 'Muestra libre'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {m.etapa.nombre} · {m.rutaPasada.nombre} · {formatFecha(m.timestamp)}
-                  </span>
-                  {m.observacion && <span className="text-xs text-muted-foreground italic">{m.observacion}</span>}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium">{m.pesoNeto.toFixed(PESO_DECIMALS)} kg</span>
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-                      m.estadoValidacion === 'ok' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-                    }`}
-                  >
-                    {m.estadoValidacion === 'ok' ? 'OK' : 'Fuera de rango'}
-                  </span>
-                </div>
-              </li>
+              <HistorialItem key={m.id} m={m} />
             ))}
           </ul>
         )}

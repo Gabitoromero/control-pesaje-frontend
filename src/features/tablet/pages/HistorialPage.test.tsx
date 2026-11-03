@@ -71,6 +71,43 @@ describe('HistorialPage', () => {
     expect(screen.queryByText('Tendencia')).not.toBeInTheDocument();
   });
 
+  it('hides the observación behind a clickable card that toggles it inline, only when the muestra has one', async () => {
+    vi.mocked(getHistorial).mockResolvedValue(
+      response({ items: [item(1, 'ok', { observacion: 'Masa pegajosa' }), item(2, 'ok', { articulo: null })] }),
+    );
+    renderWithAuth(<HistorialPage />, { user });
+
+    const card = await screen.findByRole('button', { name: /ALF-01 — Alfajor Triple/ });
+    expect(card).toHaveAttribute('aria-expanded', 'false');
+    expect(card).toHaveTextContent('Tiene observación');
+    expect(screen.queryByText('Masa pegajosa')).not.toBeInTheDocument();
+    // the muestra without observación is not interactive
+    expect(screen.getAllByRole('button', { name: /Muestra libre|ALF-01/ })).toHaveLength(1);
+
+    await userEvent.click(card);
+    expect(card).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Masa pegajosa')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await userEvent.click(card);
+    expect(card).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Masa pegajosa')).not.toBeInTheDocument();
+  });
+
+  it('tints each muestra green (ok) or red (fuera de rango) instead of showing a status badge', async () => {
+    renderWithAuth(<HistorialPage />, { user });
+
+    const list = within(await screen.findByRole('list', { name: 'Listado de muestras' }));
+    const [ok, fuera] = list.getAllByRole('listitem');
+    expect(ok).toHaveClass('bg-success/10');
+    expect(fuera).toHaveClass('bg-destructive/10');
+    expect(list.queryByText('OK')).not.toBeInTheDocument();
+    expect(list.queryByText('Fuera de rango')).not.toBeInTheDocument();
+    // the state is still announced to assistive tech, not only by color
+    expect(ok).toHaveTextContent('Estado: OK');
+    expect(fuera).toHaveTextContent('Estado: fuera de rango');
+  });
+
   it('shows "Sin datos" and an empty message for an empty set', async () => {
     vi.mocked(getHistorial).mockResolvedValue(
       response({ items: [], total: 0, kpis: { total: 0, ok: 0, fueraRango: 0, porcentajeOk: 0, porcentajeFueraRango: 0 } }),
