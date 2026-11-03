@@ -154,11 +154,17 @@ export const UsuariosPage = () => {
   };
 
   // The API replaces datosAdicionales as a whole, so keep the stored keys when setting the sector.
-  // Without a chosen sector nothing is sent, leaving the stored value untouched.
-  const sectorPayload = (): Pick<UsuarioCreate, 'datosAdicionales'> =>
-    formData.sector
-      ? { datosAdicionales: { ...editingUsuario?.datosAdicionales, sector: formData.sector as SectorUsuario } }
-      : {};
+  // "Sin sector" on a user that has one sends an explicit null to clear it; for a user without a
+  // sector there is nothing to clear, so nothing is sent and the stored value stays untouched.
+  const sectorPayload = (): Pick<UsuarioCreate, 'datosAdicionales'> => {
+    if (formData.sector) {
+      return { datosAdicionales: { ...editingUsuario?.datosAdicionales, sector: formData.sector as SectorUsuario } };
+    }
+    if (editingUsuario?.datosAdicionales?.sector) {
+      return { datosAdicionales: { ...editingUsuario.datosAdicionales, sector: null } };
+    }
+    return {};
+  };
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();

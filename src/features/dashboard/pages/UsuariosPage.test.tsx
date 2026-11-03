@@ -224,6 +224,35 @@ describe('UsuariosPage', () => {
     });
   });
 
+  it('choosing "Sin sector" on a user that has one sends sector null and keeps the other datosAdicionales keys', async () => {
+    let requestPayload: Record<string, unknown> | null = null;
+    server.use(
+      http.get('http://localhost:3000/api/usuarios', () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            { id: 7, nombreApellido: 'Sofía Sector', nombreUsuario: 'sofia', rol: 'operario', activo: true, legajo: '55555',
+              datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
+          ],
+        })
+      ),
+      http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
+        requestPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true, data: { id: 7, ...requestPayload } });
+      })
+    );
+
+    renderWithProviders(<UsuariosPage />);
+    const row = (await screen.findByText('Sofía Sector')).closest('tr')!;
+    await userEvent.click(within(row).getByTitle('Editar'));
+    await userEvent.selectOptions(screen.getByLabelText('Sector'), '');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect(requestPayload?.datosAdicionales).toEqual({ sector: null, preferenciasInterfaz: { tema: 'oscuro' } });
+    });
+  });
+
   it('users without sector still save without sending datosAdicionales', async () => {
     let requestPayload: Record<string, unknown> | null = null;
     server.use(
