@@ -76,6 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         nombreUsuario: payload.nombreUsuario,
         rol: payload.rol,
         puedeTomarMuestrasLibres: payload.puedeTomarMuestrasLibres,
+        sector: payload.sector ?? null,
       };
     } catch {
       return null;

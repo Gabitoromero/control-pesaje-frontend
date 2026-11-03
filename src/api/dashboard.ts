@@ -1,4 +1,5 @@
 import api from './axios';
+import type { SectorUsuario } from '../shared/types';
 
 export interface DashboardLineaItem {
   id: number;
@@ -42,6 +43,7 @@ export interface DashboardEtapaMuestra {
   time: string;
   pasadaId: number | null;          // null = muestra libre (sin pasada activa)
   estadoValidacion: 'ok' | 'fuera_de_rango';
+  sector?: SectorUsuario | null;    // sector of the user who weighed the sample
 }
 
 export interface DashboardEtapa {

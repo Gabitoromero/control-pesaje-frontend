@@ -337,6 +337,13 @@ export function SistemaPage() {
             carrusel con el progreso de cada etapa de la ruta activa.
           </p>
           <p>
+            Cada punto del gráfico de una etapa (un rombo, si es una muestra libre) se pinta con el
+            color del sector de quien tomó la muestra: Oficiales naranja, Supervisores verde
+            oscuro, Control de Calidad bordó y Mejora Continua morado. Las muestras fuera de rango
+            llevan además un anillo rojo alrededor. Si el usuario no tiene sector, el punto es
+            gris.
+          </p>
+          <p>
             Tiene un botón de pantalla completa (sin menú lateral) pensado para dejar el dashboard
             fijo en una pantalla de TV de planta.
           </p>
@@ -520,8 +527,17 @@ export function SistemaPage() {
               ['Rol', 'Sí', 'Administrador / Jefe / Operario / Visualización'],
               ['PIN', 'Sí al crear', 'Al editar es opcional: dejarlo vacío significa "no cambiarlo"'],
               ['Puede tomar muestras libres', 'No', 'Checkbox, en la práctica solo aplica a Operario'],
+              [
+                'Sector',
+                'No',
+                'Oficiales, Supervisores, Control de Calidad o Mejora Continua. Es solo una identificación visual: no cambia roles ni permisos. Define el color del avatar del menú lateral y el de los puntos del Monitoreo. Un usuario sin sector se muestra en gris.',
+              ],
             ]}
           />
+          <p>
+            El color del avatar del menú lateral se toma al ingresar: si cambiás el sector de
+            alguien que tiene la sesión abierta, lo ve actualizado cuando vuelva a ingresar.
+          </p>
           <p>
             Alta, edición, eliminación (borrado lógico) y reactivación. A diferencia de los
             catálogos de Parametrización, la gestión de usuarios{' '}

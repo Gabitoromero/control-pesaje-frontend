@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick, onToggleCollapse }
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
-              <Avatar name={user?.nombreUsuario} />
+              <Avatar name={user?.nombreUsuario} sector={user?.sector} data-testid="sidebar-avatar" />
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-medium text-foreground truncate">{user?.nombreUsuario}</span>
                 <span className="text-xs text-muted-foreground capitalize">{user?.rol}</span>
