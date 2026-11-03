@@ -96,3 +96,17 @@ describe('SistemaPage reports copy', () => {
     expect(text).not.toMatch(/rango máximo permitido es de 5 días/);
   });
 });
+
+describe('SistemaPage sector copy', () => {
+  it('documents the Sector field in Usuarios, the dot colors with the red ring in Monitoreo and the avatar color', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/Oficiales, Supervisores, Control de Calidad o Mejora Continua/);
+    expect(text).toMatch(/no cambia roles ni permisos/);
+    expect(text).toMatch(/color del avatar del menú lateral/);
+    expect(text).toMatch(/color del sector de quien tomó la muestra/);
+    expect(text).toMatch(/Oficiales naranja, Supervisores verde oscuro, Control de Calidad bordó y Mejora Continua morado/);
+    expect(text).toMatch(/anillo rojo/);
+    expect(text).toMatch(/sin sector/i);
+  });
+});
