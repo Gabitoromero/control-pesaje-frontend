@@ -1,6 +1,6 @@
 import type { DashboardEtapa } from '../../../api/dashboard';
 import { PESO_DECIMALS } from '../../../shared/constants';
-import { getSectorColor, getSectorLabel } from '../../../lib/sectores';
+import { SECTORES, SECTOR_NEUTRAL_COLOR, getSectorColor, getSectorLabel } from '../../../lib/sectores';
 
 // Thick bright red ring separated from the fill by a white gap, so it stays
 // distinguishable from the burgundy (DD) fill and from the other sector colors.
@@ -20,6 +20,11 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
   const muestrasTotales = etapa.muestrasTotales;
   const muestrasOk = etapa.muestrasConformes;
   const muestrasFuera = etapa.muestrasFueraRango;
+
+  // Legend: only the sectors that actually appear in this chart (fill = sector, red ring = out of range).
+  const codigosPresentes = new Set(etapa.timeSeries.map((m) => m.sector));
+  const sectoresPresentes = SECTORES.filter((s) => codigosPresentes.has(s.codigo));
+  const haySinSector = etapa.timeSeries.some((m) => !SECTORES.some((s) => s.codigo === m.sector));
 
   const x1 = (() => {
     if (rutaAsignadaAt) {
@@ -126,14 +131,28 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
       {/* Footer stats */}
       <div className="flex justify-between items-center pt-3 border-t border-border">
         <span className="text-xs text-muted-foreground font-mono hidden sm:inline-block">{muestrasTotales} muestras desde el inicio</span>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-mono">
-            <span className="text-success">● </span>
-            <span className="text-muted-foreground">{muestrasOk} ok</span>
-          </span>
-          <span className="text-xs font-mono">
-            <span className="text-destructive">● </span>
-            <span className="text-muted-foreground">{muestrasFuera} fuera</span>
+        <div data-testid="monitoreo-leyenda" className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          {sectoresPresentes.map((s) => (
+            <span key={s.codigo} className="inline-flex items-center gap-1 text-xs font-mono">
+              <span aria-hidden="true" style={{ color: s.color }}>●</span>
+              <span className="text-muted-foreground">{s.label}</span>
+            </span>
+          ))}
+          {haySinSector && (
+            <span className="inline-flex items-center gap-1 text-xs font-mono">
+              <span aria-hidden="true" style={{ color: SECTOR_NEUTRAL_COLOR }}>●</span>
+              <span className="text-muted-foreground">Sin sector</span>
+            </span>
+          )}
+          <span className="text-xs font-mono text-muted-foreground">{muestrasOk} ok</span>
+          <span data-testid="leyenda-fuera-rango" className="inline-flex items-center gap-1 text-xs font-mono">
+            <span
+              data-testid="leyenda-anillo"
+              aria-hidden="true"
+              className="mx-1 inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: SECTOR_NEUTRAL_COLOR, boxShadow: FUERA_RANGO_RING }}
+            />
+            <span className="text-muted-foreground">{muestrasFuera} fuera de rango</span>
           </span>
         </div>
       </div>
