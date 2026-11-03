@@ -112,6 +112,10 @@ export const GestionPasadasPage: React.FC = () => {
     setSugerenciaObservacionVista(true);
   };
 
+  // Task 3.9: "Cerrar sesión" asks for confirmation while a line session is active (see useTabletLogout).
+  // Called before the early return below so the hook order is the same on every render.
+  const handleLogout = useTabletLogout();
+
   if (!activeLineaId) {
     return <Navigate to="/tablet/seleccion-linea" replace />;
   }
@@ -124,9 +128,6 @@ export const GestionPasadasPage: React.FC = () => {
     const byUsuarioObject = typeof pasada.usuario === 'object' && pasada.usuario !== null && pasada.usuario.id === user?.id;
     return byFlatId || byUsuarioNumber || byUsuarioObject;
   });
-
-  // Task 3.9: "Cerrar sesión" asks for confirmation while a line session is active (see useTabletLogout).
-  const handleLogout = useTabletLogout();
 
   // Task 2.3 / 4.2: Iniciar nueva pasada — the articulo is frozen server-side
   // from the línea's assignment; only the balanza is selected here.
