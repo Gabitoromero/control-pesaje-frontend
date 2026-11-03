@@ -108,5 +108,7 @@ describe('SistemaPage sector copy', () => {
     expect(text).toMatch(/Oficiales naranja, Supervisores verde oscuro, Control de Calidad bordó y Mejora Continua morado/);
     expect(text).toMatch(/anillo rojo/);
     expect(text).toMatch(/sin sector/i);
+    expect(text).toMatch(/Para quitarlo, elegí "Sin sector"/);
+    expect(text).toMatch(/leyenda al pie de cada gráfico/);
   });
 });
