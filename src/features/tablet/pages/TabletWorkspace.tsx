@@ -29,6 +29,7 @@ import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import {
   isToleranceBlocked,
+  resolveEffectiveTolerance,
   formatTolerancePct,
   isNonPositiveWeight,
   NON_POSITIVE_WEIGHT_ALERT,
@@ -58,7 +59,7 @@ export const TabletWorkspace: React.FC = () => {
   // Global admin-configurable tolerance. Called above every early return to
   // keep the hooks order stable. No fallback value: Registrar is blocked until
   // a value was obtained at least once.
-  const tolerance = useToleranceConfig();
+  const globalTolerance = useToleranceConfig();
 
   // Task 3.3: Load the active run using GET /api/pasadas/:id
   // Poll every 5 s so the workspace detects if the run is aborted externally
@@ -123,7 +124,7 @@ export const TabletWorkspace: React.FC = () => {
     lineaProduccionId: targetLineaId,
     etapas,
     initialMuestras: muestrasList,
-    onApiError: (_err: unknown) => {
+    onApiError: () => {
       // Errors handled silently at the UI level —
       // the page remains accessible even when API calls fail.
     },
@@ -256,6 +257,8 @@ export const TabletWorkspace: React.FC = () => {
   // Note: `etapaActiva` (from usePasadaState) is the RutaPasadaEtapa wrapper itself —
   // pesoMinimo/pesoIdeal/pesoMaximo live directly on it, NOT nested under `.etapa`
   // (that nested `.etapa` is only the stage name/id detail, e.g. `.etapa.nombre`).
+  // Tolerance of the active etapa-ruta: its own percentage, or the global one by default.
+  const tolerance = resolveEffectiveTolerance(globalTolerance, etapaActiva);
   const pesoMinimo = etapaActiva?.pesoMinimo;
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;

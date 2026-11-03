@@ -66,6 +66,25 @@ describe('RutaFormPage Validation Schemas', () => {
       }
     });
 
+    it('reports an empty numeric input (NaN) in Spanish for every numeric field', () => {
+      const result = etapaSchema.safeParse({
+        etapa: 1,
+        pesoMinimo: NaN,
+        pesoIdeal: NaN,
+        pesoMaximo: NaN,
+        cantidadMuestrasRequeridas: NaN,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.map((i) => [i.path[0], i.message])).toEqual([
+          ['pesoMinimo', 'Requerido'],
+          ['pesoMaximo', 'Requerido'],
+          ['pesoIdeal', 'Requerido'],
+          ['cantidadMuestrasRequeridas', 'Requerido'],
+        ]);
+      }
+    });
+
     it('should fail if required fields are missing/NaN', () => {
       const invalidEtapa = {
         etapa: 1,
@@ -156,6 +175,30 @@ describe('RutaFormPage Component', () => {
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
     
     expect(await screen.findByText('Nombre es requerido')).toBeInTheDocument();
+  });
+
+  it('2b. invalid submit scrolls to and pulses the first invalid field', async () => {
+    const scrollIntoView = vi.fn();
+    const animate = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    HTMLElement.prototype.animate = animate;
+
+    renderWithProviders(<RutaFormPage />);
+
+    await userEvent.type(document.querySelector('input[name="nombre"]') as HTMLInputElement, 'Ruta con pesos 0');
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    // Weights keep their default of 0, so the first invalid field is the minimum of the first etapa
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    // cmdk also calls scrollIntoView on its own items, so only look at the form fields
+    const scrolledFields = () =>
+      (scrollIntoView.mock.contexts as HTMLElement[]).map((el) => el.dataset.field).filter(Boolean);
+    await waitFor(() => expect(scrolledFields()).toEqual(['etapas.0.pesoMinimo']), { timeout: 2000 });
+    expect(animate.mock.calls[0][1]).toMatchObject({ iterations: 3 });
+    // Each weight field explains what is wrong, not just the pulse
+    expect(screen.getAllByText('Debe ser mayor a 0')).toHaveLength(3);
   });
 
   it('3. ≥1 etapa required', async () => {
@@ -564,7 +607,6 @@ describe('RutaFormPage Component', () => {
       // The article combobox shows "Seleccione..." — click it to open, then select "Sal fina"
       await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
       await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
-      await userEvent.click(screen.getByRole('button', { name: /agregar artículo/i }));
 
       const dialog = await screen.findByRole('alertdialog');
       expect(within(dialog).getByText('No se pudo agregar el artículo')).toBeInTheDocument();
@@ -685,8 +727,6 @@ describe('RutaFormPage — Artículos Asignados', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
     await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
 
-    const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
-    await userEvent.click(addBtn);
 
     await waitFor(() => {
       expect(pivotPostPayload).toBeDefined();
@@ -743,8 +783,6 @@ describe('RutaFormPage — Artículos Asignados', () => {
     });
     await userEvent.click(screen.getByRole('option', { name: '[Harina 000] MarcaA' }));
 
-    const addBtn = screen.getByRole('button', { name: /agregar artículo/i });
-    await userEvent.click(addBtn);
 
     // Should appear in the list without any API call
     await waitFor(() => {
@@ -759,6 +797,190 @@ describe('RutaFormPage — Artículos Asignados', () => {
       expect(screen.queryByText('Harina 000')).not.toBeInTheDocument();
       expect(screen.getByText(/sin artículos asignados/i)).toBeInTheDocument();
     });
+  });
+});
+
+describe('RutaFormPage — create persists locally selected articulos', () => {
+  const fillValidRuta = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
+    const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
+    await userEvent.type(nombreInput, 'Ruta con artículos');
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
+    const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
+    const pesosIdeal = document.querySelectorAll('input[name$=".pesoIdeal"]')[0] as HTMLInputElement;
+    await userEvent.clear(pesosMin);
+    await userEvent.type(pesosMin, '10');
+    await userEvent.clear(pesosMax);
+    await userEvent.type(pesosMax, '20');
+    await userEvent.clear(pesosIdeal);
+    await userEvent.type(pesosIdeal, '15');
+  };
+
+  const addLocalArticulo = async (label: string) => {
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+    // The etapa combobox is already set, so the only "Seleccione..." left is the articulo one
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: label }));
+  };
+
+  it('24. create: after the ruta is created every local articulo is associated to the new ruta', async () => {
+    const pivotPayloads: Record<string, unknown>[] = [];
+    server.use(
+      http.post('http://localhost:3000/api/rutas-pasadas', () =>
+        HttpResponse.json({ success: true, data: { id: 99, nombre: 'Ruta con artículos' } }, { status: 201 })
+      ),
+      http.post('http://localhost:3000/api/rutas-pasadas-articulos', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        pivotPayloads.push(body);
+        return HttpResponse.json({ success: true, data: { id: 500 + pivotPayloads.length } }, { status: 201 });
+      })
+    );
+
+    renderWithProviders(<RutaFormPage />);
+    await fillValidRuta();
+    await addLocalArticulo('[Harina 000] MarcaA');
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/dashboard/rutas'));
+    expect(pivotPayloads).toHaveLength(2);
+    expect(pivotPayloads).toEqual(
+      expect.arrayContaining([
+        { rutaPasada: 99, articulo: 1 },
+        { rutaPasada: 99, articulo: 3 },
+      ])
+    );
+  });
+
+  it('25. create: when some articulos fail the ruta stays created and the failed ones are listed', async () => {
+    server.use(
+      http.post('http://localhost:3000/api/rutas-pasadas', () =>
+        HttpResponse.json({ success: true, data: { id: 99, nombre: 'Ruta con artículos' } }, { status: 201 })
+      ),
+      http.post('http://localhost:3000/api/rutas-pasadas-articulos', async ({ request }) => {
+        const body = (await request.json()) as { articulo: number };
+        if (body.articulo === 3) {
+          return HttpResponse.json({ success: false, error: { message: 'Ya está asignado' } }, { status: 400 });
+        }
+        return HttpResponse.json({ success: true, data: { id: 501 } }, { status: 201 });
+      })
+    );
+
+    renderWithProviders(<RutaFormPage />);
+    await fillValidRuta();
+    await addLocalArticulo('[Harina 000] MarcaA');
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('La ruta se creó, pero no se pudieron asignar algunos artículos')).toBeInTheDocument();
+    expect(within(dialog).getByText(/\[Sal fina\] MarcaC/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/\[Harina 000\] MarcaA/)).not.toBeInTheDocument();
+    // The ruta exists, so the user lands on its edit page to retry
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/dashboard/rutas/99'));
+  });
+});
+
+describe('RutaFormPage — tolerancia por etapa', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const capturePut = (): { payload: any } => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const holder: { payload: any } = { payload: null };
+    server.use(
+      http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
+        holder.payload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 1, ...holder.payload } });
+      })
+    );
+    return holder;
+  };
+
+  const openEdit = async () => {
+    paramsMock = { id: '1' };
+    renderWithProviders(<RutaFormPage />);
+    const container = await screen.findByTestId('etapas-container');
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
+    await waitFor(() => expect(within(container).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2));
+    return container;
+  };
+
+  it('26. every etapa shows the "Tolerancia por defecto" checkbox checked and no own input', async () => {
+    const container = await openEdit();
+    const checks = within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i });
+    expect(checks).toHaveLength(2);
+    checks.forEach((c) => expect(c).toBeChecked());
+    expect(within(container).queryByLabelText('Tolerancia propia (%)')).not.toBeInTheDocument();
+  });
+
+  it('27. unchecking shows the input for an own percentage and saving sends it for that etapa only', async () => {
+    const holder = capturePut();
+    const container = await openEdit();
+
+    await userEvent.click(within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i })[0]);
+    const input = within(container).getByLabelText('Tolerancia propia (%)');
+    await userEvent.type(input, '7.5');
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    await waitFor(() => expect(holder.payload).not.toBeNull());
+
+    expect(holder.payload.etapas[0].toleranciaPorDefecto).toBe(false);
+    expect(holder.payload.etapas[0].toleranciaPct).toBe(7.5);
+    expect(holder.payload.etapas[1].toleranciaPorDefecto).toBe(true);
+    expect(holder.payload.etapas[1].toleranciaPct).toBeNull();
+  });
+
+  it('28. re-checking "por defecto" discards the own percentage', async () => {
+    const holder = capturePut();
+    const container = await openEdit();
+
+    const first = within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i })[0];
+    await userEvent.click(first);
+    await userEvent.type(within(container).getByLabelText('Tolerancia propia (%)'), '9');
+    await userEvent.click(first);
+    expect(within(container).queryByLabelText('Tolerancia propia (%)')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    await waitFor(() => expect(holder.payload).not.toBeNull());
+
+    expect(holder.payload.etapas[0].toleranciaPorDefecto).toBe(true);
+    expect(holder.payload.etapas[0].toleranciaPct).toBeNull();
+  });
+
+  it('29. an own percentage is required and limited to 0-50 (nothing is sent otherwise)', async () => {
+    const holder = capturePut();
+    const container = await openEdit();
+
+    await userEvent.click(within(container).getAllByRole('checkbox', { name: /tolerancia por defecto/i })[0]);
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    expect(await within(container).findByText('Requerido')).toBeInTheDocument();
+
+    await userEvent.type(within(container).getByLabelText('Tolerancia propia (%)'), '51');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    expect(await within(container).findByText('Debe estar entre 0 y 50')).toBeInTheDocument();
+    expect(holder.payload).toBeNull();
+  });
+});
+
+describe('RutaFormPage Validation Schemas — tolerancia', () => {
+  const etapa = { etapa: 1, pesoMinimo: 10, pesoMaximo: 20, pesoIdeal: 15, cantidadMuestrasRequeridas: 1 };
+
+  it('accepts etapas without tolerance fields and with the default active', () => {
+    expect(etapaSchema.safeParse(etapa).success).toBe(true);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: true, toleranciaPct: null }).success).toBe(true);
+  });
+
+  it('accepts 0 and 50 as own percentage, rejects values outside the range', () => {
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: 0 }).success).toBe(true);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: 50 }).success).toBe(true);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: 50.5 }).success).toBe(false);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: -1 }).success).toBe(false);
+    expect(etapaSchema.safeParse({ ...etapa, toleranciaPorDefecto: false, toleranciaPct: null }).success).toBe(false);
   });
 });
 

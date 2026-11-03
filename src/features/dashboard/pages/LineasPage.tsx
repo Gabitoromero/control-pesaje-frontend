@@ -307,7 +307,7 @@ export const LineasPage = () => {
   if (error) return <div className="p-6 text-destructive">Error al cargar líneas</div>;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-foreground">Gestión de Líneas</h1>
         <button
@@ -426,7 +426,9 @@ export const LineasPage = () => {
                   <SearchableCombobox
                     value={formData.idBalanza ? Number(formData.idBalanza) : null}
                     onChange={(val) => setFormData({ ...formData, idBalanza: val ? String(val) : '' })}
-                    options={balanzas.map((b) => ({ id: b.id, nombre: b.nombre }))}
+                    options={[...balanzas]
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))
+                      .map((b) => ({ id: b.id, nombre: b.nombre }))}
                     placeholder="Buscar balanza..."
                   />
                 )}
@@ -436,7 +438,9 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.articuloId ? Number(formData.articuloId) : null}
                   onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
-                  options={articulos.map((a) => ({ id: a.id, nombre: a.codigo || a.nombre || '' }))}
+                  options={[...articulos]
+                    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
+                    .map((a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo || '' }))}
                   placeholder="Buscar artículo..."
                 />
               </div>
@@ -445,7 +449,9 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.dispositivoHardwareId}
                   onChange={(val) => setFormData({ ...formData, dispositivoHardwareId: (val as string) || '' })}
-                  options={dispositivos.map((device) => ({ id: device.hardwareId, nombre: `${device.nombre} (${device.hardwareId.slice(0, 8)})` }))}
+                  options={[...dispositivos]
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))
+                    .map((device) => ({ id: device.hardwareId, nombre: `${device.nombre} (${device.hardwareId.slice(0, 8)})` }))}
                   placeholder="Buscar dispositivo..."
                   clearable
                 />
@@ -455,7 +461,7 @@ export const LineasPage = () => {
                 <SearchableCombobox
                   value={formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null}
                   onChange={(val) => setFormData({ ...formData, rutaPasadaActiva: val ? String(val) : '' })}
-                  options={rutas}
+                  options={[...rutas].sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))}
                   placeholder="Buscar ruta..."
                   clearable
                 />

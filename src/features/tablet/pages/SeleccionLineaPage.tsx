@@ -104,7 +104,7 @@ export const SeleccionLineaPage: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main data-testid="tablet-page-scroll" className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
+      <main data-testid="tablet-page-scroll" className="flex-1 w-full p-4 md:p-8 overflow-y-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -127,7 +127,7 @@ export const SeleccionLineaPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 min-[720px]:grid-cols-2 min-[1080px]:grid-cols-3 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(20rem,100%),1fr))] gap-4">
               {lineas.map((linea) => (
                 <button
                   key={linea.id}

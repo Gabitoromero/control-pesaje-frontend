@@ -117,10 +117,10 @@ export function SistemaPage() {
         </p>
       </div>
 
-      <CollapsibleSection title="Manual — Rol Operario" count={7} defaultOpen>
+      <CollapsibleSection title="Manual — Rol Operario" count={8} defaultOpen>
         <p className="text-sm text-muted-foreground mb-5">
           Uso diario de la tablet asignada a cada línea de producción: ingreso, selección de
-          línea, registro de muestras de una pasada y muestras libres de calidad.
+          línea, registro de muestras de una pasada, muestras libres de calidad e historial propio.
         </p>
 
         <Nota>
@@ -187,9 +187,11 @@ export function SistemaPage() {
             seguir. El aviso indica el porcentaje vigente.
           </p>
           <p>
-            Ese porcentaje es <strong>un único valor para todas las líneas, etapas y artículos</strong>{' '}
-            y lo edita solamente un Administrador. Cuando lo cambia, las tablets lo toman solas en
-            hasta 30 segundos, sin cerrar sesión ni recargar.
+            Ese porcentaje global es <strong>el valor por defecto</strong> y lo edita solamente un
+            Administrador. Cuando lo cambia, las tablets lo toman solas en hasta 30 segundos, sin
+            cerrar sesión ni recargar. Una etapa de la ruta puede tener además{' '}
+            <strong>su propia tolerancia</strong> (la configura un Jefe o Administrador en la
+            ruta): en ese caso, esa etapa se controla con su porcentaje y no con el global.
           </p>
           <Nota>
             Si la tablet no logra leer la tolerancia (por ejemplo, si se abrió la pantalla sin
@@ -283,6 +285,37 @@ export function SistemaPage() {
             Hay un límite duro de <strong>20 muestras por sesión</strong>. El botón final es{' '}
             <strong>"Finalizar Muestras"</strong> (no pide confirmación), limpia la sesión local y
             vuelve al listado de pasadas.
+          </p>
+        </Sub>
+
+        <Sub title="8. Mi historial">
+          <p>
+            Es el listado de tus propias muestras. Se abre con el interruptor "Pasadas / Mi
+            historial" del encabezado de la tablet, que aparece en Gestión de Pasadas y en el
+            propio historial (no en el espacio de trabajo ni en muestras libres). Cambiar de vista
+            solo cambia de pantalla: no se pierde ninguna pasada ni cierra tu sesión de línea.
+          </p>
+          <p>
+            Ves <strong>únicamente las muestras que tomaste vos</strong>, nunca las de otros
+            usuarios. Arriba hay dos indicadores, <strong>Muestras OK</strong> y{' '}
+            <strong>Fuera de rango</strong>, con el porcentaje y la cantidad sobre el total. Se
+            calculan sobre todo lo que muestran los filtros elegidos, no solo sobre la página
+            visible. Sin muestras para esos filtros muestran "Sin datos".
+          </p>
+          <p>
+            Podés filtrar por etapa, por artículo, por fecha (Desde / Hasta) o escribir en el
+            buscador, que busca en artículo, etapa, ruta y observación. La lista se muestra de 20
+            en 20, con los botones de página anterior y siguiente al pie.
+          </p>
+          <p>
+            Cada muestra es una tarjeta con artículo (o "Muestra libre"), etapa, ruta, fecha y peso
+            neto. El resultado se ve por el color: <strong>fondo verde</strong> si el peso estuvo
+            dentro del rango y <strong>fondo rojo</strong> si estuvo fuera de rango.
+          </p>
+          <p>
+            Si la muestra tiene observación, la tarjeta muestra un ícono de mensaje. Tocando la
+            tarjeta se despliega la observación debajo, dentro de la misma tarjeta, y se vuelve a
+            tocar para ocultarla. Las muestras sin observación no se despliegan.
           </p>
         </Sub>
       </CollapsibleSection>
@@ -393,13 +426,20 @@ export function SistemaPage() {
               ['Peso mínimo (kg)', 'Límite inferior del rango de tolerancia'],
               ['Peso ideal (kg)', 'Valor objetivo de referencia'],
               ['Peso máximo (kg)', 'Límite superior del rango de tolerancia'],
+              ['Tolerancia por defecto', 'Casilla tildada por defecto: la etapa usa la tolerancia global (Parametrización → Muestras)'],
+              ['Tolerancia propia (%)', 'Aparece al destildar la casilla. Entre 0 y 50, hasta 2 decimales. Al volver a tildarla se descarta'],
             ]}
           />
+          <p>
+            La tolerancia propia vale para todos los artículos que usan esa ruta y solo afecta a
+            las muestras nuevas: las ya cargadas no cambian.
+          </p>
           <p>
             Además, cada ruta tiene una sección separada, "Artículos Asignados", donde se arma
             una relación de muchos a muchos: <strong>una ruta puede aplicarse a varios artículos</strong>,
             y un artículo puede tener más de una ruta posible. Los artículos se asignan a la ruta
-            desde esta pantalla, no al revés.
+            desde esta pantalla, no al revés. Los artículos que se elijan al crear una ruta nueva
+            se guardan junto con la ruta, en el primer guardado.
           </p>
         </Sub>
 
@@ -419,13 +459,37 @@ export function SistemaPage() {
 
         <Sub title="9. Reportes">
           <p>
-            Hoy hay un único reporte implementado: <strong>"Reporte de Pasadas y Muestras"</strong>,
-            con filtro de rango de fechas (Desde / Hasta). El rango máximo permitido es de{' '}
-            <strong>5 días</strong>; un rango mayor no se puede descargar.
+            Hay tres reportes en Excel (.xlsx), cada uno con su botón "Descargar":
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>Reporte de Muestras</strong>: una única hoja con todas las muestras del
+              rango, de todas las líneas juntas. Incluye línea, balanza, ruta, número y estado de
+              la pasada, código y artículo, etapa, fecha y hora, pesos y límites, validación,
+              observación y operario. En las muestras libres (sin pasada) balanza, código y
+              artículo salen con "-".
+            </li>
+            <li>
+              <strong>Reporte de Pasadas</strong>: una hoja de pasadas y una hoja de etapas por
+              cada línea de producción. Si en el rango no hay pasadas, el archivo trae una hoja
+              "Sin datos".
+            </li>
+            <li>
+              <strong>Reporte de Rutas de Pasada</strong>: la configuración actual de las rutas,
+              con sus etapas, pesos y artículos asignados. No pide rango de fechas.
+            </li>
+          </ul>
+          <p>
+            Muestras y Pasadas comparten el mismo selector de fechas (Desde / Hasta). El rango
+            máximo es de <strong>90 días</strong>, contando ambos extremos; con un rango mayor el
+            sistema avisa "El rango máximo es de 90 días" y no descarga nada.
           </p>
           <p>
-            El botón "Descargar .xlsx" está deshabilitado con la leyenda{' '}
-            <strong>"Disponible próximamente"</strong> — todavía no es una función operativa.
+            Con rangos largos el archivo puede tardar en generarse. Mientras tanto se muestra una
+            pantalla de carga con el mensaje "Generando el reporte en el servidor..." y, cuando el
+            archivo está listo, "Reporte listo, descargando el archivo...". Durante la carga los
+            campos de fecha quedan bloqueados y el diálogo no se puede cerrar: conviene esperar y
+            no volver a presionar el botón.
           </p>
         </Sub>
       </CollapsibleSection>
@@ -481,8 +545,9 @@ export function SistemaPage() {
         <Sub title="4. Parametrización — Muestras (tolerancia de peso)">
           <p>
             Pantalla exclusiva de Administrador, dentro del grupo "Parametrización" (el Jefe no la
-            ve). Define el <strong>porcentaje de tolerancia global</strong>: un solo valor que se
-            aplica a todas las líneas, etapas y artículos por igual, no uno por etapa.
+            ve). Define el <strong>porcentaje de tolerancia global</strong>: el valor por defecto
+            que se aplica a todas las líneas, etapas y artículos, salvo a las etapas de una ruta
+            que tengan su propia tolerancia (ver "Parametrización — Rutas").
           </p>
           <p>
             Se edita con los botones <strong>−</strong> y <strong>+</strong> (suben o bajan de a
