@@ -17,6 +17,7 @@ import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { ToleranceStatus } from '../components/ToleranceStatus';
 import { ReporteSinPesoButton } from '../components/ReporteSinPesoButton';
+import { LineaParadaButton } from '../components/LineaParadaButton';
 import { useReporteSinPeso } from '../hooks/useReporteSinPeso';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
@@ -402,6 +403,11 @@ export const TabletWorkspace: React.FC = () => {
             Registrar Muestra
           </button>
           <ToleranceStatus tolerance={tolerance} />
+          <LineaParadaButton
+            lineaProduccionId={targetLineaId}
+            onRegistrada={() => { clearPasada(); navigate('/tablet/pasadas'); }}
+            className="w-full"
+          />
         </div>
 
         {/* Muestras List */}

@@ -8,6 +8,7 @@ import { getLinea } from '../../../api/lineas';
 import { getBalanzas } from '../../../api/balanzas';
 import type { Pasada, Balanza } from '../../../shared/types/domain';
 import { PasadaCard } from '../components/PasadaCard';
+import { LineaParadaButton } from '../components/LineaParadaButton';
 import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
 import { resetSocket } from '../../../services/websocket';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -272,6 +273,12 @@ export const GestionPasadasPage: React.FC = () => {
               <Plus size={22} />
               Nueva Pasada
             </button>
+
+            <LineaParadaButton
+              lineaProduccionId={activeLineaId}
+              onRegistrada={() => { void refetchPasadas(); }}
+              className="w-full"
+            />
 
             {sinDispositivo && (
               <p className="text-sm text-warning text-center -mt-2">

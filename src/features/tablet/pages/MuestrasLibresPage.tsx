@@ -12,6 +12,7 @@ import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
 import { ToleranceStatus } from '../components/ToleranceStatus';
 import { ReporteSinPesoButton } from '../components/ReporteSinPesoButton';
+import { LineaParadaButton } from '../components/LineaParadaButton';
 import { useReporteSinPeso } from '../hooks/useReporteSinPeso';
 import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
@@ -287,6 +288,7 @@ export function MuestrasLibresPage() {
             Registrar Muestra de Calidad
           </button>
           <ToleranceStatus tolerance={tolerance} />
+          <LineaParadaButton lineaProduccionId={activeLineaId ?? 0} variant="warning" className="w-full" />
         </div>
 
         {/* Samples panel — filtered to the currently-selected etapa */}

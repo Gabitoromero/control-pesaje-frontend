@@ -28,7 +28,12 @@ export const iniciarPasada = async (data: { lineaProduccionId: number; idBalanza
   return response.data.data;
 };
 
-export const completarPasada = async (id: number): Promise<Pasada> => {
+export const registrarLineaParada = async (data: { lineaProduccionId: number; observacion: string; idBalanza?: number }): Promise<Pasada> => {
+  const response = await api.post<ApiEnvelope<Pasada>>('/pasadas/linea-parada', data);
+  return response.data.data;
+};
+
+export const completarPasada =async (id: number): Promise<Pasada> => {
   const response = await api.put<ApiEnvelope<Pasada>>(`/pasadas/${id}`, { action: 'completar' });
   return response.data.data;
 };
