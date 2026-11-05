@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 import { renderWithProviders } from '../../../test/render';
 import { PasadaCard } from './PasadaCard';
 import { getMuestras } from '../../../api/muestras';
-import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
+import type { Muestra, Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -93,9 +93,8 @@ describe('PasadaCard', () => {
     // responses carry `etapa` as a raw FK number and have no `etapaId`
     // field at all — this reproduces that exact shape, not the
     // already-normalized one the other tests use implicitly via [].
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(getMuestras).mockResolvedValue([
-      { id: 1, etapa: 10, estadoValidacion: 'ok', pesoNeto: 1.5 } as any,
+      { id: 1, etapa: 10, estadoValidacion: 'ok', pesoNeto: 1.5 } as unknown as Muestra,
     ]);
 
     renderWithProviders(<PasadaCard pasada={basePasada} etapas={etapas} />);

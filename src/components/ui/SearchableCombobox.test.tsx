@@ -43,6 +43,13 @@ describe('SearchableCombobox', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('shows a custom emptyLabel instead of "Seleccione..." while nothing is selected', () => {
+    renderCombobox({ value: null, emptyLabel: 'Todas las etapas' });
+
+    expect(screen.getByRole('button', { name: 'Todas las etapas' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Seleccione...' })).not.toBeInTheDocument();
+  });
+
   it('shows the nombre of the option matching value when closed', () => {
     renderCombobox({ value: 2 });
     expect(screen.getByRole('button', { name: 'Envasado' })).toBeInTheDocument();

@@ -1,4 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
+import { getSectorColor } from '../../../lib/sectores';
 import { renderWithAuth } from '../../../test/render';
 import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
@@ -1339,5 +1340,16 @@ describe('TabletWorkspace', () => {
       await waitFor(() => expect(posts.count).toBe(1));
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
+  });
+
+  it('colors the avatar with the user sector color and keeps the default look without sector', async () => {
+    const { unmount } = renderWithAuth(<TabletWorkspace />, { user: { ...operarioUser, sector: 'SU' }, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
+    expect(await screen.findByText('OP')).toHaveStyle({ backgroundColor: getSectorColor('SU') });
+    unmount();
+
+    renderWithAuth(<TabletWorkspace />, { user: operarioUser, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
+    const neutral = await screen.findByText('OP');
+    expect(neutral.style.backgroundColor).toBe('');
+    expect(neutral.className).toContain('bg-secondary');
   });
 });

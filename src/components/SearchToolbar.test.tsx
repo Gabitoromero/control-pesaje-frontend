@@ -129,4 +129,30 @@ describe('SearchToolbar', () => {
       { value: 'descripcion', label: 'Descripción' }
     ]);
   });
+
+  it('renders optional extra filters between the field selector and the search input, and nothing extra by default', () => {
+    const props = {
+      status: 'activo' as const,
+      onStatusChange: vi.fn(),
+      fields: defaultFields,
+      field: 'nombre',
+      onFieldChange: vi.fn(),
+      query: '',
+      onQueryChange: vi.fn(),
+    };
+    const { unmount } = render(<SearchToolbar {...props} />);
+    expect(screen.getAllByRole('combobox')).toHaveLength(2);
+    unmount();
+
+    render(
+      <SearchToolbar {...props}>
+        <select aria-label="Filtro extra" defaultValue="">
+          <option value="">Todos</option>
+        </select>
+      </SearchToolbar>
+    );
+    const combos = screen.getAllByRole('combobox');
+    expect(combos).toHaveLength(3);
+    expect(combos[2]).toHaveAccessibleName('Filtro extra');
+  });
 });

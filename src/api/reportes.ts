@@ -19,13 +19,40 @@ export function todayLocalIso(now: Date = new Date()): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export async function downloadReportePasadasMuestras(desde: string, hasta: string): Promise<void> {
-  const response = await api.get('/reportes/pasadas-muestras', {
+async function downloadReporteConRango(
+  path: 'muestras' | 'pasadas',
+  desde: string,
+  hasta: string,
+  onResponseStart?: () => void,
+): Promise<void> {
+  let started = false;
+  const response = await api.get(`/reportes/${path}`, {
     params: { desde, hasta },
     responseType: 'blob',
+    // Ranges up to 90 days take a while to build: do not abort with the default 5s timeout.
+    timeout: 0,
+    // The server only starts sending once the workbook is built, so the first progress event
+    // means the backend finished generating and the file is now being downloaded.
+    onDownloadProgress: () => {
+      if (started) return;
+      started = true;
+      onResponseStart?.();
+    },
   });
-  saveBlobAsFile(response.data, `reporte-${desde.split('T')[0]}.xlsx`);
+  saveBlobAsFile(response.data, `reporte-${path}-${desde.split('T')[0]}.xlsx`);
 }
+
+export const downloadReporteMuestras = (
+  desde: string,
+  hasta: string,
+  onResponseStart?: () => void,
+): Promise<void> => downloadReporteConRango('muestras', desde, hasta, onResponseStart);
+
+export const downloadReportePasadas = (
+  desde: string,
+  hasta: string,
+  onResponseStart?: () => void,
+): Promise<void> => downloadReporteConRango('pasadas', desde, hasta, onResponseStart);
 
 export async function downloadReporteRutasPasada(): Promise<void> {
   const response = await api.get('/reportes/rutas-pasada', { responseType: 'blob' });

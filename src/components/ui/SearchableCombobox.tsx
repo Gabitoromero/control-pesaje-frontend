@@ -8,7 +8,8 @@ export const SearchableCombobox = ({
   onChange,
   options,
   placeholder = "Buscar...",
-  clearable = false
+  clearable = false,
+  emptyLabel = 'Seleccione...'
 }: {
   value: number | string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,6 +17,8 @@ export const SearchableCombobox = ({
   options: { id?: number | string; nombre: string }[];
   placeholder?: string;
   clearable?: boolean;
+  /** Text of the closed field while nothing is selected. */
+  emptyLabel?: string;
 }) => {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -23,7 +26,7 @@ export const SearchableCombobox = ({
   // Options without id can never be "selected" (avoids undefined === undefined when value is null).
   const selectedOption =
     value === null || value === undefined ? undefined : options.find((o) => o.id !== undefined && o.id === value);
-  const selectedLabel = selectedOption?.nombre || 'Seleccione...';
+  const selectedLabel = selectedOption?.nombre || emptyLabel;
 
   return (
     <div className="relative w-full">

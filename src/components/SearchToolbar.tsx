@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export type SearchField = { value: string; label: string };
 
 export interface SearchToolbarProps {
@@ -8,6 +10,8 @@ export interface SearchToolbarProps {
   onFieldChange: (f: string) => void;
   query: string;
   onQueryChange: (q: string) => void;
+  /** Optional extra filters, rendered between the field selector and the search input. */
+  children?: ReactNode;
 }
 
 export function SearchToolbar({
@@ -18,6 +22,7 @@ export function SearchToolbar({
   onFieldChange,
   query,
   onQueryChange,
+  children,
 }: SearchToolbarProps) {
   return (
     <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 mb-4">
@@ -41,6 +46,8 @@ export function SearchToolbar({
           </option>
         ))}
       </select>
+
+      {children}
 
       <input
         className="flex-1 min-w-[12rem] rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"

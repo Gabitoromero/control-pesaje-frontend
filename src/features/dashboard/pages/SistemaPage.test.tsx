@@ -66,3 +66,51 @@ describe('SistemaPage tolerance copy', () => {
     expect(text).not.toMatch(/más dos secciones exclusivas/);
   });
 });
+
+describe('SistemaPage operator history copy', () => {
+  it('documents "Mi historial": the switch, own muestras only, KPIs, filters, colors and the observación toggle', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/8\. Mi historial/);
+    expect(text).toMatch(/interruptor "Pasadas \/ Mi historial"/);
+    expect(text).toMatch(/únicamente las muestras que tomaste vos/);
+    expect(text).toMatch(/Muestras OK/);
+    expect(text).toMatch(/de 20 en 20/);
+    expect(text).toMatch(/fondo verde/);
+    expect(text).toMatch(/fondo rojo/);
+    expect(text).toMatch(/Tiene observación|ícono de mensaje/);
+  });
+});
+
+describe('SistemaPage reports copy', () => {
+  it('documents the three reports, the 90-day range and the loading screen instead of the old single report', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/Reporte de Muestras/);
+    expect(text).toMatch(/Reporte de Pasadas/);
+    expect(text).toMatch(/Reporte de Rutas de Pasada/);
+    expect(text).toMatch(/90 días/);
+    expect(text).toMatch(/Generando el reporte en el servidor/);
+    expect(text).not.toMatch(/Reporte de Pasadas y Muestras/);
+    expect(text).not.toMatch(/Disponible próximamente/);
+    expect(text).not.toMatch(/rango máximo permitido es de 5 días/);
+  });
+});
+
+describe('SistemaPage sector copy', () => {
+  it('documents the Sector field in Usuarios, the dot colors with the red ring in Monitoreo and the avatar color', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/Oficiales, Supervisores, Control de Calidad o Mejora Continua/);
+    expect(text).toMatch(/no cambia roles ni permisos/);
+    expect(text).toMatch(/color del avatar \(en el menú lateral y en las pantallas de la tablet\)/);
+    expect(text).toMatch(/color del sector de quien tomó la muestra/);
+    expect(text).toMatch(/Oficiales naranja, Supervisores verde oscuro, Control de Calidad bordó y Mejora Continua morado/);
+    expect(text).toMatch(/anillo rojo/);
+    expect(text).toMatch(/sin sector/i);
+    expect(text).toMatch(/Para quitarlo, elegí "Sin sector"/);
+    expect(text).toMatch(/leyenda al pie de cada gráfico/);
+    expect(text).toMatch(/columna Sector de la tabla/);
+    expect(text).toMatch(/filtrar la lista por sector/);
+  });
+});

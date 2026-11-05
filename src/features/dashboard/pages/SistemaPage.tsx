@@ -117,10 +117,10 @@ export function SistemaPage() {
         </p>
       </div>
 
-      <CollapsibleSection title="Manual — Rol Operario" count={7} defaultOpen>
+      <CollapsibleSection title="Manual — Rol Operario" count={8} defaultOpen>
         <p className="text-sm text-muted-foreground mb-5">
           Uso diario de la tablet asignada a cada línea de producción: ingreso, selección de
-          línea, registro de muestras de una pasada y muestras libres de calidad.
+          línea, registro de muestras de una pasada, muestras libres de calidad e historial propio.
         </p>
 
         <Nota>
@@ -287,6 +287,37 @@ export function SistemaPage() {
             vuelve al listado de pasadas.
           </p>
         </Sub>
+
+        <Sub title="8. Mi historial">
+          <p>
+            Es el listado de tus propias muestras. Se abre con el interruptor "Pasadas / Mi
+            historial" del encabezado de la tablet, que aparece en Gestión de Pasadas y en el
+            propio historial (no en el espacio de trabajo ni en muestras libres). Cambiar de vista
+            solo cambia de pantalla: no se pierde ninguna pasada ni cierra tu sesión de línea.
+          </p>
+          <p>
+            Ves <strong>únicamente las muestras que tomaste vos</strong>, nunca las de otros
+            usuarios. Arriba hay dos indicadores, <strong>Muestras OK</strong> y{' '}
+            <strong>Fuera de rango</strong>, con el porcentaje y la cantidad sobre el total. Se
+            calculan sobre todo lo que muestran los filtros elegidos, no solo sobre la página
+            visible. Sin muestras para esos filtros muestran "Sin datos".
+          </p>
+          <p>
+            Podés filtrar por etapa, por artículo, por fecha (Desde / Hasta) o escribir en el
+            buscador, que busca en artículo, etapa, ruta y observación. La lista se muestra de 20
+            en 20, con los botones de página anterior y siguiente al pie.
+          </p>
+          <p>
+            Cada muestra es una tarjeta con artículo (o "Muestra libre"), etapa, ruta, fecha y peso
+            neto. El resultado se ve por el color: <strong>fondo verde</strong> si el peso estuvo
+            dentro del rango y <strong>fondo rojo</strong> si estuvo fuera de rango.
+          </p>
+          <p>
+            Si la muestra tiene observación, la tarjeta muestra un ícono de mensaje. Tocando la
+            tarjeta se despliega la observación debajo, dentro de la misma tarjeta, y se vuelve a
+            tocar para ocultarla. Las muestras sin observación no se despliegan.
+          </p>
+        </Sub>
       </CollapsibleSection>
 
       <CollapsibleSection title="Manual — Rol Jefe" count={9}>
@@ -304,6 +335,14 @@ export function SistemaPage() {
             Muestra un selector de línea, KPIs (muestras totales, muestras fuera de rango, pasadas
             finalizadas, pasadas en curso), un banner con la observación cargada en la línea, y un
             carrusel con el progreso de cada etapa de la ruta activa.
+          </p>
+          <p>
+            Cada punto del gráfico de una etapa (un rombo, si es una muestra libre) se pinta con el
+            color del sector de quien tomó la muestra: Oficiales naranja, Supervisores verde
+            oscuro, Control de Calidad bordó y Mejora Continua morado. Las muestras fuera de rango
+            llevan además un anillo rojo alrededor. Si el usuario no tiene sector, el punto es
+            gris. Hay una leyenda al pie de cada gráfico con los sectores que aparecen en él y la
+            cantidad de muestras conformes y fuera de rango.
           </p>
           <p>
             Tiene un botón de pantalla completa (sin menú lateral) pensado para dejar el dashboard
@@ -428,13 +467,41 @@ export function SistemaPage() {
 
         <Sub title="9. Reportes">
           <p>
-            Hoy hay un único reporte implementado: <strong>"Reporte de Pasadas y Muestras"</strong>,
-            con filtro de rango de fechas (Desde / Hasta). El rango máximo permitido es de{' '}
-            <strong>5 días</strong>; un rango mayor no se puede descargar.
+            Hay tres reportes en Excel (.xlsx), cada uno con su botón "Descargar":
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>Reporte de Muestras</strong>: una única hoja con todas las muestras del
+              rango, de todas las líneas juntas. Incluye línea, balanza, ruta, número y estado de
+              la pasada, código y artículo, etapa, fecha y hora, pesos y límites, validación,
+              observación y operario. En las muestras libres (sin pasada) balanza, código y
+              artículo salen con "-".
+            </li>
+            <li>
+              <strong>Reporte de Pasadas</strong>: una hoja por cada línea de producción que tuvo
+              pasadas en el rango. Cada fila describe una etapa de una pasada, y los datos de la
+              pasada (balanza, ruta, artículo, inicio, cierre, totales de muestras, etc.) se repiten
+              en todas las filas de sus etapas; una pasada sin muestras sale en una sola fila con
+              "-" en las columnas de la etapa. Como los datos de la pasada se repiten, no conviene
+              sumar las columnas "... Pasada" de toda la hoja. Si en el rango no hay pasadas, el
+              archivo trae una hoja "Sin datos".
+            </li>
+            <li>
+              <strong>Reporte de Rutas de Pasada</strong>: la configuración actual de las rutas,
+              con sus etapas, pesos y artículos asignados. No pide rango de fechas.
+            </li>
+          </ul>
+          <p>
+            Muestras y Pasadas comparten el mismo selector de fechas (Desde / Hasta). El rango
+            máximo es de <strong>90 días</strong>, contando ambos extremos; con un rango mayor el
+            sistema avisa "El rango máximo es de 90 días" y no descarga nada.
           </p>
           <p>
-            El botón "Descargar .xlsx" está deshabilitado con la leyenda{' '}
-            <strong>"Disponible próximamente"</strong> — todavía no es una función operativa.
+            Con rangos largos el archivo puede tardar en generarse. Mientras tanto se muestra una
+            pantalla de carga con el mensaje "Generando el reporte en el servidor..." y, cuando el
+            archivo está listo, "Reporte listo, descargando el archivo...". Durante la carga los
+            campos de fecha quedan bloqueados y el diálogo no se puede cerrar: conviene esperar y
+            no volver a presionar el botón.
           </p>
         </Sub>
       </CollapsibleSection>
@@ -465,8 +532,23 @@ export function SistemaPage() {
               ['Rol', 'Sí', 'Administrador / Jefe / Operario / Visualización'],
               ['PIN', 'Sí al crear', 'Al editar es opcional: dejarlo vacío significa "no cambiarlo"'],
               ['Puede tomar muestras libres', 'No', 'Checkbox, en la práctica solo aplica a Operario'],
+              [
+                'Sector',
+                'No',
+                'Oficiales, Supervisores, Control de Calidad o Mejora Continua. Es solo una identificación visual: no cambia roles ni permisos. Define el color del avatar (en el menú lateral y en las pantallas de la tablet) y el de los puntos del Monitoreo. Un usuario sin sector se muestra en gris. Para quitarlo, elegí "Sin sector".',
+              ],
             ]}
           />
+          <p>
+            La columna Sector de la tabla muestra el sector de cada usuario con una etiqueta del
+            color correspondiente ("Sin sector" en gris si no tiene), y el selector "Filtrar por
+            sector" de la barra de búsqueda permite filtrar la lista por sector o ver solo los
+            usuarios que todavía no tienen uno. Se combina con el estado y con el buscador.
+          </p>
+          <p>
+            El color del avatar se toma al ingresar: si cambiás el sector de alguien que tiene la
+            sesión abierta, lo ve actualizado cuando vuelva a ingresar.
+          </p>
           <p>
             Alta, edición, eliminación (borrado lógico) y reactivación. A diferencia de los
             catálogos de Parametrización, la gestión de usuarios{' '}

@@ -331,7 +331,7 @@ export const RutaFormPage = () => {
     },
   });
 
-  const focusTimer = useRef<number>();
+  const focusTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(focusTimer.current), []);
 
   const { fields, append, remove, swap } = useFieldArray({
@@ -576,7 +576,7 @@ export const RutaFormPage = () => {
   if (isEditing && loadingRuta) return <div className="p-6 text-foreground">Cargando...</div>;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/dashboard/rutas')}
@@ -600,7 +600,7 @@ export const RutaFormPage = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+      <form onSubmit={e => handleSubmit(onSubmit, onInvalid)(e)} className="space-y-6">
         <div className="bg-card border border-border rounded-lg shadow p-6">
           <h2 className="text-lg font-medium mb-4 text-foreground">Información General</h2>
           <div className="space-y-4">

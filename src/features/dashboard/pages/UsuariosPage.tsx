@@ -10,6 +10,8 @@ import {
   type UsuarioCreate,
 } from '../../../api/usuarios';
 import { UsuarioRol } from '../../../shared/types';
+import type { SectorUsuario } from '../../../shared/types';
+import { SECTORES, getSectorColor, getSectorLabel } from '../../../lib/sectores';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -38,6 +40,15 @@ const EMPTY_FORM = {
   rol: UsuarioRol.OPERARIO as string,
   pin: '',
   puedeTomarMuestrasLibres: false,
+  sector: '',
+};
+
+const FILTRO_SIN_SECTOR = 'sin-sector';
+
+// Only a known sector code counts; anything else is shown and filtered as "Sin sector".
+const sectorDe = (u: Usuario): string | null => {
+  const codigo = u.datosAdicionales?.sector ?? null;
+  return codigo && getSectorLabel(codigo) ? codigo : null;
 };
 
 const USUARIO_FIELDS: SearchField[] = [
@@ -57,6 +68,7 @@ export const UsuariosPage = () => {
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombreApellido');
   const [query, setQuery] = useState('');
+  const [sector, setSector] = useState('');
 
   const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
     queryKey: ['usuarios'],
@@ -72,7 +84,10 @@ export const UsuariosPage = () => {
   const error = errorActivos || errorInactivos;
 
   const usuariosFiltrados = useMemo(() => {
-    const base = status === 'activo' ? activos : inactivos;
+    const todos = status === 'activo' ? activos : inactivos;
+    const base = sector
+      ? todos.filter((u) => (sector === FILTRO_SIN_SECTOR ? sectorDe(u) === null : sectorDe(u) === sector))
+      : todos;
     const q = query.trim().toLowerCase();
     let result = base;
     if (q) {
@@ -81,7 +96,7 @@ export const UsuariosPage = () => {
       );
     }
     return [...result].sort((a, b) => a.nombreApellido.localeCompare(b.nombreApellido));
-  }, [activos, inactivos, status, field, query]);
+  }, [activos, inactivos, status, sector, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createUsuario,
@@ -135,6 +150,7 @@ export const UsuariosPage = () => {
         rol: usuario.rol,
         pin: usuario.pin ?? '',
         puedeTomarMuestrasLibres: usuario.puedeTomarMuestrasLibres ?? false,
+        sector: usuario.datosAdicionales?.sector ?? '',
       });
     } else {
       setEditingUsuario(null);
@@ -149,6 +165,19 @@ export const UsuariosPage = () => {
     setFormData(EMPTY_FORM);
   };
 
+  // The API replaces datosAdicionales as a whole, so keep the stored keys when setting the sector.
+  // "Sin sector" on a user that has one sends an explicit null to clear it; for a user without a
+  // sector there is nothing to clear, so nothing is sent and the stored value stays untouched.
+  const sectorPayload = (): Pick<UsuarioCreate, 'datosAdicionales'> => {
+    if (formData.sector) {
+      return { datosAdicionales: { ...editingUsuario?.datosAdicionales, sector: formData.sector as SectorUsuario } };
+    }
+    if (editingUsuario?.datosAdicionales?.sector) {
+      return { datosAdicionales: { ...editingUsuario.datosAdicionales, sector: null } };
+    }
+    return {};
+  };
+
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -158,6 +187,7 @@ export const UsuariosPage = () => {
       nombreUsuario: formData.nombreUsuario,
       rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
       puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
+      ...sectorPayload(),
       ...(formData.pin ? { pin: formData.pin } : {}),
     };
 
@@ -179,6 +209,7 @@ export const UsuariosPage = () => {
         rol: formData.rol as typeof UsuarioRol[keyof typeof UsuarioRol],
         puedeTomarMuestrasLibres: formData.puedeTomarMuestrasLibres,
         activo: true,
+        ...sectorPayload(),
         ...(formData.pin ? { pin: formData.pin } : {}),
       },
     });
@@ -203,7 +234,7 @@ export const UsuariosPage = () => {
   if (error) return <div className="p-6 text-destructive">Error al cargar usuarios</div>;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h1>
         <button
@@ -222,7 +253,22 @@ export const UsuariosPage = () => {
         onFieldChange={setField}
         query={query}
         onQueryChange={setQuery}
-      />
+      >
+        <select
+          aria-label="Filtrar por sector"
+          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+          value={sector}
+          onChange={(e) => setSector(e.target.value)}
+        >
+          <option value="">Todos los sectores</option>
+          {SECTORES.map((s) => (
+            <option key={s.codigo} value={s.codigo}>
+              {s.label}
+            </option>
+          ))}
+          <option value={FILTRO_SIN_SECTOR}>Sin sector</option>
+        </select>
+      </SearchToolbar>
 
       <div className="bg-card border border-border rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
@@ -233,6 +279,7 @@ export const UsuariosPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Usuario</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Legajo</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Rol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Sector</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
@@ -244,6 +291,20 @@ export const UsuariosPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{u.nombreUsuario}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{u.legajo || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{ROL_LABELS[u.rol] ?? u.rol}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {sectorDe(u) ? (
+                      <span
+                        className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+                        style={{ backgroundColor: getSectorColor(sectorDe(u)) }}
+                      >
+                        {getSectorLabel(sectorDe(u))}
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                        Sin sector
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {u.activo !== false ? 'Activo' : 'Inactivo'}
@@ -258,7 +319,7 @@ export const UsuariosPage = () => {
               ))}
               {usuariosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
+                  <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
                 </tr>
               )}
             </tbody>
@@ -319,6 +380,21 @@ export const UsuariosPage = () => {
                   options={Object.entries(ROL_LABELS).map(([id, nombre]) => ({ id, nombre }))}
                   placeholder="Buscar rol..."
                 />
+              </div>
+
+              <div>
+                <label htmlFor="sector" className="block text-sm font-medium text-foreground">Sector</label>
+                <select
+                  id="sector"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={formData.sector}
+                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                >
+                  <option value="">Sin sector</option>
+                  {SECTORES.map((s) => (
+                    <option key={s.codigo} value={s.codigo}>{s.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

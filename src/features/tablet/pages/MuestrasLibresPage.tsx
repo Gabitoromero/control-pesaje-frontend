@@ -16,6 +16,7 @@ import { LineaParadaButton } from '../components/LineaParadaButton';
 import { useReporteSinPeso } from '../hooks/useReporteSinPeso';
 import { getLinea } from '../../../api/lineas';
 import { getAvatarInitials } from '../utils/avatarInitials';
+import { getSectorAvatarProps } from '../../../lib/sectores';
 import {
   isToleranceBlocked,
   resolveEffectiveTolerance,
@@ -40,6 +41,7 @@ import { PESO_DECIMALS } from '../../../shared/constants';
  */
 export function MuestrasLibresPage() {
   const { user, activeLineaId } = useAuth();
+  const sectorAvatar = getSectorAvatarProps(user?.sector);
   const { alertWarning } = useDialog();
   const navigate = useNavigate();
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number | null>(null);
@@ -178,7 +180,11 @@ export function MuestrasLibresPage() {
             <span className="px-2 py-0.5 rounded-md border border-warning bg-warning/10 text-warning text-xs font-bold tracking-wide">
               MUESTRAS LIBRES
             </span>
-            <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${sectorAvatar.className}`}
+              style={sectorAvatar.style}
+              title={sectorAvatar.title}
+            >
               {getAvatarInitials(user?.nombreUsuario)}
             </div>
             <div className="flex flex-col">

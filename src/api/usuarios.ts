@@ -1,5 +1,7 @@
 import api from './axios';
-import type { UsuarioRol } from '../shared/types';
+import type { UsuarioRol, UsuarioMetadata } from '../shared/types';
+
+export type UsuarioDatosAdicionales = UsuarioMetadata;
 
 export interface Usuario {
   id?: number;
@@ -10,6 +12,7 @@ export interface Usuario {
   activo?: boolean;
   puedeTomarMuestrasLibres?: boolean;
   pin?: string;
+  datosAdicionales?: UsuarioDatosAdicionales;
 }
 
 export type UsuarioCreate = Omit<Usuario, 'id'>;
