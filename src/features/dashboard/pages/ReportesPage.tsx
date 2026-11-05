@@ -43,7 +43,7 @@ const REPORTES: ReporteDefinicion[] = [
   {
     id: 'reporte-pasadas',
     titulo: 'Reporte de Pasadas',
-    descripcion: 'Pasadas del rango con una hoja por línea de producción y su hoja de etapas.',
+    descripcion: 'Pasadas del rango con una hoja por línea de producción; cada fila es una etapa de la pasada.',
     requiresDateRange: true,
     download: downloadReportePasadas,
   },

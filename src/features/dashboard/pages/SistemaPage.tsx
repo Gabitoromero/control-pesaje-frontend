@@ -478,9 +478,13 @@ export function SistemaPage() {
               artículo salen con "-".
             </li>
             <li>
-              <strong>Reporte de Pasadas</strong>: una hoja de pasadas y una hoja de etapas por
-              cada línea de producción. Si en el rango no hay pasadas, el archivo trae una hoja
-              "Sin datos".
+              <strong>Reporte de Pasadas</strong>: una hoja por cada línea de producción que tuvo
+              pasadas en el rango. Cada fila describe una etapa de una pasada, y los datos de la
+              pasada (balanza, ruta, artículo, inicio, cierre, totales de muestras, etc.) se repiten
+              en todas las filas de sus etapas; una pasada sin muestras sale en una sola fila con
+              "-" en las columnas de la etapa. Como los datos de la pasada se repiten, no conviene
+              sumar las columnas "... Pasada" de toda la hoja. Si en el rango no hay pasadas, el
+              archivo trae una hoja "Sin datos".
             </li>
             <li>
               <strong>Reporte de Rutas de Pasada</strong>: la configuración actual de las rutas,
