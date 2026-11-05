@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ReporteDescargaProgreso, type ReporteDescargaFase } from '../components/ReporteDescargaProgreso';
+import { ReporteIcon, type ReporteIconTipo } from '../components/ReporteIcons';
 import {
   downloadReporteMuestras,
   downloadReportePasadas,
@@ -17,6 +18,7 @@ interface ReporteBase {
   id: string;
   titulo: string;
   descripcion: string;
+  icono: ReporteIconTipo;
 }
 
 interface ReporteConRango extends ReporteBase {
@@ -34,6 +36,7 @@ type ReporteDefinicion = ReporteConRango | ReporteDirecto;
 const REPORTES: ReporteDefinicion[] = [
   {
     id: 'reporte-muestras',
+    icono: 'muestras',
     titulo: 'Reporte de Muestras',
     descripcion:
       'Todas las muestras del rango en una única hoja, con línea, balanza, código y artículo.',
@@ -42,6 +45,7 @@ const REPORTES: ReporteDefinicion[] = [
   },
   {
     id: 'reporte-pasadas',
+    icono: 'pasadas',
     titulo: 'Reporte de Pasadas',
     descripcion: 'Pasadas del rango con una hoja por línea de producción; cada fila es una etapa de la pasada.',
     requiresDateRange: true,
@@ -49,6 +53,7 @@ const REPORTES: ReporteDefinicion[] = [
   },
   {
     id: 'reporte-rutas-pasada',
+    icono: 'rutas',
     titulo: 'Reporte de Rutas de Pasada',
     descripcion:
       'Configuración actual de rutas de pasada, sus etapas con pesos y los artículos asignados.',
@@ -56,6 +61,47 @@ const REPORTES: ReporteDefinicion[] = [
     download: downloadReporteRutasPasada,
   },
 ];
+
+interface ReporteCardProps {
+  reporte: ReporteDefinicion;
+  isDownloading: boolean;
+  onDownload: () => void;
+}
+
+/** One report card; its icon plays while the card is hovered or has keyboard focus. */
+function ReporteCard({ reporte, isDownloading, onDownload }: ReporteCardProps) {
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
+
+  return (
+    <div
+      className="bg-card border border-border rounded-2xl p-6 flex gap-4"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setFocus(true)}
+      onBlur={() => setFocus(false)}
+    >
+      <ReporteIcon tipo={reporte.icono} active={hover || focus} />
+      <div className="flex flex-col gap-3 flex-1 min-w-0">
+        <h3 className="text-lg font-bold text-foreground">{reporte.titulo}</h3>
+        <p className="text-sm text-muted-foreground flex-1">{reporte.descripcion}</p>
+
+        <div>
+          <button
+            type="button"
+            aria-label={`Descargar ${reporte.titulo}`}
+            disabled={isDownloading}
+            onClick={onDownload}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            {isDownloading ? 'Descargando...' : 'Descargar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export const ReportesPage: React.FC = () => {
   const [modalReporte, setModalReporte] = useState<ReporteConRango | null>(null);
@@ -118,33 +164,16 @@ export const ReportesPage: React.FC = () => {
       <h2 className="text-2xl font-bold mb-6 text-foreground">Reportes</h2>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(22rem,100%),1fr))] gap-6">
-        {REPORTES.map((reporte) => {
-          const isDownloading = downloadingId === reporte.id;
-          return (
-            <div
-              key={reporte.id}
-              className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-3"
-            >
-              <h3 className="text-lg font-bold text-foreground">{reporte.titulo}</h3>
-              <p className="text-sm text-muted-foreground flex-1">{reporte.descripcion}</p>
-
-              <div>
-                <button
-                  type="button"
-                  aria-label={`Descargar ${reporte.titulo}`}
-                  disabled={isDownloading}
-                  onClick={() =>
-                    reporte.requiresDateRange ? setModalReporte(reporte) : handleDirectDownload(reporte)
-                  }
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Download className="w-4 h-4" />
-                  {isDownloading ? 'Descargando...' : 'Descargar'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {REPORTES.map((reporte) => (
+          <ReporteCard
+            key={reporte.id}
+            reporte={reporte}
+            isDownloading={downloadingId === reporte.id}
+            onDownload={() =>
+              reporte.requiresDateRange ? setModalReporte(reporte) : handleDirectDownload(reporte)
+            }
+          />
+        ))}
       </div>
       <Dialog
         open={modalReporte !== null}
