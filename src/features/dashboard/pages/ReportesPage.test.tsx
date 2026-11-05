@@ -248,3 +248,44 @@ describe('ReportesPage', () => {
     spy.mockRestore();
   });
 });
+
+describe('ReportesPage — íconos animados', () => {
+  const icon = (tipo: string) => screen.getByTestId(`reporte-icon-${tipo}`);
+
+  it('shows a different icon on each report card, hidden from assistive tech', () => {
+    renderWithProviders(<ReportesPage />);
+    const tipos = ['muestras', 'pasadas', 'rutas'];
+
+    tipos.forEach((tipo) => expect(icon(tipo)).toHaveAttribute('aria-hidden', 'true'));
+    const dibujos = tipos.map((tipo) => icon(tipo).querySelector('svg')?.getAttribute('data-icono'));
+    expect(new Set(dibujos).size).toBe(3);
+  });
+
+  it('animates only the icon of the card under the mouse', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ReportesPage />);
+    expect(icon('pasadas')).toHaveAttribute('data-active', 'false');
+
+    await user.hover(pasadasButton());
+    expect(icon('pasadas')).toHaveAttribute('data-active', 'true');
+    expect(icon('muestras')).toHaveAttribute('data-active', 'false');
+    expect(icon('rutas')).toHaveAttribute('data-active', 'false');
+
+    await user.unhover(pasadasButton());
+    expect(icon('pasadas')).toHaveAttribute('data-active', 'false');
+  });
+
+  it('also animates the icon when its card receives keyboard focus', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ReportesPage />);
+
+    await user.tab();
+    expect(muestrasButton()).toHaveFocus();
+    expect(icon('muestras')).toHaveAttribute('data-active', 'true');
+
+    await user.tab();
+    expect(icon('muestras')).toHaveAttribute('data-active', 'false');
+    expect(icon('pasadas')).toHaveAttribute('data-active', 'true');
+  });
+});
+
