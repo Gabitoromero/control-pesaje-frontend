@@ -409,11 +409,14 @@ export const TabletWorkspace: React.FC = () => {
             Registrar Muestra
           </button>
           <ToleranceStatus tolerance={tolerance} />
-          <LineaParadaButton
-            lineaProduccionId={targetLineaId}
-            onRegistrada={() => { clearPasada(); navigate('/tablet/pasadas'); }}
-            className="w-full"
-          />
+          <div className="mt-4 pt-4 border-t border-border">
+            <LineaParadaButton
+              lineaProduccionId={targetLineaId}
+              onRegistrada={() => { clearPasada(); navigate('/tablet/pasadas'); }}
+              variant="destructive"
+              className="w-full"
+            />
+          </div>
         </div>
 
         {/* Muestras List */}

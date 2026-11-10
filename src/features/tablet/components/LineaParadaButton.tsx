@@ -9,8 +9,8 @@ export interface LineaParadaButtonProps {
   lineaProduccionId: number;
   /** Called after the parada was registered (the running pasada, if any, is now closed). */
   onRegistrada?: () => void;
-  /** Accent color: 'primary' (cyan) for the tablet pages, 'warning' (amber) for Muestras Libres. */
-  variant?: 'primary' | 'warning';
+  /** Accent color: 'primary' (cyan), 'warning' (amber) or 'destructive' (red, to set it apart from sampling actions). */
+  variant?: 'primary' | 'warning' | 'destructive';
   className?: string;
 }
 
@@ -28,7 +28,12 @@ export function LineaParadaButton({
   const { alertError, alertSuccess } = useDialog();
   const [isOpen, setIsOpen] = useState(false);
 
-  const accent = variant === 'warning' ? 'border-warning text-warning' : 'border-primary text-primary';
+  const accent =
+    variant === 'warning'
+      ? 'border-warning text-warning'
+      : variant === 'destructive'
+        ? 'border-destructive text-destructive'
+        : 'border-primary text-primary';
 
   const handleConfirm = async (observacion: string) => {
     try {

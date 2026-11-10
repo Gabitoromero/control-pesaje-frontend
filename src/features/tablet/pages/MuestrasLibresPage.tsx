@@ -294,7 +294,9 @@ export function MuestrasLibresPage() {
             Registrar Muestra de Calidad
           </button>
           <ToleranceStatus tolerance={tolerance} />
-          <LineaParadaButton lineaProduccionId={activeLineaId ?? 0} variant="warning" className="w-full" />
+          <div className="mt-4 pt-4 border-t border-border">
+            <LineaParadaButton lineaProduccionId={activeLineaId ?? 0} variant="destructive" className="w-full" />
+          </div>
         </div>
 
         {/* Samples panel — filtered to the currently-selected etapa */}
