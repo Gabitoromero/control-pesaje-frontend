@@ -236,6 +236,7 @@ export const GestionPasadasPage: React.FC = () => {
             <LineaParadaButton
               lineaProduccionId={activeLineaId}
               onRegistrada={() => { void refetchPasadas(); }}
+              variant="destructive"
               className="w-full"
             />
 
