@@ -59,7 +59,8 @@ export function LineaParadaButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`min-h-11 px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all active:scale-95 ${accent} ${className}`}
+        disabled={!lineaProduccionId}
+        className={`min-h-11 px-4 py-2 rounded-xl border-2 text-sm font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${accent} ${className}`}
       >
         <OctagonX className="inline w-4 h-4 mr-1.5 align-text-bottom" aria-hidden="true" />
         Línea parada

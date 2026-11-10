@@ -14,6 +14,17 @@ describe('LineaParadaButton', () => {
     vi.mocked(registrarLineaParada).mockReset();
   });
 
+  it('is disabled and never opens the dialog when there is no valid line', async () => {
+    renderWithProviders(<LineaParadaButton lineaProduccionId={0} />);
+
+    const button = screen.getByRole('button', { name: /línea parada/i });
+    expect(button).toBeDisabled();
+
+    await userEvent.click(button);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(registrarLineaParada).not.toHaveBeenCalled();
+  });
+
   it('opens the reason dialog and keeps confirm disabled while the observation is empty', async () => {
     renderWithProviders(<LineaParadaButton lineaProduccionId={7} />);
 
