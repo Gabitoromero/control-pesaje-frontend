@@ -181,5 +181,34 @@ describe('MonitoreoEtapaCard', () => {
 
     expect(screen.getByText('104.1283')).toBeInTheDocument();
   });
-});
 
+  describe('magnitud', () => {
+    const renderCard = (etapa: DashboardEtapa) =>
+      render(
+        <MonitoreoEtapaCard
+          etapa={etapa}
+          rutaAsignadaAt="2026-07-22T09:00:00.000Z"
+          ahora="2026-07-22T10:00:00.000Z"
+        />
+      );
+
+    it('a volumen etapa labels the range, the last value and the sample tooltip in mL', () => {
+      const { container } = renderCard({ ...mockEtapa, magnitud: 'volumen' });
+
+      expect(screen.getByText(/rango 90–110 mL · ideal 100 mL/)).toBeInTheDocument();
+      expect(screen.getByText('ÚLTIMO VOLUMEN')).toBeInTheDocument();
+      expect(screen.getByTestId('ultimo-peso')).toHaveTextContent(/^100\.0000 mL$/);
+      expect(container.querySelector('[title^="101.0mL · OK"]')).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(/\d ?g\b/);
+    });
+
+    it('an etapa without magnitud keeps the g labels', () => {
+      const { container } = renderCard(mockEtapa);
+
+      expect(screen.getByText(/rango 90–110 g · ideal 100 g/)).toBeInTheDocument();
+      expect(screen.getByText('ÚLTIMO PESO')).toBeInTheDocument();
+      expect(screen.getByTestId('ultimo-peso')).toHaveTextContent(/^100\.0000 g$/);
+      expect(container.querySelector('[title^="101.0g · OK"]')).toBeInTheDocument();
+    });
+  });
+});
