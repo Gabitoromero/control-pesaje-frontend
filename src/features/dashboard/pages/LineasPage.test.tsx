@@ -12,16 +12,27 @@ const server = setupServer(...handlers);
 
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
+
+// jsdom has no Element.animate; the "missing field" pulse is observed through this spy.
+const animateSpy = vi.fn();
+beforeEach(() => {
+  animateSpy.mockClear();
+  (Element.prototype as unknown as { animate: unknown }).animate = animateSpy;
+});
+afterEach(() => {
+  delete (Element.prototype as unknown as { animate?: unknown }).animate;
+});
+/** data-field names of the elements that were pulsed so far. */
+const pulsedFields = () =>
+  animateSpy.mock.contexts.map((el) => (el as HTMLElement).dataset.field).filter(Boolean);
 afterAll(() => server.close());
 
-// With the new required Balanza/Articulo selectors added ahead of Dispositivo and
-// Ruta Activa in the create/edit form, a *new* línea (empty form) renders four
-// unselected SearchableCombobox triggers in this order: Balanza, Articulo,
-// Dispositivo, Ruta Activa. When editing an existing línea (which already has
-// idBalanza/articuloId from the mock), only Dispositivo and Ruta Activa remain
-// unselected, so their "Seleccione..." index stays stable at [0] and [1].
-const selectComboboxOption = async (index: number, optionName: string) => {
-  const trigger = screen.getAllByRole('button', { name: 'Seleccione...' })[index];
+// The form is a single column of labelled fields (Nombre, Balanza, Ruta Activa,
+// Artículo, Dispositivo, Observación). Comboboxes are targeted by their field label
+// so reordering fields never silently changes which one a test interacts with.
+const selectComboboxOption = async (fieldLabel: RegExp | string, optionName: string) => {
+  const label = screen.getByText(fieldLabel, { selector: 'label' });
+  const trigger = within(label.parentElement as HTMLElement).getAllByRole('button')[0];
   await userEvent.click(trigger);
   await userEvent.click(screen.getByRole('option', { name: optionName }));
 };
@@ -197,7 +208,7 @@ describe('LineasPage', () => {
     // Línea 4 already has idBalanza/articuloId from the mock, so only Dispositivo
     // and Ruta Activa remain unselected. Assign a ruta activa before activating so
     // this hits the "success" branch, not the "no ruta" warning branch.
-    await selectComboboxOption(1, 'Ruta Alpha');
+    await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
 
     await userEvent.click(screen.getByRole('button', { name: 'Activar Línea' }));
 
@@ -395,8 +406,8 @@ describe('LineasPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, '[Harina 000] MarcaA');
+      await selectComboboxOption('Balanza', 'Balanza 1');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByText('No se pudo crear la línea');
@@ -465,10 +476,10 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
 
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, '[Harina 000] MarcaA');
+      await selectComboboxOption('Balanza', 'Balanza 1');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
       // Ruta Activa is now the last unselected combobox (Dispositivo before it stays empty)
-      await selectComboboxOption(1, 'Ruta Alpha');
+      await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -489,8 +500,8 @@ describe('LineasPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
 
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Ruta');
-      await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, '[Harina 000] MarcaA');
+      await selectComboboxOption('Balanza', 'Balanza 1');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
       const dialog = await screen.findByRole('alertdialog');
@@ -546,51 +557,56 @@ describe('LineasPage', () => {
       expect(screen.getByText('Artículo')).toBeInTheDocument();
     });
 
-    it('Guardar is disabled when balanza is not selected', async () => {
-      renderWithProviders(<LineasPage />);
 
+    it('Guardar is never disabled by missing fields; submitting without artículo pulses the artículo field and sends nothing', async () => {
+      let posted = false;
+      server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', () => {
+          posted = true;
+          return HttpResponse.json({ success: true, data: { id: 99 } });
+        })
+      );
+      renderWithProviders(<LineasPage />);
       await waitFor(() => {
         expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
       });
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      // Index 1 is Articulo while Balanza (index 0) is still unselected.
-      await selectComboboxOption(1, '[Harina 000] MarcaA');
+      await selectComboboxOption('Balanza', 'Balanza 1');
 
-      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+      expect(pulsedFields()).not.toContain('articuloId');
+      const guardar = screen.getByRole('button', { name: 'Guardar' });
+      expect(guardar).toBeEnabled();
+
+      await userEvent.click(guardar);
+
+      await waitFor(() => expect(pulsedFields()).toContain('articuloId'));
+      expect(pulsedFields()).not.toContain('idBalanza');
+      expect(posted).toBe(false);
     });
 
-    it('Guardar is disabled when articulo is not selected', async () => {
+    it('submitting without balanza pulses the Balanza field and sends nothing', async () => {
+      let posted = false;
+      server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', () => {
+          posted = true;
+          return HttpResponse.json({ success: true, data: { id: 99 } });
+        })
+      );
       renderWithProviders(<LineasPage />);
-
       await waitFor(() => {
         expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
       });
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      await selectComboboxOption(0, 'Balanza 1');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
-      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
-    });
-
-    it('Guardar is enabled once both balanza and articulo are selected', async () => {
-      renderWithProviders(<LineasPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
-      });
-
-      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
-      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-
-      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
-
-      await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, '[Harina 000] MarcaA');
-
-      expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled();
+      await waitFor(() => expect(pulsedFields()).toContain('idBalanza'));
+      expect(pulsedFields()).not.toContain('articuloId');
+      expect(posted).toBe(false);
     });
 
     it('creating a línea sends idBalanza and articuloId in the payload', async () => {
@@ -610,8 +626,8 @@ describe('LineasPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      await selectComboboxOption(0, 'Balanza 2');
-      await selectComboboxOption(0, '[Azúcar] MarcaB');
+      await selectComboboxOption('Balanza', 'Balanza 2');
+      await selectComboboxOption('Artículo', '[Azúcar] MarcaB');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -669,8 +685,8 @@ describe('LineasPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
-      await selectComboboxOption(0, 'Balanza 2');
-      await selectComboboxOption(0, '[Azúcar] MarcaB');
+      await selectComboboxOption('Balanza', 'Balanza 2');
+      await selectComboboxOption('Artículo', '[Azúcar] MarcaB');
       await userEvent.type(screen.getByLabelText(/observación/i), 'Línea reservada para temporada');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
@@ -697,8 +713,8 @@ describe('LineasPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
       await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Sin Observación');
-      await selectComboboxOption(0, 'Balanza 1');
-      await selectComboboxOption(0, '[Harina 000] MarcaA');
+      await selectComboboxOption('Balanza', 'Balanza 1');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
 
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -737,7 +753,12 @@ describe('LineasPage', () => {
     });
 
     it('empty balanza catalog shows an empty state with a link to the Balanza catalog page and blocks submission', async () => {
+      let posted = false;
       server.use(
+        http.post('http://localhost:3000/api/lineas-produccion', () => {
+          posted = true;
+          return HttpResponse.json({ success: true, data: { id: 99 } });
+        }),
         http.get('http://localhost:3000/api/balanzas', () =>
           HttpResponse.json({ success: true, data: [] })
         )
@@ -758,7 +779,103 @@ describe('LineasPage', () => {
       const link = screen.getByRole('link', { name: /ir al catálogo de balanzas/i });
       expect(link).toHaveAttribute('href', '/dashboard/balanzas');
 
-      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+      // Guardar stays clickable, but without a balanza nothing is sent.
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+      expect(posted).toBe(false);
+    });
+  });
+
+  describe('línea form: ruta before artículo, artículos filtered by ruta', () => {
+    const openCreateForm = async () => {
+      renderWithProviders(<LineasPage />);
+      await waitFor(() => {
+        expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
+      });
+      await userEvent.click(screen.getByRole('button', { name: /nueva línea/i }));
+    };
+
+    it('lists Ruta Activa before Artículo, and optional fields last', async () => {
+      await openCreateForm();
+
+      const labels = Array.from(document.querySelectorAll('form label')).map((l) => l.textContent ?? '');
+      const idx = (re: RegExp) => labels.findIndex((t) => re.test(t));
+
+      expect(idx(/^Nombre/)).toBeLessThan(idx(/^Balanza/));
+      expect(idx(/^Balanza/)).toBeLessThan(idx(/^Ruta Activa/));
+      expect(idx(/^Ruta Activa/)).toBeLessThan(idx(/^Artículo/));
+      expect(idx(/^Artículo/)).toBeLessThan(idx(/^Dispositivo/));
+      expect(idx(/^Dispositivo/)).toBeLessThan(idx(/^Observación/));
+    });
+
+    it('without a ruta, every artículo is offered and the help text says so', async () => {
+      await openCreateForm();
+
+      expect(screen.getByText(/sin ruta.*todos los artículos/i)).toBeInTheDocument();
+      await userEvent.click(within(screen.getByText('Artículo', { selector: 'label' }).parentElement as HTMLElement).getAllByRole('button')[0]);
+      expect(screen.getByRole('option', { name: '[Harina 000] MarcaA' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: '[Sal fina] MarcaC' })).toBeInTheDocument();
+    });
+
+    it('with a ruta selected, only the artículos of that ruta are offered', async () => {
+      await openCreateForm();
+
+      await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
+
+      expect(await screen.findByText(/solo.*artículos de la ruta/i)).toBeInTheDocument();
+      await waitFor(async () => {
+        const field = screen.getByText('Artículo', { selector: 'label' }).parentElement as HTMLElement;
+        await userEvent.click(within(field).getAllByRole('button')[0]);
+        expect(screen.getByRole('option', { name: '[Harina 000] MarcaA' })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: '[Azúcar] MarcaB' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: '[Sal fina] MarcaC' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('changing to a ruta that does not contain the selected artículo clears it', async () => {
+      await openCreateForm();
+
+      await selectComboboxOption('Artículo', '[Sal fina] MarcaC');
+      expect(screen.getByRole('button', { name: '[Sal fina] MarcaC' })).toBeInTheDocument();
+
+      await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: '[Sal fina] MarcaC' })).not.toBeInTheDocument();
+      });
+      const articuloField = screen.getByText('Artículo', { selector: 'label' }).parentElement as HTMLElement;
+      expect(within(articuloField).getByRole('button', { name: 'Seleccione...' })).toBeInTheDocument();
+    });
+
+    it('clearing the ruta also clears the artículo, which must then be picked again before saving', async () => {
+      await openCreateForm();
+      await userEvent.type(screen.getByLabelText('Nombre'), 'Línea Nueva');
+
+      await selectComboboxOption('Balanza', 'Balanza 1');
+      await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
+
+      const rutaField = screen.getByText(/^Ruta Activa/, { selector: 'label' }).parentElement as HTMLElement;
+      // The icon-only clear (X) button is the second button of a clearable combobox.
+      await userEvent.click(within(rutaField).getAllByRole('button')[1]);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: '[Harina 000] MarcaA' })).not.toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+      await waitFor(() => expect(pulsedFields()).toContain('articuloId'));
+    });
+
+    it('keeps the selected artículo when it belongs to the newly selected ruta', async () => {
+      await openCreateForm();
+
+      await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
+      await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
+
+      await screen.findByText(/solo.*artículos de la ruta/i);
+      expect(screen.getByRole('button', { name: '[Harina 000] MarcaA' })).toBeInTheDocument();
     });
   });
 

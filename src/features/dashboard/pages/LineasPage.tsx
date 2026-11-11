@@ -14,6 +14,7 @@ import {
 import { getRutas } from '../../../api/rutas';
 import { getBalanzas } from '../../../api/balanzas';
 import { getArticulos } from '../../../api/articulos';
+import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { dispositivosApi } from '../../../api/dispositivos';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
@@ -29,6 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
+import { focusFirstFormError } from './focusFirstFormError';
 
 
 const EMPTY_FORM = {
@@ -97,6 +99,25 @@ export const LineasPage = () => {
     queryKey: ['articulos'],
     queryFn: getArticulos,
   });
+
+  // The artículo of a línea must belong to the línea's ruta (the backend rejects a
+  // pasada otherwise), so once a ruta is chosen only its artículos are offered.
+  const selectedRutaId = formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null;
+  const selectedRuta = rutas.find((r) => r.id === selectedRutaId);
+
+  const { data: articulosDeRuta, isSuccess: articulosDeRutaListos } = useQuery({
+    queryKey: ['articulos-por-ruta', selectedRutaId],
+    queryFn: () => getArticulosPorRuta(selectedRutaId as number),
+    enabled: selectedRutaId !== null,
+  });
+
+  const articulosDisponibles = selectedRutaId === null ? articulos : (articulosDeRuta ?? []);
+
+  // A previously chosen artículo that the selected ruta does not contain counts as unselected.
+  const articuloIdEfectivo =
+    selectedRutaId !== null && articulosDeRutaListos && !articulosDeRuta.some((a) => a.id === Number(formData.articuloId))
+      ? ''
+      : formData.articuloId;
 
   const isLoading = loadingActivas || loadingInactivas;
   const error = errorActivas || errorInactivas;
@@ -233,12 +254,20 @@ export const LineasPage = () => {
     setFormData(EMPTY_FORM);
   };
 
-  const canSubmit = Boolean(formData.idBalanza) && Boolean(formData.articuloId);
+  const falta = { idBalanza: !formData.idBalanza, articuloId: !articuloIdEfectivo };
+  const canSubmit = !falta.idBalanza && !falta.articuloId;
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      // Scroll to the first missing field and pulse it red (same effect as the Rutas form).
+      focusFirstFormError({
+        ...(falta.idBalanza && { idBalanza: { type: 'required' } }),
+        ...(falta.articuloId && { articuloId: { type: 'required' } }),
+      });
+      return;
+    }
 
     const observacion = formData.observacion.trim();
 
@@ -249,7 +278,7 @@ export const LineasPage = () => {
           nombre: formData.nombre,
           rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
           idBalanza: Number(formData.idBalanza),
-          articuloId: Number(formData.articuloId),
+          articuloId: Number(articuloIdEfectivo),
           // Empty means "cleared" here — unlike a create, this PUT reflects
           // the form's current state, so an emptied field sends null.
           observacion: observacion || null,
@@ -264,7 +293,7 @@ export const LineasPage = () => {
         activo: true,
         dispositivoHardwareId: formData.dispositivoHardwareId,
         idBalanza: Number(formData.idBalanza),
-        articuloId: Number(formData.articuloId),
+        articuloId: Number(articuloIdEfectivo),
         // Backend rejects an empty string ("" fails Zod's min(1)) — omit the
         // key entirely rather than sending "".
         ...(observacion && { observacion }),
@@ -294,7 +323,7 @@ export const LineasPage = () => {
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         activo: true,
         idBalanza: formData.idBalanza ? Number(formData.idBalanza) : undefined,
-        articuloId: formData.articuloId ? Number(formData.articuloId) : undefined,
+        articuloId: articuloIdEfectivo ? Number(articuloIdEfectivo) : undefined,
       },
       hardwareId: formData.dispositivoHardwareId,
       accion: 'activada',
@@ -400,8 +429,8 @@ export const LineasPage = () => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
+            <div className="grid grid-cols-1 gap-4">
+              <div>
                 <label htmlFor="linea-nombre" className="block text-sm font-medium text-foreground">Nombre</label>
                 <input
                   id="linea-nombre"
@@ -413,7 +442,7 @@ export const LineasPage = () => {
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Balanza</label>
                 {balanzas.length === 0 ? (
                   <div className="rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm text-foreground">
@@ -423,28 +452,52 @@ export const LineasPage = () => {
                     </Link>
                   </div>
                 ) : (
-                  <SearchableCombobox
-                    value={formData.idBalanza ? Number(formData.idBalanza) : null}
-                    onChange={(val) => setFormData({ ...formData, idBalanza: val ? String(val) : '' })}
-                    options={[...balanzas]
-                      .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))
-                      .map((b) => ({ id: b.id, nombre: b.nombre }))}
-                    placeholder="Buscar balanza..."
-                  />
+                  <div data-field="idBalanza" className="rounded-md">
+                    <SearchableCombobox
+                      value={formData.idBalanza ? Number(formData.idBalanza) : null}
+                      onChange={(val) => setFormData({ ...formData, idBalanza: val ? String(val) : '' })}
+                      options={[...balanzas]
+                        .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))
+                        .map((b) => ({ id: b.id, nombre: b.nombre }))}
+                      placeholder="Buscar balanza..."
+                    />
+                  </div>
                 )}
               </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-foreground mb-1">Artículo</label>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
                 <SearchableCombobox
-                  value={formData.articuloId ? Number(formData.articuloId) : null}
-                  onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
-                  options={[...articulos]
-                    .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
-                    .map((a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo || '' }))}
-                  placeholder="Buscar artículo..."
+                  value={selectedRutaId}
+                  onChange={(val) =>
+                    // Removing the ruta leaves the artículo to be picked again from the full list.
+                    setFormData({ ...formData, rutaPasadaActiva: val ? String(val) : '', ...(val ? {} : { articuloId: '' }) })
+                  }
+                  options={[...rutas].sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))}
+                  placeholder="Buscar ruta..."
+                  clearable
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Artículo</label>
+                <div data-field="articuloId" className="rounded-md">
+                  <SearchableCombobox
+                    value={articuloIdEfectivo ? Number(articuloIdEfectivo) : null}
+                    onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
+                    options={[...articulosDisponibles]
+                      .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
+                      .map((a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo || '' }))}
+                    placeholder="Buscar artículo..."
+                  />
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {selectedRutaId === null
+                    ? 'Sin ruta, se listan todos los artículos. Seleccione una ruta para ver solo los suyos.'
+                    : articulosDeRutaListos
+                      ? `Solo se muestran los artículos de la ruta «${selectedRuta?.nombre ?? ''}».`
+                      : 'Cargando los artículos de la ruta…'}
+                </p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Dispositivo <span className="text-muted-foreground font-normal">(opcional)</span></label>
                 <SearchableCombobox
                   value={formData.dispositivoHardwareId}
@@ -456,17 +509,7 @@ export const LineasPage = () => {
                   clearable
                 />
               </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-foreground mb-1">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
-                <SearchableCombobox
-                  value={formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null}
-                  onChange={(val) => setFormData({ ...formData, rutaPasadaActiva: val ? String(val) : '' })}
-                  options={[...rutas].sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))}
-                  placeholder="Buscar ruta..."
-                  clearable
-                />
-              </div>
-              <div className="sm:col-span-2">
+              <div>
                 <label htmlFor="linea-observacion" className="block text-sm font-medium text-foreground mb-1">
                   Observación <span className="text-muted-foreground font-normal">(opcional)</span>
                 </label>
@@ -496,7 +539,7 @@ export const LineasPage = () => {
               <button type="button" onClick={closeModal} className="px-4 py-2 border border-border rounded-md text-foreground hover:bg-accent">
                 Cancelar
               </button>
-              <button type="submit" disabled={isBusy || !canSubmit} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
+              <button type="submit" disabled={isBusy} className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
                 {isBusy ? 'Guardando...' : 'Guardar'}
               </button>
             </DialogFooter>
