@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAGNITUDES } from '../../../shared/constants';
 
 // Same bounds as the global tolerance (MuestrasConfigPage)
 export const MIN_TOLERANCIA_PCT = 0;
@@ -14,6 +15,8 @@ export const etapaSchema = z.object({
   // undefined is treated as "por defecto" (uses the global tolerance)
   toleranciaPorDefecto: z.boolean().optional(),
   toleranciaPct: z.number().nullable().optional(),
+  // undefined is treated as 'peso'
+  magnitud: z.enum(MAGNITUDES).optional(),
 }).superRefine((data, ctx) => {
   if (data.toleranciaPorDefecto === false) {
     const pct = data.toleranciaPct;

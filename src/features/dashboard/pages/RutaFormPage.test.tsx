@@ -1106,3 +1106,82 @@ describe('RutaFormPage — success toasts on mutation success', () => {
   });
 });
 
+
+describe('RutaFormPage — magnitud por etapa', () => {
+  const openEtapas = async () => {
+    paramsMock = { id: '1' };
+    renderWithProviders(<RutaFormPage />);
+    const etapasContainer = await screen.findByTestId('etapas-container');
+    await userEvent.click(screen.getByRole('button', { name: /etapas de la ruta/i }));
+    await waitFor(() => {
+      expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
+    });
+    return etapasContainer;
+  };
+
+  const capturePut = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const captured: { payload: any } = { payload: null };
+    server.use(
+      http.put('http://localhost:3000/api/rutas-pasadas/:id', async ({ request }) => {
+        captured.payload = await request.json();
+        return HttpResponse.json({ success: true, data: { id: 1, ...captured.payload } });
+      })
+    );
+    return captured;
+  };
+
+  it('26. an etapa without magnitud shows Peso selected and is saved as peso', async () => {
+    const captured = capturePut();
+    const etapasContainer = await openEtapas();
+
+    const pesoRadios = within(etapasContainer).getAllByRole('radio', { name: 'Peso' });
+    const volumenRadios = within(etapasContainer).getAllByRole('radio', { name: 'Volumen' });
+    expect(pesoRadios).toHaveLength(2);
+    pesoRadios.forEach((r) => expect(r).toBeChecked());
+    volumenRadios.forEach((r) => expect(r).not.toBeChecked());
+    expect(within(etapasContainer).getAllByText('Rango de Peso (kg)')).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    await waitFor(() => expect(captured.payload).not.toBeNull());
+    expect(captured.payload.etapas.map((e: { magnitud: string }) => e.magnitud)).toEqual(['peso', 'peso']);
+  });
+
+  it('27. edit pre-fills the stored magnitud and labels a volumen range in L', async () => {
+    server.use(
+      http.get('http://localhost:3000/api/rutas-pasadas/:id', () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            id: 1, nombre: 'Ruta Alpha', descripcion: 'Descripción Alpha', activo: true,
+            etapas: [
+              { id: 10, etapa: { id: 1, nombre: 'Amasado' }, orden: 1, pesoMinimo: 10, pesoIdeal: 15, pesoMaximo: 20, cantidadMuestrasRequeridas: 2, magnitud: 'volumen' },
+              { id: 11, etapa: { id: 2, nombre: 'Horneado' }, orden: 2, pesoMinimo: 30, pesoIdeal: 35, pesoMaximo: 40, cantidadMuestrasRequeridas: 1, magnitud: 'peso' },
+            ],
+          },
+        })
+      )
+    );
+    const etapasContainer = await openEtapas();
+
+    const volumenRadios = within(etapasContainer).getAllByRole('radio', { name: 'Volumen' });
+    expect(volumenRadios[0]).toBeChecked();
+    expect(volumenRadios[1]).not.toBeChecked();
+    expect(within(etapasContainer).getAllByText('Rango de Volumen (L)')).toHaveLength(1);
+    expect(within(etapasContainer).getAllByText('Rango de Peso (kg)')).toHaveLength(1);
+  });
+
+  it('28. choosing Volumen on one etapa sends volumen only for that etapa', async () => {
+    const captured = capturePut();
+    const etapasContainer = await openEtapas();
+
+    await userEvent.click(within(etapasContainer).getAllByRole('radio', { name: 'Volumen' })[1]);
+    expect(within(etapasContainer).getAllByText('Rango de Volumen (L)')).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+    await waitFor(() => expect(captured.payload).not.toBeNull());
+    expect(captured.payload.etapas.map((e: { magnitud: string }) => e.magnitud)).toEqual(['peso', 'volumen']);
+    // Label only: the configured values are sent untouched
+    expect(captured.payload.etapas[1]).toMatchObject({ pesoMinimo: 30, pesoIdeal: 35, pesoMaximo: 40 });
+  });
+});
