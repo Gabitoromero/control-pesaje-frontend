@@ -1,0 +1,52 @@
+/* Sistema manual: navigation + micro-interactions.
+   Hover lift only on fine pointers (mouse); touch gets press feedback. */
+
+.sistema-progreso {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: hsl(var(--primary));
+  transform-origin: 0 50%;
+}
+
+.sistema-seccion {
+  scroll-margin-top: 7rem;
+}
+
+.sistema-seccion button[aria-expanded] {
+  transition: transform 150ms ease-out;
+}
+
+.sistema-seccion button[aria-expanded]:active {
+  transform: scale(0.99);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sistema-tarjeta {
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+  }
+
+  .sistema-tarjeta:hover {
+    transform: translateY(-2px);
+    border-color: hsl(var(--primary) / 0.6);
+    box-shadow: 0 10px 24px -14px hsl(var(--primary) / 0.5);
+  }
+}
+
+@media (hover: none) {
+  .sistema-tarjeta:active {
+    transform: scale(0.98);
+    transition: transform 120ms ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sistema-tarjeta,
+  .sistema-seccion button[aria-expanded],
+  .sistema-indice button {
+    transition: none !important;
+    transform: none !important;
+  }
+}

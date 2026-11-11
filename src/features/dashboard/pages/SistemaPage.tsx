@@ -1,11 +1,21 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { BookOpen } from 'lucide-react';
-import { CollapsibleSection } from '../../../components/ui/CollapsibleSection';
+import { SeccionManual, SistemaIndice, type SeccionIndice } from '../components/SistemaNavegacion';
+import { useSistemaNavegacion } from '../components/useSistemaNavegacion';
+
+const SECCIONES: SeccionIndice[] = [
+  { id: 'operario', etiqueta: 'Operario' },
+  { id: 'jefe', etiqueta: 'Jefe' },
+  { id: 'administrador', etiqueta: 'Administrador' },
+  { id: 'visualizacion', etiqueta: 'Visualización' },
+  { id: 'infraestructura', etiqueta: 'Infraestructura' },
+];
+const IDS_SECCIONES = SECCIONES.map((s) => s.id);
 
 function Nota({ children, clave = false }: { children: ReactNode; clave?: boolean }) {
   return (
     <div
-      className={`text-sm rounded-md px-4 py-3 my-3 border-l-4 ${
+      className={`sistema-tarjeta text-sm rounded-md px-4 py-3 my-3 border-l-4 ${
         clave
           ? 'bg-brand-muted border-brand text-foreground'
           : 'bg-muted border-border text-foreground'
@@ -86,7 +96,7 @@ function Caja({
 }) {
   return (
     <div
-      className={`rounded-md border px-3 py-2.5 text-center text-xs font-semibold min-w-[110px] flex-1 basis-[130px] ${
+      className={`sistema-tarjeta rounded-md border px-3 py-2.5 text-center text-xs font-semibold min-w-[110px] flex-1 basis-[130px] ${
         destacada
           ? 'bg-primary text-primary-foreground border-primary'
           : 'bg-muted text-foreground border-border'
@@ -105,8 +115,11 @@ function Caja({
 }
 
 export function SistemaPage() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { activa, progresoSuave, irA } = useSistemaNavegacion(rootRef, IDS_SECCIONES);
+
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div ref={rootRef} className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <BookOpen className="w-6 h-6" />
@@ -117,7 +130,9 @@ export function SistemaPage() {
         </p>
       </div>
 
-      <CollapsibleSection title="Manual — Rol Operario" count={8} defaultOpen>
+      <SistemaIndice secciones={SECCIONES} activa={activa} progreso={progresoSuave} onIr={irA} />
+
+      <SeccionManual id="operario" orden={0} title="Manual — Rol Operario" count={8} defaultOpen>
         <p className="text-sm text-muted-foreground mb-5">
           Uso diario de la tablet asignada a cada línea de producción: ingreso, selección de
           línea, registro de muestras de una pasada, muestras libres de calidad e historial propio.
@@ -318,9 +333,9 @@ export function SistemaPage() {
             tocar para ocultarla. Las muestras sin observación no se despliegan.
           </p>
         </Sub>
-      </CollapsibleSection>
+      </SeccionManual>
 
-      <CollapsibleSection title="Manual — Rol Jefe" count={9}>
+      <SeccionManual id="jefe" orden={1} title="Manual — Rol Jefe" count={9}>
         <p className="text-sm text-muted-foreground mb-5">
           Supervisión de planta y configuración de líneas, rutas, artículos y etapas desde el
           navegador. El Jefe ve todo esto además de poder entrar a la tablet como Operario.
@@ -504,9 +519,9 @@ export function SistemaPage() {
             no volver a presionar el botón.
           </p>
         </Sub>
-      </CollapsibleSection>
+      </SeccionManual>
 
-      <CollapsibleSection title="Manual — Rol Administrador" count={4}>
+      <SeccionManual id="administrador" orden={2} title="Manual — Rol Administrador" count={4}>
         <p className="text-sm text-muted-foreground mb-5">
           El Administrador ve y puede hacer todo lo que puede hacer un Jefe (Monitoreo, Pasadas
           Activas y toda la Parametrización descripta arriba), más tres secciones exclusivas:
@@ -598,9 +613,9 @@ export function SistemaPage() {
             planta cuando se modifica, porque cambia qué pesos se pueden registrar.
           </p>
         </Sub>
-      </CollapsibleSection>
+      </SeccionManual>
 
-      <CollapsibleSection title="Manual — Rol Visualización" count={1}>
+      <SeccionManual id="visualizacion" orden={3} title="Manual — Rol Visualización" count={1}>
         <p className="text-sm text-muted-foreground mb-5">
           Pensado para quedar fijo en una pantalla o TV de planta, sin un operador activo
           manejándola.
@@ -618,9 +633,9 @@ export function SistemaPage() {
             tablet de operario.
           </p>
         </Sub>
-      </CollapsibleSection>
+      </SeccionManual>
 
-      <CollapsibleSection title="Infraestructura — Raspberry Pi y sincronización" count={6}>
+      <SeccionManual id="infraestructura" orden={4} title="Infraestructura — Raspberry Pi y sincronización" count={6}>
         <p className="text-sm text-muted-foreground mb-5">
           Qué hace la Raspberry Pi de cada línea de producción y cómo se sincroniza con el
           servidor central. Documento de referencia técnica, preparado originalmente para el
@@ -1036,7 +1051,7 @@ export function SistemaPage() {
             rows={[[<C>+54 9 341 720-6049</C>, <C>contacto@maciasoft.com</C>]]}
           />
         </Sub>
-      </CollapsibleSection>
+      </SeccionManual>
     </div>
   );
 }
