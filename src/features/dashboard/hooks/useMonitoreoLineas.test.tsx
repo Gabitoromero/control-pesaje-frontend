@@ -8,6 +8,9 @@ import {
   getDashboardResumen,
   getDashboardKpis,
   getDashboardEtapas,
+  type DashboardKpi,
+  type DashboardLineaItem,
+  type DashboardLineaResumen,
 } from '../../../api/dashboard';
 
 vi.mock('../../../api/dashboard', () => ({
@@ -27,8 +30,8 @@ const kpisVacios = { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, p
 
 describe('useMonitoreoLineas', () => {
   beforeEach(() => {
-    vi.mocked(getDashboardResumen).mockResolvedValue(resumenEsperando as any);
-    vi.mocked(getDashboardKpis).mockResolvedValue(kpisVacios as any);
+    vi.mocked(getDashboardResumen).mockResolvedValue(resumenEsperando as unknown as DashboardLineaResumen);
+    vi.mocked(getDashboardKpis).mockResolvedValue(kpisVacios as unknown as DashboardKpi);
     vi.mocked(getDashboardEtapas).mockResolvedValue([]);
   });
 
@@ -41,7 +44,7 @@ describe('useMonitoreoLineas', () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' } },
       { id: 2, nombre: 'Linea 2', activo: true },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -53,7 +56,7 @@ describe('useMonitoreoLineas', () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true },
       { id: 2, nombre: 'Linea 2', activo: true },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -69,7 +72,7 @@ describe('useMonitoreoLineas', () => {
         rutaPasadaActiva: { id: 10, nombre: 'Ruta A' },
         dispositivo: null,
       },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -81,7 +84,7 @@ describe('useMonitoreoLineas', () => {
   it('does not break when resumen payload is "esperando" (pasadaEnCurso: null)', async () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' } },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -95,7 +98,7 @@ describe('useMonitoreoLineas', () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' } },
       { id: 2, nombre: 'Linea 2', activo: true, rutaPasadaActiva: { id: 20, nombre: 'Ruta B' } },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 

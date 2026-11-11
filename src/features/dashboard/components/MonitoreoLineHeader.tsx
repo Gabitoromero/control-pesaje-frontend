@@ -27,10 +27,16 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
     ? Math.floor(resumen.tiempoDesdeRuta / 1000)
     : null;
   const [elapsedRuta, setElapsedRuta] = useState(rutaInitialSeconds ?? 0);
+  const [baseSeconds, setBaseSeconds] = useState(rutaInitialSeconds);
+
+  // Re-base the counter when the server-side value changes (adjusting state while rendering).
+  if (baseSeconds !== rutaInitialSeconds) {
+    setBaseSeconds(rutaInitialSeconds);
+    if (rutaInitialSeconds !== null) setElapsedRuta(rutaInitialSeconds);
+  }
 
   useEffect(() => {
     if (rutaInitialSeconds === null) return;
-    setElapsedRuta(rutaInitialSeconds);
     const timer = setInterval(() => setElapsedRuta((prev) => prev + 1), 1000);
     return () => clearInterval(timer);
   }, [rutaInitialSeconds]);

@@ -210,7 +210,7 @@ export const DispositivosConectadosPage: React.FC = () => {
               <button
                 type="button"
                 className="px-4 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors flex items-center gap-2"
-                onClick={() => handleDelete(editingDevice?.hardwareId!)}
+                onClick={() => editingDevice && handleDelete(editingDevice.hardwareId)}
               >
                 <Trash size={18} /> Eliminar
               </button>
