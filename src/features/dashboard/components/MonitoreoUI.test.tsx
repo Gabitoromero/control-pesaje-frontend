@@ -1,7 +1,10 @@
+import type { ComponentProps } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MonitoreoLineHeader } from './MonitoreoLineHeader';
 import { MonitoreoKpiStrip } from './MonitoreoKpiStrip';
+
+type HeaderProps = ComponentProps<typeof MonitoreoLineHeader>;
 
 describe('MonitoreoUI Components', () => {
   describe('MonitoreoLineHeader', () => {
@@ -20,7 +23,7 @@ describe('MonitoreoUI Components', () => {
 
       render(
         <MonitoreoLineHeader
-          resumen={resumen as any}
+          resumen={resumen as unknown as HeaderProps['resumen']}
           lineaNombre="Linea 1"
           rutaActivaNombre="Alfajores Triples"
           isFullscreen={false}
@@ -39,7 +42,7 @@ describe('MonitoreoUI Components', () => {
 
       render(
         <MonitoreoLineHeader
-          resumen={resumen as any}
+          resumen={resumen as unknown as HeaderProps['resumen']}
           lineaNombre="Linea 1"
           rutaActivaNombre={null}
           isFullscreen={false}
@@ -58,7 +61,7 @@ describe('MonitoreoUI Components', () => {
 
       render(
         <MonitoreoLineHeader
-          resumen={resumen as any}
+          resumen={resumen as unknown as HeaderProps['resumen']}
           lineaNombre="Linea 1"
           rutaActivaNombre="Alfajores Triples"
           isFullscreen={false}
@@ -76,7 +79,7 @@ describe('MonitoreoUI Components', () => {
 
       render(
         <MonitoreoLineHeader
-          resumen={resumen as any}
+          resumen={resumen as unknown as HeaderProps['resumen']}
           lineaNombre="Linea 1"
           rutaActivaNombre="Alfajores Triples"
           isFullscreen={false}
@@ -98,7 +101,7 @@ describe('MonitoreoUI Components', () => {
         pasadasEnCurso: 1
       };
 
-      render(<MonitoreoKpiStrip kpis={kpis as any} />);
+      render(<MonitoreoKpiStrip kpis={kpis as unknown as ComponentProps<typeof MonitoreoKpiStrip>['kpis']} />);
 
       expect(screen.getByText('100')).toBeInTheDocument(); // Muestras
       expect(screen.getByText('5')).toBeInTheDocument(); // Fuera de rango
