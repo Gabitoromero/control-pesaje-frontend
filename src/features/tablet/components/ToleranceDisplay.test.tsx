@@ -66,3 +66,24 @@ describe('ToleranceDisplay', () => {
     expect(screen.getByText('MAXIMO')).toBeInTheDocument();
   });
 });
+
+describe('ToleranceDisplay — magnitud', () => {
+  it('labels the limits in L for a volumen etapa, with the same values', () => {
+    render(
+      <ToleranceDisplay pesoNeto={15} pesoMinimo={10} pesoIdeal={15} pesoMaximo={20} magnitud="volumen" />
+    );
+
+    expect(screen.getByText('10.0000 L')).toBeInTheDocument();
+    expect(screen.getByText('15.0000 L')).toBeInTheDocument();
+    expect(screen.getByText('20.0000 L')).toBeInTheDocument();
+    expect(screen.queryByText(/kg/)).not.toBeInTheDocument();
+  });
+
+  it('keeps kg when the magnitud is peso', () => {
+    render(
+      <ToleranceDisplay pesoNeto={15} pesoMinimo={10} pesoIdeal={15} pesoMaximo={20} magnitud="peso" />
+    );
+
+    expect(screen.getByText('10.0000 kg')).toBeInTheDocument();
+  });
+});

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { dispositivosApi } from '../../../api/dispositivos';
-import type { UnidadPeso } from '../../../shared/types/domain';
+import type { Magnitud, UnidadPeso } from '../../../shared/types/domain';
+import { unidadLabel } from '../../../shared/peso';
 import { useDialog } from '../../../components/dialogs/useDialog';
 
 export interface UnidadBalanzaControlProps {
@@ -9,17 +10,14 @@ export interface UnidadBalanzaControlProps {
   disabled: boolean;
   /** Accent color: 'primary' (cyan) for TabletWorkspace, 'warning' (amber) for Muestras Libres. */
   variant: 'primary' | 'warning';
+  /** Magnitud of the etapa being weighed: volumen shows mL / L. The unit sent to the scale is still g / kg. */
+  magnitud?: Magnitud;
 }
 
 const OPTIONS: UnidadPeso[] = ['g', 'kg'];
 
-const UNIDAD_LABEL: Record<UnidadPeso, string> = {
-  g: 'g',
-  kg: 'kg',
-};
-
 /**
- * Segmented g / kg toggle for correcting the source unit a physical scale
+ * Segmented g / kg toggle (mL / L on a volumen etapa, label only) for correcting the source unit a physical scale
  * transmits, live, without a Raspberry reconnect. Presentational — the
  * authoritative unit always comes from the `unidad` prop, which the caller
  * derives from the server-confirmed `balanza-status` socket payload. This
@@ -33,6 +31,7 @@ export const UnidadBalanzaControl: React.FC<UnidadBalanzaControlProps> = ({
   unidad,
   disabled,
   variant,
+  magnitud,
 }) => {
   const { confirm, alertWarning } = useDialog();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +44,7 @@ export const UnidadBalanzaControl: React.FC<UnidadBalanzaControlProps> = ({
 
     const confirmed = await confirm({
       title: 'Cambiar unidad de la balanza',
-      description: `¿Cambiar la unidad de la balanza a ${UNIDAD_LABEL[next]}? El peso mostrado se recalculará.`,
+      description: `¿Cambiar la unidad de la balanza a ${unidadLabel(next, magnitud)}? El peso mostrado se recalculará.`,
       confirmText: 'Confirmar',
       cancelText: 'Cancelar',
     });
@@ -82,7 +81,7 @@ export const UnidadBalanzaControl: React.FC<UnidadBalanzaControlProps> = ({
                 ${isActive ? activeClass : 'bg-muted text-muted-foreground'}
                 ${isControlDisabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
             >
-              {UNIDAD_LABEL[option]}
+              {unidadLabel(option, magnitud)}
             </button>
           );
         })}

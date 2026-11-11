@@ -165,3 +165,34 @@ describe('MuestrasListPanel', () => {
     expect(onSampleClick).toHaveBeenCalledWith(1);
   });
 });
+
+describe('MuestrasListPanel — magnitud', () => {
+  const onSampleClick = vi.fn();
+  const rutaEtapa = (id: number, magnitud?: 'peso' | 'volumen') => ({
+    etapa: { id, nombre: `Etapa ${id}` },
+    orden: id,
+    pesoMinimo: 10,
+    pesoIdeal: 15,
+    pesoMaximo: 20,
+    cantidadMuestrasRequeridas: 1,
+    ...(magnitud ? { magnitud } : {}),
+  });
+
+  it('labels every sample with the magnitud prop when no etapas are given', () => {
+    render(<MuestrasListPanel muestras={[makeMuestra()]} onSampleClick={onSampleClick} magnitud="volumen" />);
+    expect(screen.getByText('15.0000 L')).toBeInTheDocument();
+  });
+
+  it('labels each sample by the magnitud of its own etapa', () => {
+    render(
+      <MuestrasListPanel
+        muestras={[makeMuestra({ id: 1, etapaId: 10, pesoNeto: 1 }), makeMuestra({ id: 2, etapaId: 20, pesoNeto: 2 }), makeMuestra({ id: 3, etapaId: 30, pesoNeto: 3 })]}
+        onSampleClick={onSampleClick}
+        etapas={[rutaEtapa(10, 'volumen'), rutaEtapa(20, 'peso'), rutaEtapa(30)]}
+      />
+    );
+    expect(screen.getByText('1.0000 L')).toBeInTheDocument();
+    expect(screen.getByText('2.0000 kg')).toBeInTheDocument();
+    expect(screen.getByText('3.0000 kg')).toBeInTheDocument();
+  });
+});

@@ -2,6 +2,8 @@ import React from 'react';
 import { getToleranceLayout } from '../utils/toleranceRange';
 import { isWithinTolerance } from '../utils/toleranceStatus';
 import { PESO_DECIMALS } from '../../../shared/constants';
+import { unidadLabel } from '../../../shared/peso';
+import type { Magnitud } from '../../../shared/types/domain';
 
 export interface ToleranceDisplayProps {
   pesoNeto: number;
@@ -10,6 +12,8 @@ export interface ToleranceDisplayProps {
   pesoMaximo: number;
   /** Accent color: 'primary' (cyan, default) for TabletWorkspace, 'warning' (amber) for Muestras Libres. */
   variant?: 'primary' | 'warning';
+  /** Magnitud of the etapa: volumen labels the limits in L (same values). Defaults to peso. */
+  magnitud?: Magnitud;
 }
 
 /**
@@ -27,7 +31,9 @@ export const ToleranceDisplay: React.FC<ToleranceDisplayProps> = ({
   pesoIdeal,
   pesoMaximo,
   variant = 'primary',
+  magnitud,
 }) => {
+  const unidad = unidadLabel('kg', magnitud);
   const toleranceLayout = getToleranceLayout(pesoMinimo, pesoIdeal, pesoMaximo);
   const isInRange = isWithinTolerance(pesoNeto, pesoMinimo, pesoMaximo);
 
@@ -60,15 +66,15 @@ export const ToleranceDisplay: React.FC<ToleranceDisplayProps> = ({
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-card border border-border rounded-lg p-2 text-center">
             <div className="text-xs text-muted-foreground">MINIMO</div>
-            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo.toFixed(PESO_DECIMALS)} kg</div>
+            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMinimo.toFixed(PESO_DECIMALS)} {unidad}</div>
           </div>
           <div className="bg-card border border-border rounded-lg p-2 text-center">
             <div className="text-xs text-muted-foreground">IDEAL</div>
-            <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal.toFixed(PESO_DECIMALS)} kg</div>
+            <div className="text-sm font-bold text-foreground tabular-nums">{pesoIdeal.toFixed(PESO_DECIMALS)} {unidad}</div>
           </div>
           <div className="bg-card border border-border rounded-lg p-2 text-center">
             <div className="text-xs text-muted-foreground">MAXIMO</div>
-            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMaximo.toFixed(PESO_DECIMALS)} kg</div>
+            <div className="text-sm font-bold text-foreground tabular-nums">{pesoMaximo.toFixed(PESO_DECIMALS)} {unidad}</div>
           </div>
         </div>
       </div>

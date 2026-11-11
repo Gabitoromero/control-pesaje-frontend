@@ -1,4 +1,5 @@
-import type { Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
+import type { Magnitud, Muestra, RutaPasadaEtapa } from '../../../shared/types/domain';
+import { unidadLabel } from '../../../shared/peso';
 import { PESO_DECIMALS } from '../../../shared/constants';
 
 interface MuestrasListPanelProps {
@@ -6,6 +7,8 @@ interface MuestrasListPanelProps {
   onSampleClick: (index: number) => void;
   emptyMessage?: string;
   etapas?: RutaPasadaEtapa[];
+  /** Magnitud for samples whose etapa is not in `etapas` (or when no etapas are given). */
+  magnitud?: Magnitud;
 }
 
 export function MuestrasListPanel({
@@ -13,6 +16,7 @@ export function MuestrasListPanel({
   onSampleClick,
   emptyMessage = 'No hay muestras registradas en esta sesión.',
   etapas,
+  magnitud,
 }: MuestrasListPanelProps) {
   if (muestras.length === 0) {
     return (
@@ -23,7 +27,9 @@ export function MuestrasListPanel({
   return (
     <div className="space-y-1 max-h-48 overflow-y-auto">
       {muestras.map((m, i) => {
-        const stageName = etapas?.find(e => e.etapa.id === m.etapaId)?.etapa.nombre;
+        const rutaEtapa = etapas?.find(e => e.etapa.id === m.etapaId);
+        const stageName = rutaEtapa?.etapa.nombre;
+        const unidad = unidadLabel('kg', rutaEtapa?.magnitud ?? magnitud);
         return (
         <button
           key={m.id ?? i}
@@ -33,7 +39,7 @@ export function MuestrasListPanel({
         >
           <span className="text-muted-foreground">#{i + 1}</span>
           {stageName && <span className="text-muted-foreground text-xs truncate max-w-[100px]">{stageName}</span>}
-          <span className="font-medium text-foreground">{m.pesoNeto.toFixed(PESO_DECIMALS)} kg</span>
+          <span className="font-medium text-foreground">{m.pesoNeto.toFixed(PESO_DECIMALS)} {unidad}</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
               m.estadoValidacion === 'ok'
