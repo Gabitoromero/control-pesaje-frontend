@@ -115,4 +115,36 @@ describe('useMonitoreoLineas', () => {
 
     expect(result.current.lineaIndex).toBe(1);
   });
+
+  it('goes back to the first línea when the list shrinks and grows again', async () => {
+    vi.useFakeTimers();
+    const mk = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: i + 1,
+        nombre: `Linea ${i + 1}`,
+        activo: true,
+        rutaPasadaActiva: { id: 10 + i, nombre: `Ruta ${i + 1}` },
+      })) as unknown as DashboardLineaItem[];
+    vi.mocked(getDashboardLineas).mockResolvedValue(mk(3));
+
+    const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120000);
+    });
+    expect(result.current.lineaIndex).toBe(2);
+
+    vi.mocked(getDashboardLineas).mockResolvedValue(mk(1));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30100);
+    });
+    expect(result.current.lineas).toHaveLength(1);
+    expect(result.current.lineaIndex).toBe(0);
+
+    vi.mocked(getDashboardLineas).mockResolvedValue(mk(3));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30100);
+    });
+    expect(result.current.lineas).toHaveLength(3);
+    expect(result.current.lineaIndex).toBe(0);
+  });
 });

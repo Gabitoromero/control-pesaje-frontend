@@ -784,6 +784,8 @@ describe('LineasPage', () => {
       await selectComboboxOption('Artículo', '[Harina 000] MarcaA');
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
       expect(posted).toBe(false);
+      // The empty state is the "Balanza field" here, so it is the one that gets pulsed.
+      await waitFor(() => expect(pulsedFields()).toContain('idBalanza'));
     });
   });
 
@@ -864,6 +866,56 @@ describe('LineasPage', () => {
         expect(screen.queryByRole('button', { name: '[Harina 000] MarcaA' })).not.toBeInTheDocument();
       });
 
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+      await waitFor(() => expect(pulsedFields()).toContain('articuloId'));
+    });
+
+    it('shows an error with a retry button when the artículos of the ruta cannot be loaded', async () => {
+      let calls = 0;
+      server.use(
+        http.get('http://localhost:3000/api/rutas-pasadas-articulos', () => {
+          calls += 1;
+          return calls === 1
+            ? HttpResponse.json({ success: false, error: { message: 'boom' } }, { status: 500 })
+            : HttpResponse.json({
+                success: true,
+                data: [{ id: 101, articulo: { id: 1, codigo: 'Harina 000', nombre: 'MarcaA' } }],
+              });
+        })
+      );
+      await openCreateForm();
+
+      await selectComboboxOption(/^Ruta Activa/, 'Ruta Alpha');
+
+      expect(await screen.findByText(/no se pudieron cargar los artículos de la ruta/i)).toBeInTheDocument();
+      expect(screen.queryByText(/cargando los artículos/i)).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+
+      expect(await screen.findByText(/solo.*artículos de la ruta/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no se pudieron cargar/i)).not.toBeInTheDocument();
+    });
+
+    it('opening a línea whose artículo is not in its ruta shows the artículo as unselected', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/lineas-produccion', () =>
+          HttpResponse.json({
+            success: true,
+            data: [
+              { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: { id: 1, nombre: 'Ruta Alpha' }, idBalanza: 1, articuloId: 3 },
+              ...lineasMock.slice(1),
+            ],
+          })
+        )
+      );
+      renderWithProviders(<LineasPage />);
+      const row = (await screen.findByText('Línea 1 — Envasado A')).closest('tr')!;
+      await userEvent.click(within(row).getByTitle('Editar'));
+
+      const articuloField = screen.getByText('Artículo', { selector: 'label' }).parentElement as HTMLElement;
+      await waitFor(() => {
+        expect(within(articuloField).getByRole('button', { name: 'Seleccione...' })).toBeInTheDocument();
+      });
       await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
       await waitFor(() => expect(pulsedFields()).toContain('articuloId'));
     });

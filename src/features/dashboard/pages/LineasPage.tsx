@@ -105,7 +105,11 @@ export const LineasPage = () => {
   const selectedRutaId = formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null;
   const selectedRuta = rutas.find((r) => r.id === selectedRutaId);
 
-  const { data: articulosDeRuta, isSuccess: articulosDeRutaListos } = useQuery({
+  const {
+    data: articulosDeRuta,
+    isSuccess: articulosDeRutaListos,
+    isError: articulosDeRutaConError,
+  } = useQuery({
     queryKey: ['articulos-por-ruta', selectedRutaId],
     queryFn: () => getArticulosPorRuta(selectedRutaId as number),
     enabled: selectedRutaId !== null,
@@ -113,11 +117,35 @@ export const LineasPage = () => {
 
   const articulosDisponibles = selectedRutaId === null ? articulos : (articulosDeRuta ?? []);
 
-  // A previously chosen artículo that the selected ruta does not contain counts as unselected.
-  const articuloIdEfectivo =
-    selectedRutaId !== null && articulosDeRutaListos && !articulosDeRuta.some((a) => a.id === Number(formData.articuloId))
-      ? ''
-      : formData.articuloId;
+  // Clears the chosen artículo when the ruta does not contain it. It shares the query cache
+  // with the useQuery above, so no extra request is made for a ruta that is already loaded.
+  const descartarArticuloAjeno = async (rutaId: number) => {
+    try {
+      const deLaRuta = await queryClient.fetchQuery({
+        queryKey: ['articulos-por-ruta', rutaId],
+        queryFn: () => getArticulosPorRuta(rutaId),
+      });
+      setFormData((prev) =>
+        prev.rutaPasadaActiva === String(rutaId) &&
+        prev.articuloId &&
+        !deLaRuta.some((a) => a.id === Number(prev.articuloId))
+          ? { ...prev, articuloId: '' }
+          : prev
+      );
+    } catch {
+      // The load error is shown next to the artículo field, with a retry button.
+    }
+  };
+
+  const handleRutaChange = (val: number | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      rutaPasadaActiva: val ? String(val) : '',
+      // Without a ruta the artículo is picked again from the full list.
+      ...(val ? {} : { articuloId: '' }),
+    }));
+    if (val) void descartarArticuloAjeno(val);
+  };
 
   const isLoading = loadingActivas || loadingInactivas;
   const error = errorActivas || errorInactivas;
@@ -241,6 +269,7 @@ export const LineasPage = () => {
         articuloId: linea.articuloId?.toString() || '',
         observacion: linea.observacion ?? '',
       });
+      if (linea.rutaPasadaActiva?.id) void descartarArticuloAjeno(linea.rutaPasadaActiva.id);
     } else {
       setEditingLinea(null);
       setFormData(EMPTY_FORM);
@@ -254,7 +283,7 @@ export const LineasPage = () => {
     setFormData(EMPTY_FORM);
   };
 
-  const falta = { idBalanza: !formData.idBalanza, articuloId: !articuloIdEfectivo };
+  const falta = { idBalanza: !formData.idBalanza, articuloId: !formData.articuloId };
   const canSubmit = !falta.idBalanza && !falta.articuloId;
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -278,7 +307,7 @@ export const LineasPage = () => {
           nombre: formData.nombre,
           rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
           idBalanza: Number(formData.idBalanza),
-          articuloId: Number(articuloIdEfectivo),
+          articuloId: Number(formData.articuloId),
           // Empty means "cleared" here — unlike a create, this PUT reflects
           // the form's current state, so an emptied field sends null.
           observacion: observacion || null,
@@ -293,7 +322,7 @@ export const LineasPage = () => {
         activo: true,
         dispositivoHardwareId: formData.dispositivoHardwareId,
         idBalanza: Number(formData.idBalanza),
-        articuloId: Number(articuloIdEfectivo),
+        articuloId: Number(formData.articuloId),
         // Backend rejects an empty string ("" fails Zod's min(1)) — omit the
         // key entirely rather than sending "".
         ...(observacion && { observacion }),
@@ -323,7 +352,7 @@ export const LineasPage = () => {
         rutaPasadaActiva: formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null,
         activo: true,
         idBalanza: formData.idBalanza ? Number(formData.idBalanza) : undefined,
-        articuloId: articuloIdEfectivo ? Number(articuloIdEfectivo) : undefined,
+        articuloId: formData.articuloId ? Number(formData.articuloId) : undefined,
       },
       hardwareId: formData.dispositivoHardwareId,
       accion: 'activada',
@@ -444,15 +473,15 @@ export const LineasPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Balanza</label>
-                {balanzas.length === 0 ? (
-                  <div className="rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm text-foreground">
-                    <p>No hay balanzas activas disponibles.</p>
-                    <Link to="/dashboard/balanzas" className="text-primary underline hover:no-underline">
-                      Ir al catálogo de balanzas
-                    </Link>
-                  </div>
-                ) : (
-                  <div data-field="idBalanza" className="rounded-md">
+                <div data-field="idBalanza" className="rounded-md">
+                  {balanzas.length === 0 ? (
+                    <div className="rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm text-foreground">
+                      <p>No hay balanzas activas disponibles.</p>
+                      <Link to="/dashboard/balanzas" className="text-primary underline hover:no-underline">
+                        Ir al catálogo de balanzas
+                      </Link>
+                    </div>
+                  ) : (
                     <SearchableCombobox
                       value={formData.idBalanza ? Number(formData.idBalanza) : null}
                       onChange={(val) => setFormData({ ...formData, idBalanza: val ? String(val) : '' })}
@@ -461,17 +490,14 @@ export const LineasPage = () => {
                         .map((b) => ({ id: b.id, nombre: b.nombre }))}
                       placeholder="Buscar balanza..."
                     />
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
                 <SearchableCombobox
                   value={selectedRutaId}
-                  onChange={(val) =>
-                    // Removing the ruta leaves the artículo to be picked again from the full list.
-                    setFormData({ ...formData, rutaPasadaActiva: val ? String(val) : '', ...(val ? {} : { articuloId: '' }) })
-                  }
+                  onChange={handleRutaChange}
                   options={[...rutas].sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))}
                   placeholder="Buscar ruta..."
                   clearable
@@ -481,7 +507,7 @@ export const LineasPage = () => {
                 <label className="block text-sm font-medium text-foreground mb-1">Artículo</label>
                 <div data-field="articuloId" className="rounded-md">
                   <SearchableCombobox
-                    value={articuloIdEfectivo ? Number(articuloIdEfectivo) : null}
+                    value={formData.articuloId ? Number(formData.articuloId) : null}
                     onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
                     options={[...articulosDisponibles]
                       .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
@@ -489,13 +515,26 @@ export const LineasPage = () => {
                     placeholder="Buscar artículo..."
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {selectedRutaId === null
-                    ? 'Sin ruta, se listan todos los artículos. Seleccione una ruta para ver solo los suyos.'
-                    : articulosDeRutaListos
-                      ? `Solo se muestran los artículos de la ruta «${selectedRuta?.nombre ?? ''}».`
-                      : 'Cargando los artículos de la ruta…'}
-                </p>
+                {articulosDeRutaConError ? (
+                  <p className="mt-1 text-xs text-destructive">
+                    No se pudieron cargar los artículos de la ruta.{' '}
+                    <button
+                      type="button"
+                      className="underline hover:no-underline"
+                      onClick={() => selectedRutaId !== null && void descartarArticuloAjeno(selectedRutaId)}
+                    >
+                      Reintentar
+                    </button>
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {selectedRutaId === null
+                      ? 'Sin ruta, se listan todos los artículos. Seleccione una ruta para ver solo los suyos.'
+                      : articulosDeRutaListos
+                        ? `Solo se muestran los artículos de la ruta «${selectedRuta?.nombre ?? ''}».`
+                        : 'Cargando los artículos de la ruta…'}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Dispositivo <span className="text-muted-foreground font-normal">(opcional)</span></label>

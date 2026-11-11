@@ -39,21 +39,21 @@ export function useMonitoreoLineas(): UseMonitoreoLineas {
 
   const isEmpty = lineas.length === 0;
 
-  // The stored index can outlive a shrinking list; read it as 0 when it is out of range.
-  const indiceActual = lineaIndex >= lineas.length ? 0 : lineaIndex;
+  // When the list shrinks past the stored index, go back to the first línea. Resetting the
+  // state itself (not just reading 0) keeps the view from jumping if the list grows again.
+  if (lineaIndex !== 0 && lineaIndex >= lineas.length) {
+    setLineaIndex(0);
+  }
 
   useEffect(() => {
     if (lineas.length <= 1) return;
     const interval = setInterval(() => {
-      setLineaIndex((prev) => {
-        const base = prev >= lineas.length ? 0 : prev;
-        return base + 1 >= lineas.length ? 0 : base + 1;
-      });
+      setLineaIndex((prev) => (prev + 1 >= lineas.length ? 0 : prev + 1));
     }, 60000);
     return () => clearInterval(interval);
   }, [lineas.length]);
 
-  const lineaActual = lineas[indiceActual] ?? null;
+  const lineaActual = lineas[lineaIndex] ?? null;
   const lineaId = lineaActual?.id;
 
   const { data: resumen, isLoading: loadingResumen } = useQuery({
@@ -80,7 +80,7 @@ export function useMonitoreoLineas(): UseMonitoreoLineas {
   const onLineaChange = useCallback(
     (delta: 1 | -1) => {
       setLineaIndex((prev) => {
-        const next = (prev >= lineas.length ? 0 : prev) + delta;
+        const next = prev + delta;
         if (next < 0) return lineas.length - 1;
         if (next >= lineas.length) return 0;
         return next;
@@ -97,7 +97,7 @@ export function useMonitoreoLineas(): UseMonitoreoLineas {
     etapas,
     isEmpty,
     isLoading: lineaId !== undefined && loadingResumen,
-    lineaIndex: indiceActual,
+    lineaIndex,
     onLineaChange,
   };
 }
