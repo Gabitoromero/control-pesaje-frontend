@@ -20,7 +20,7 @@ export interface HistorialCambioItem {
   despues: Record<string, unknown>;
   /** Name of the etapa/articulo a nested ruta change refers to. */
   contexto?: string;
-  usuario: { id: number; nombreApellido: string; nombreUsuario: string } | null;
+  usuario: { id: number; nombreApellido: string; nombreUsuario: string; sector?: string | null } | null;
 }
 
 /** Current human name of referenced ids: { field: { id: label } }. */

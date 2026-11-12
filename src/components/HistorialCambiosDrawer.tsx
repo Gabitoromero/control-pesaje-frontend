@@ -8,6 +8,7 @@ import {
   type HistorialReferencias,
   type HistorialRaizTipo,
 } from '../api/historial-cambios';
+import { getSectorColor, getSectorLabel } from '../lib/sectores';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from './ui/sheet';
 
 const PAGE_SIZE = 20;
@@ -39,7 +40,11 @@ const initials = (name: string) =>
 const UserBadge = ({ usuario }: { usuario: HistorialCambioItem['usuario'] }) => (
   <div className="mt-1.5 flex items-center gap-2">
     <span
-      className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
+      className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+        usuario?.sector ? 'text-white' : 'bg-primary/15 text-primary'
+      }`}
+      style={usuario?.sector ? { backgroundColor: getSectorColor(usuario.sector) } : undefined}
+      title={usuario?.sector ? getSectorLabel(usuario.sector) ?? undefined : undefined}
       aria-hidden
     >
       {usuario ? initials(usuario.nombreApellido) || <User className="size-3.5" /> : <Bot className="size-3.5" />}
@@ -81,7 +86,7 @@ const FIELD_LABEL: Record<string, string> = {
 const formatValue = (value: unknown, field?: string, referencias?: HistorialReferencias): string => {
   if (field && typeof value === 'number' && referencias?.[field]) {
     const label = referencias[field][String(value)];
-    return label ? `${label} (#${value})` : `#${value} (ya no existe)`;
+    return label ?? `#${value} (ya no existe)`;
   }
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Sí' : 'No';
@@ -153,13 +158,11 @@ export const HistorialCambiosDrawer = ({ raizTipo, raizId, title, open, onOpenCh
         <ol className="space-y-4">
           {data?.items.map((item) => (
             <li key={item.id} className="rounded-md border border-border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="font-medium text-foreground">
-                  {ACCION_LABEL[item.accion]} · {ENTIDAD_LABEL[item.entidad] ?? item.entidad}
-                </span>
-                <span className="text-muted-foreground">{formatFecha(item.fecha)}</span>
-              </div>
-              {item.contexto && <p className="mt-1 text-sm font-semibold text-foreground">{item.contexto}</p>}
+              <p className="text-sm font-medium text-foreground">
+                {ACCION_LABEL[item.accion]} · {ENTIDAD_LABEL[item.entidad] ?? item.entidad}
+              </p>
+              {item.contexto && <p className="text-sm font-semibold text-foreground">{item.contexto}</p>}
+              <p className="text-xs text-muted-foreground">{formatFecha(item.fecha)}</p>
               <UserBadge usuario={item.usuario} />
               <ChangeDetail item={item} referencias={data.referencias} />
             </li>

@@ -52,10 +52,10 @@ describe('HistorialCambiosDrawer', () => {
       referencias: { articulo: { '29': 'A29 - Cono' }, rutaPasada: { '3': 'Ruta Calibracion' } },
       total: 2, page: 1, pageSize: 20,
     });
-    renderWithProviders(<HistorialCambiosDrawer raizTipo="ruta" raizId={3} title="Ruta Calibracion" open onOpenChange={() => {}} />);
+    renderWithProviders(<HistorialCambiosDrawer raizTipo="ruta" raizId={3} title="Ruta (título)" open onOpenChange={() => {}} />);
 
-    expect(await screen.findByText('A29 - Cono (#29)')).toBeInTheDocument();
-    expect(screen.getAllByText('Ruta Calibracion (#3)')).toHaveLength(2);
+    expect(await screen.findByText('A29 - Cono')).toBeInTheDocument();
+    expect(screen.getAllByText('Ruta Calibracion')).toHaveLength(2);
     expect(screen.getByText('#6 (ya no existe)')).toBeInTheDocument();
   });
 
@@ -78,6 +78,17 @@ describe('HistorialCambiosDrawer', () => {
 
     expect(await screen.findByText('11 cambios')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument();
+  });
+
+  it('colors the user avatar with the sector color when the user has a sector', async () => {
+    vi.mocked(api.getHistorialCambios).mockResolvedValue({
+      items: [item({ usuario: { id: 2, nombreApellido: 'Ana Pérez', nombreUsuario: 'ana', sector: 'OF' } })],
+      total: 1, page: 1, pageSize: 20,
+    });
+    renderWithProviders(<HistorialCambiosDrawer raizTipo="articulo" raizId={5} title="Harina" open onOpenChange={() => {}} />);
+
+    const avatar = (await screen.findByText('AP')).closest('span') as HTMLElement;
+    expect(avatar.style.backgroundColor).not.toBe('');
   });
 
   it('does not fetch while closed', () => {
