@@ -270,6 +270,61 @@ describe('GestionPasadasPage', () => {
     expect(await screen.findByText('La balanza seleccionada no está activa')).toBeInTheDocument();
   });
 
+  // ── Balanza verification ──────────────────────────────────────────────────
+
+  it('cuando el backend rechaza por "Balanza sin verificar" muestra la causa y el atajo a la ruta de verificación', async () => {
+    const mensaje =
+      'Balanza sin verificar: cambió el artículo respecto del último producido en esta balanza. Solo se puede iniciar la ruta de verificación con pesas patrón.';
+    vi.mocked(iniciarPasada).mockRejectedValueOnce({ response: { data: { error: { message: mensaje } } } });
+    vi.mocked(iniciarPasada).mockResolvedValueOnce({ id: 300 } as Pasada);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
+
+    const aviso = await screen.findByTestId('balanza-sin-verificar');
+    expect(within(aviso).getByText('Balanza sin verificar')).toBeInTheDocument();
+    expect(within(aviso).getByText(mensaje)).toBeInTheDocument();
+    // The normal start is blocked while the balanza is unverified
+    expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('button', { name: /ir a la ruta de verificación/i }));
+
+    expect(iniciarPasada).toHaveBeenLastCalledWith({ lineaProduccionId: 1, idBalanza: 1, verificacion: true });
+    expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=300');
+  });
+
+  it('muestra el aviso desde que se elige una balanza con verificación pendiente, sin intentar iniciar', async () => {
+    vi.mocked(getBalanzas).mockResolvedValue([
+      { id: 1, nombre: 'Balanza 1', activo: true, verificacionPendiente: true },
+      { id: 2, nombre: 'Balanza 2', activo: true, verificacionPendiente: false },
+    ]);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByTestId('balanza-sin-verificar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).toBeDisabled();
+
+    // Switching to a verified balanza removes the notice and re-enables the normal start
+    await userEvent.click(screen.getByText('Balanza 2'));
+    expect(screen.queryByTestId('balanza-sin-verificar')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).not.toBeDisabled();
+    expect(iniciarPasada).not.toHaveBeenCalled();
+  });
+
+  it('no muestra el aviso ni la clave verificacion cuando la balanza está verificada', async () => {
+    vi.mocked(iniciarPasada).mockResolvedValue({ id: 301 } as Pasada);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    expect(screen.queryByTestId('balanza-sin-verificar')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
+    expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
+  });
+
   it('muestra el empty state cuando getBalanzas retorna vacío y bloquea la confirmación', async () => {
     vi.mocked(getBalanzas).mockResolvedValue([]);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
