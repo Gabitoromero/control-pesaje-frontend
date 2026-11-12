@@ -39,7 +39,7 @@ describe('ArticulosPage history', () => {
     const row = screen.getByText('Harina 000').closest('tr') as HTMLElement;
     await userEvent.click(within(row).getByRole('button', { name: 'Ver historial de cambios' }));
 
-    expect(await screen.findByText('José Jefe (jefe1)')).toBeInTheDocument();
+    expect(await screen.findByText('José Jefe')).toBeInTheDocument();
     expect(requestedUrl?.searchParams.get('raizTipo')).toBe('articulo');
     expect(requestedUrl?.searchParams.get('raizId')).toBe('1');
   });

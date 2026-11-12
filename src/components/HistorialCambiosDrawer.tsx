@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Bot, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   getHistorialCambios,
@@ -26,6 +27,27 @@ const ENTIDAD_LABEL: Record<string, string> = {
   ruta_etapa: 'Etapa de la ruta',
   ruta_articulo: 'Artículo asignado',
 };
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
+
+const UserBadge = ({ usuario }: { usuario: HistorialCambioItem['usuario'] }) => (
+  <div className="mt-1.5 flex items-center gap-2">
+    <span
+      className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
+      aria-hidden
+    >
+      {usuario ? initials(usuario.nombreApellido) || <User className="size-3.5" /> : <Bot className="size-3.5" />}
+    </span>
+    <span className="text-sm text-foreground">{usuario ? usuario.nombreApellido : 'Sistema'}</span>
+    {usuario && <span className="text-xs text-muted-foreground">@{usuario.nombreUsuario}</span>}
+  </div>
+);
 
 const formatFecha = (iso: string) => {
   const d = new Date(iso);
@@ -137,35 +159,39 @@ export const HistorialCambiosDrawer = ({ raizTipo, raizId, title, open, onOpenCh
                 </span>
                 <span className="text-muted-foreground">{formatFecha(item.fecha)}</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {item.usuario ? `${item.usuario.nombreApellido} (${item.usuario.nombreUsuario})` : 'Sistema'}
-              </p>
+              {item.contexto && <p className="mt-1 text-sm font-semibold text-foreground">{item.contexto}</p>}
+              <UserBadge usuario={item.usuario} />
               <ChangeDetail item={item} referencias={data.referencias} />
             </li>
           ))}
         </ol>
 
-        {data && data.total > data.pageSize && (
-          <div className="mt-auto flex items-center justify-between pt-2 text-sm">
-            <button
-              type="button"
-              className="rounded border border-border px-3 py-1 disabled:opacity-50"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Anterior
-            </button>
+        {data && data.total > 0 && (
+          <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-sm">
             <span className="text-muted-foreground">
-              Página {page} de {totalPages}
+              {data.total} {data.total === 1 ? 'cambio' : 'cambios'}
+              {totalPages > 1 && ` · Página ${page} de ${totalPages}`}
             </span>
-            <button
-              type="button"
-              className="rounded border border-border px-3 py-1 disabled:opacity-50"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Siguiente
-            </button>
+            {totalPages > 1 && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-border px-3 py-1 disabled:opacity-50"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-border px-3 py-1 disabled:opacity-50"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
         )}
       </SheetContent>

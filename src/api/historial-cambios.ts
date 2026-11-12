@@ -18,6 +18,8 @@ export interface HistorialCambioItem {
   fecha: string;
   antes: Record<string, unknown>;
   despues: Record<string, unknown>;
+  /** Name of the etapa/articulo a nested ruta change refers to. */
+  contexto?: string;
   usuario: { id: number; nombreApellido: string; nombreUsuario: string } | null;
 }
 

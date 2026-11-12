@@ -24,7 +24,9 @@ describe('HistorialCambiosDrawer', () => {
     renderWithProviders(<HistorialCambiosDrawer raizTipo="articulo" raizId={5} title="Harina" open onOpenChange={() => {}} />);
 
     expect(await screen.findByText(/Edición/)).toBeInTheDocument();
-    expect(screen.getByText('Ana Pérez (ana)')).toBeInTheDocument();
+    expect(screen.getByText('Ana Pérez')).toBeInTheDocument();
+    expect(screen.getByText('@ana')).toBeInTheDocument();
+    expect(screen.getByText('AP')).toBeInTheDocument();
     expect(screen.getByText('Viejo')).toBeInTheDocument();
     expect(screen.getByText('Nuevo')).toBeInTheDocument();
     expect(api.getHistorialCambios).toHaveBeenCalledWith({ raizTipo: 'articulo', raizId: 5, page: 1, pageSize: 20 });
@@ -55,6 +57,27 @@ describe('HistorialCambiosDrawer', () => {
     expect(await screen.findByText('A29 - Cono (#29)')).toBeInTheDocument();
     expect(screen.getAllByText('Ruta Calibracion (#3)')).toHaveLength(2);
     expect(screen.getByText('#6 (ya no existe)')).toBeInTheDocument();
+  });
+
+  it('names the etapa of a nested change and shows the total plus pagination only when there are several pages', async () => {
+    vi.mocked(api.getHistorialCambios).mockResolvedValue({
+      items: [item({ entidad: 'ruta_etapa', despues: { toleranciaPct: 7 }, antes: { toleranciaPct: null }, contexto: 'Corte' })],
+      total: 45, page: 1, pageSize: 20,
+    });
+    renderWithProviders(<HistorialCambiosDrawer raizTipo="ruta" raizId={3} title="Ruta 1" open onOpenChange={() => {}} />);
+
+    expect(await screen.findByText('Corte')).toBeInTheDocument();
+    expect(screen.getByText('45 cambios · Página 1 de 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeEnabled();
+  });
+
+  it('shows only the total, without pagination buttons, when everything fits one page', async () => {
+    vi.mocked(api.getHistorialCambios).mockResolvedValue({ items: [item({})], total: 11, page: 1, pageSize: 20 });
+    renderWithProviders(<HistorialCambiosDrawer raizTipo="articulo" raizId={5} title="Harina" open onOpenChange={() => {}} />);
+
+    expect(await screen.findByText('11 cambios')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument();
   });
 
   it('does not fetch while closed', () => {
