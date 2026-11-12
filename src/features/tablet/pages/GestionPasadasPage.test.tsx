@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { User } from '../../../shared/types/auth';
 import { GestionPasadasPage } from './GestionPasadasPage';
 import { vi } from 'vitest';
-import { getPasadas, iniciarPasada } from '../../../api/pasadas';
+import { getPasadas, iniciarPasada, getRutasVerificacion } from '../../../api/pasadas';
 import { getBalanzas } from '../../../api/balanzas';
 import { getLinea, type Linea } from '../../../api/lineas';
 import type { Pasada, Balanza } from '../../../shared/types/domain';
@@ -21,6 +21,7 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../../../api/pasadas', () => ({
   getPasadas: vi.fn(),
   iniciarPasada: vi.fn(),
+  getRutasVerificacion: vi.fn(),
 }));
 
 vi.mock('../../../api/balanzas', () => ({
@@ -79,6 +80,7 @@ describe('GestionPasadasPage', () => {
     navigateMock.mockClear();
     vi.mocked(getPasadas).mockReset();
     vi.mocked(iniciarPasada).mockReset();
+    vi.mocked(getRutasVerificacion).mockReset();
     vi.mocked(getBalanzas).mockReset();
     vi.mocked(getLinea).mockReset();
 
@@ -86,6 +88,10 @@ describe('GestionPasadasPage', () => {
     vi.mocked(getPasadas).mockResolvedValue(mockPasadas as Pasada[]);
     vi.mocked(getBalanzas).mockResolvedValue(mockBalanzas);
     vi.mocked(getLinea).mockResolvedValue(lineaConRuta);
+    vi.mocked(getRutasVerificacion).mockResolvedValue([
+      { id: 457, nombre: 'PP-1 (10GR)' },
+      { id: 464, nombre: 'PP-2 (20GR)' },
+    ]);
   });
 
   // Task 3.7 / 3.9: clicking "Cerrar sesión" with an active line session
@@ -295,8 +301,12 @@ describe('GestionPasadasPage', () => {
     expect(screen.getByRole('button', { name: /^siguiente$/i })).toBeDisabled();
 
     await userEvent.click(screen.getByRole('button', { name: /ir a la ruta de verificación/i }));
+    await userEvent.click(await screen.findByText('PP-2 (20GR)'));
+    await userEvent.click(screen.getByRole('button', { name: /^iniciar verificación$/i }));
 
-    expect(iniciarPasada).toHaveBeenLastCalledWith({ lineaProduccionId: 1, idBalanza: 1, verificacion: true });
+    expect(iniciarPasada).toHaveBeenLastCalledWith({
+      lineaProduccionId: 1, idBalanza: 1, verificacion: true, rutaPasadaId: 464,
+    });
     expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=300');
   });
 
@@ -716,6 +726,63 @@ describe('GestionPasadasPage', () => {
 
       await abrirModal();
       expect(screen.getByText(/paso 1 de 2/i)).toBeInTheDocument();
+    });
+
+    it('al elegir la ruta de verificación lista las rutas, exige elegir una y no pide observación', async () => {
+      vi.mocked(getBalanzas).mockResolvedValue([
+        { id: 1, nombre: 'Balanza 1', activo: true, verificacionPendiente: true },
+      ]);
+      vi.mocked(iniciarPasada).mockResolvedValue({ id: 500 } as Pasada);
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      await userEvent.click(await screen.findByRole('button', { name: /ir a la ruta de verificación/i }));
+
+      expect(await screen.findByText(/paso 2 de 2/i)).toBeInTheDocument();
+      expect(screen.getByText('PP-1 (10GR)')).toBeInTheDocument();
+      expect(screen.getByText('PP-2 (20GR)')).toBeInTheDocument();
+      expect(screen.queryByLabelText(/observación de la pasada/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('Balanza 1')).not.toBeInTheDocument();
+      const iniciar = screen.getByRole('button', { name: /^iniciar verificación$/i });
+      expect(iniciar).toBeDisabled();
+
+      await userEvent.click(screen.getByText('PP-1 (10GR)'));
+      expect(iniciar).not.toBeDisabled();
+      await userEvent.click(iniciar);
+
+      expect(iniciarPasada).toHaveBeenCalledWith({
+        lineaProduccionId: 1, idBalanza: 1, verificacion: true, rutaPasadaId: 457,
+      });
+      expect(navigateMock).toHaveBeenCalledWith('/tablet?pasadaId=500');
+    });
+
+    it('Atrás desde la elección de ruta vuelve a la balanza sin iniciar nada', async () => {
+      vi.mocked(getBalanzas).mockResolvedValue([
+        { id: 1, nombre: 'Balanza 1', activo: true, verificacionPendiente: true },
+      ]);
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+      await userEvent.click(await screen.findByRole('button', { name: /ir a la ruta de verificación/i }));
+      await screen.findByText('PP-1 (10GR)');
+
+      await userEvent.click(screen.getByRole('button', { name: /^atrás$/i }));
+
+      expect(screen.getByText(/paso 1 de 2/i)).toBeInTheDocument();
+      expect(screen.getByText('Balanza 1')).toBeInTheDocument();
+      expect(iniciarPasada).not.toHaveBeenCalled();
+    });
+
+    it('si no hay rutas de verificación lo informa y no permite iniciar', async () => {
+      vi.mocked(getRutasVerificacion).mockResolvedValue([]);
+      vi.mocked(getBalanzas).mockResolvedValue([
+        { id: 1, nombre: 'Balanza 1', activo: true, verificacionPendiente: true },
+      ]);
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+      await userEvent.click(await screen.findByRole('button', { name: /ir a la ruta de verificación/i }));
+
+      expect(await screen.findByText(/no hay rutas de verificación/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^iniciar verificación$/i })).toBeDisabled();
     });
   });
 });

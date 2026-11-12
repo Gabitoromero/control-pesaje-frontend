@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Loader2, X, Check, AlertTriangle, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
-import { getPasadas, iniciarPasada } from '../../../api/pasadas';
+import { getPasadas, iniciarPasada, getRutasVerificacion } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
 import { getBalanzas } from '../../../api/balanzas';
 import type { Pasada, Balanza } from '../../../shared/types/domain';
@@ -20,7 +20,9 @@ export const GestionPasadasPage: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   // Wizard step of the new-pasada modal: 1 = balanza, 2 = observación.
-  const [paso, setPaso] = React.useState<1 | 2>(1);
+  // 'ruta' replaces step 2 when the balanza needs verification: pick which verification route to run.
+  const [paso, setPaso] = React.useState<1 | 2 | 'ruta'>(1);
+  const [selectedRutaVerificacionId, setSelectedRutaVerificacionId] = React.useState<number | null>(null);
   const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
   const [observacionIniciar, setObservacionIniciar] = React.useState('');
   const [sugerenciaObservacionVista, setSugerenciaObservacionVista] = React.useState(false);
@@ -85,6 +87,16 @@ export const GestionPasadasPage: React.FC = () => {
     enabled: isModalOpen,
   });
 
+  const {
+    data: rutasVerificacion = [],
+    isLoading: loadingRutasVerificacion,
+    isError: errorRutasVerificacion,
+  } = useQuery({
+    queryKey: ['rutas-verificacion'],
+    queryFn: getRutasVerificacion,
+    enabled: isModalOpen && paso === 'ruta',
+  });
+
   // Seed the balanza selection from the línea's assigned balanza right when
   // the modal opens, and clear it right when it closes, so the next open
   // re-seeds from the (possibly refetched) línea instead of a stale override.
@@ -97,6 +109,7 @@ export const GestionPasadasPage: React.FC = () => {
     setErrorIniciar(null);
     setBloqueoVerificacion(null);
     setPaso(1);
+    setSelectedRutaVerificacionId(null);
     setIsModalOpen(true);
   };
 
@@ -161,7 +174,10 @@ export const GestionPasadasPage: React.FC = () => {
         lineaProduccionId: activeLineaId,
         idBalanza: selectedBalanzaId,
         ...(observacion && { observacion }),
-        ...(verificacion && { verificacion: true }),
+        ...(verificacion && {
+          verificacion: true,
+          ...(selectedRutaVerificacionId !== null && { rutaPasadaId: selectedRutaVerificacionId }),
+        }),
       });
       setIsModalOpen(false);
       navigate(`/tablet?pasadaId=${newPasada.id}`);
@@ -306,7 +322,7 @@ export const GestionPasadasPage: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Paso {paso} de 2 · {paso === 1 ? 'Balanza' : 'Observación'}
+                  Paso {paso === 1 ? 1 : 2} de 2 · {paso === 1 ? 'Balanza' : paso === 2 ? 'Observación' : 'Ruta de verificación'}
                 </p>
               </div>
               <button
@@ -381,17 +397,54 @@ export const GestionPasadasPage: React.FC = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleIniciarPasada(true)}
-                    disabled={iniciando}
-                    className="flex items-center justify-center gap-2 bg-warning/20 border border-warning text-warning hover:bg-warning/30 disabled:opacity-40 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                    onClick={() => { setSelectedRutaVerificacionId(null); setPaso('ruta'); }}
+                    className="flex items-center justify-center gap-2 bg-warning/20 border border-warning text-warning hover:bg-warning/30 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                   >
-                    {iniciando && <Loader2 size={16} className="animate-spin" />}
                     Ir a la ruta de verificación
                   </button>
                 </div>
               )}
 
               </>
+              )}
+
+              {paso === 'ruta' && (
+                <>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Seleccione la ruta con la que se va a verificar la balanza (pesas patrón):
+                  </p>
+                  {loadingRutasVerificacion ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
+                      <Loader2 className="animate-spin text-primary" size={28} />
+                      <p className="text-xs">Cargando rutas de verificación...</p>
+                    </div>
+                  ) : errorRutasVerificacion ? (
+                    <p className="text-sm text-destructive text-center py-4">Error al cargar las rutas de verificación.</p>
+                  ) : rutasVerificacion.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No hay rutas de verificación disponibles</p>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto pr-1 space-y-2 select-none scrollbar-thin">
+                      {rutasVerificacion.map((ruta) => {
+                        const isSelected = selectedRutaVerificacionId === ruta.id;
+                        return (
+                          <button
+                            key={ruta.id}
+                            type="button"
+                            onClick={() => setSelectedRutaVerificacionId(ruta.id)}
+                            className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
+                              ${isSelected
+                                ? 'bg-primary/25 border-primary text-foreground shadow-md shadow-primary/5'
+                                : 'bg-muted border-border hover:bg-muted/70 text-foreground'
+                              }`}
+                          >
+                            <p className="font-semibold text-sm">{ruta.nombre}</p>
+                            {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
 
               {paso === 2 && (
@@ -459,6 +512,16 @@ export const GestionPasadasPage: React.FC = () => {
                   className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
                 >
                   Siguiente
+                </button>
+              ) : paso === 'ruta' ? (
+                <button
+                  type="button"
+                  onClick={() => handleIniciarPasada(true)}
+                  disabled={selectedRutaVerificacionId === null || iniciando}
+                  className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+                >
+                  {iniciando && <Loader2 size={16} className="animate-spin" />}
+                  Iniciar verificación
                 </button>
               ) : (
                 <button

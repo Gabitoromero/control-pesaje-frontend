@@ -21,10 +21,11 @@ import { LineaParadaButton } from '../components/LineaParadaButton';
 import { useReporteSinPeso } from '../hooks/useReporteSinPeso';
 import { getPasada, completarPasada } from '../../../api/pasadas';
 import { getLinea } from '../../../api/lineas';
+import { getRuta } from '../../../api/rutas';
 import { getArticulo } from '../../../api/articulos';
 import type { Articulo } from '../../../api/articulos';
 import { getMuestras } from '../../../api/muestras';
-import type { Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
+import type { Pasada, Ruta, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { PESO_DECIMALS } from '../../../shared/constants';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { getAvatarInitials } from '../utils/avatarInitials';
@@ -87,7 +88,25 @@ export const TabletWorkspace: React.FC = () => {
     enabled: !!targetLineaId,
   });
 
-  const etapas: RutaPasadaEtapa[] = linea?.rutaPasadaActiva?.etapas ?? [];
+  // The pasada carries its OWN ruta (a verification pasada runs a ruta that is not the línea's active
+  // one). Like `articulo`, GET /pasadas/:id serializes the relation as the raw FK number, or as an
+  // object when populated. Only a pasada without ruta falls back to the línea's active ruta.
+  const rutaRelation = (pasada as (Pasada & { rutaPasada?: number | Ruta | null }) | undefined)?.rutaPasada;
+  const rutaFromPasada = typeof rutaRelation === 'object' ? rutaRelation : undefined;
+  const rutaIdToFetch = typeof rutaRelation === 'number' ? rutaRelation : undefined;
+
+  const { data: rutaFetched } = useQuery({
+    queryKey: ['ruta', rutaIdToFetch],
+    queryFn: () => getRuta(rutaIdToFetch!),
+    enabled: !!rutaIdToFetch,
+  });
+
+  const tieneRutaPropia = rutaRelation !== undefined && rutaRelation !== null;
+  const rutaDeLaPasada: Ruta | null | undefined = tieneRutaPropia
+    ? (rutaFromPasada ?? rutaFetched ?? null) // still loading → no stages (never the línea's)
+    : linea?.rutaPasadaActiva;
+
+  const etapas: RutaPasadaEtapa[] = rutaDeLaPasada?.etapas ?? [];
 
   // The backend's GET /pasadas/:id doesn't eager-load the articulo relation
   // (unlike GET /pasadas, which does) — MikroORM then serializes it as the
@@ -299,7 +318,7 @@ export const TabletWorkspace: React.FC = () => {
               {articulo ? (articulo.nombre ? `${articulo.nombre} - ${articulo.codigo}` : articulo.codigo) : '—'}
             </span>
             <span className="text-sm text-muted-foreground">
-              Ruta: {linea?.rutaPasadaActiva?.nombre ?? '—'}
+              Ruta: {rutaDeLaPasada?.nombre ?? '—'}
               <span className="hidden min-[570px]:inline"> · Pasada #{pasada?.numero ?? '—'}</span>
             </span>
           </div>
