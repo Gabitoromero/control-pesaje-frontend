@@ -23,7 +23,26 @@ export const getPasada = async (id: number): Promise<Pasada> => {
   return response.data.data;
 };
 
-export const iniciarPasada = async (data: { lineaProduccionId: number; idBalanza: number; observacion?: string; verificacion?: boolean }): Promise<Pasada> => {
+export interface RutaVerificacion {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+}
+
+// Active rutas linked to the verification articulo (code 0): the ones a balanza can be verified with.
+export const getRutasVerificacion = async (): Promise<RutaVerificacion[]> => {
+  const response = await api.get<ApiEnvelope<RutaVerificacion[]>>('/pasadas/rutas-verificacion');
+  return response.data.data;
+};
+
+export const iniciarPasada = async (data: {
+  lineaProduccionId: number;
+  idBalanza: number;
+  observacion?: string;
+  verificacion?: boolean;
+  // Which verification route to run; only valid together with `verificacion: true`.
+  rutaPasadaId?: number;
+}): Promise<Pasada> => {
   const response = await api.post<ApiEnvelope<Pasada>>('/pasadas', data);
   return response.data.data;
 };

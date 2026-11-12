@@ -1420,4 +1420,65 @@ describe('TabletWorkspace', () => {
       expect(screen.getByRole('button', { name: 'kg' })).toHaveAttribute('aria-pressed', 'true');
     });
   });
+
+  // ── Route of the pasada vs. active route of the línea ─────────────────────
+
+  const etapaRuta = (nombre: string, id: number) => ({
+    id,
+    etapa: { id, nombre },
+    orden: 1,
+    pesoMinimo: 10,
+    pesoIdeal: 15,
+    pesoMaximo: 20,
+    cantidadMuestrasRequeridas: 1,
+  });
+
+  const pasadaConRuta = (rutaPasada: unknown) =>
+    http.get(`${BASE}/pasadas/101`, () =>
+      HttpResponse.json({
+        success: true,
+        data: {
+          id: 101, lineaProduccionId: 1, usuarioId: 3, estado: 'en_curso', numero: 1,
+          createdAt: '2026-06-23T18:44:38Z', updatedAt: '2026-06-23T18:44:38Z', muestras: [],
+          rutaPasada,
+        },
+      })
+    );
+
+  it('usa el nombre y las etapas de la ruta de la pasada, no los de la ruta activa de la línea', async () => {
+    server.use(
+      pasadaConRuta(457),
+      http.get(`${BASE}/rutas-pasadas/457`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { id: 457, nombre: 'PP-1 (10GR)', activo: true, etapas: [etapaRuta('Control Peso1', 6)] },
+        })
+      )
+    );
+
+    renderWithAuth(<TabletWorkspace />, { user: operarioUser, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
+
+    expect(await screen.findByText(/Ruta: PP-1 \(10GR\)/)).toBeInTheDocument();
+    expect((await screen.findAllByText('Control Peso1')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Amasado')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ruta: Ruta 1/)).not.toBeInTheDocument();
+  });
+
+  it('acepta la ruta de la pasada ya populada como objeto', async () => {
+    server.use(
+      pasadaConRuta({ id: 457, nombre: 'PP-1 (10GR)', activo: true, etapas: [etapaRuta('Control Peso1', 6)] })
+    );
+
+    renderWithAuth(<TabletWorkspace />, { user: operarioUser, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
+
+    expect(await screen.findByText(/Ruta: PP-1 \(10GR\)/)).toBeInTheDocument();
+    expect((await screen.findAllByText('Control Peso1')).length).toBeGreaterThan(0);
+  });
+
+  it('si la pasada no trae ruta usa la ruta activa de la línea (comportamiento previo)', async () => {
+    renderWithAuth(<TabletWorkspace />, { user: operarioUser, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
+
+    expect(await screen.findByText(/Ruta: Ruta 1/)).toBeInTheDocument();
+    expect((await screen.findAllByText('Amasado')).length).toBeGreaterThan(0);
+  });
 });
