@@ -4,6 +4,7 @@ import {
   getHistorialCambios,
   type HistorialAccion,
   type HistorialCambioItem,
+  type HistorialReferencias,
   type HistorialRaizTipo,
 } from '../api/historial-cambios';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from './ui/sheet';
@@ -33,30 +34,56 @@ const formatFecha = (iso: string) => {
   return `${date} ${time}`;
 };
 
-const formatValue = (value: unknown): string => {
+const FIELD_LABEL: Record<string, string> = {
+  id: 'Id',
+  codigo: 'Código',
+  nombre: 'Nombre',
+  descripcion: 'Descripción',
+  activo: 'Activo',
+  articulo: 'Artículo',
+  etapa: 'Etapa',
+  rutaPasada: 'Ruta',
+  rutaPasadaActiva: 'Ruta activa',
+  balanza: 'Balanza',
+  orden: 'Orden',
+  pesoIdeal: 'Peso ideal',
+  pesoMinimo: 'Peso mínimo',
+  pesoMaximo: 'Peso máximo',
+  cantidadMuestrasRequeridas: 'Muestras requeridas',
+  toleranciaPorDefecto: 'Tolerancia por defecto',
+  toleranciaPct: 'Tolerancia (%)',
+  magnitud: 'Magnitud',
+  observacion: 'Observación',
+};
+
+const formatValue = (value: unknown, field?: string, referencias?: HistorialReferencias): string => {
+  if (field && typeof value === 'number' && referencias?.[field]) {
+    const label = referencias[field][String(value)];
+    return label ? `${label} (#${value})` : `#${value} (ya no existe)`;
+  }
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Sí' : 'No';
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 };
 
-const ChangeDetail = ({ item }: { item: HistorialCambioItem }) => {
+const ChangeDetail = ({ item, referencias }: { item: HistorialCambioItem; referencias?: HistorialReferencias }) => {
   const keys = Array.from(new Set([...Object.keys(item.antes), ...Object.keys(item.despues)]));
   if (keys.length === 0) return null;
   return (
     <ul className="mt-2 space-y-1 text-sm">
       {keys.map((key) => (
         <li key={key} className="flex flex-wrap items-baseline gap-x-2">
-          <span className="font-medium text-foreground">{key}:</span>
+          <span className="font-medium text-foreground">{FIELD_LABEL[key] ?? key}:</span>
           {item.accion === 'crear' ? (
-            <span className="text-foreground">{formatValue(item.despues[key])}</span>
+            <span className="text-foreground">{formatValue(item.despues[key], key, referencias)}</span>
           ) : item.accion === 'eliminar' ? (
-            <span className="text-muted-foreground line-through">{formatValue(item.antes[key])}</span>
+            <span className="text-muted-foreground line-through">{formatValue(item.antes[key], key, referencias)}</span>
           ) : (
             <>
-              <span className="text-muted-foreground line-through">{formatValue(item.antes[key])}</span>
+              <span className="text-muted-foreground line-through">{formatValue(item.antes[key], key, referencias)}</span>
               <span aria-hidden>→</span>
-              <span className="text-foreground">{formatValue(item.despues[key])}</span>
+              <span className="text-foreground">{formatValue(item.despues[key], key, referencias)}</span>
             </>
           )}
         </li>
@@ -113,7 +140,7 @@ export const HistorialCambiosDrawer = ({ raizTipo, raizId, title, open, onOpenCh
               <p className="text-xs text-muted-foreground">
                 {item.usuario ? `${item.usuario.nombreApellido} (${item.usuario.nombreUsuario})` : 'Sistema'}
               </p>
-              <ChangeDetail item={item} />
+              <ChangeDetail item={item} referencias={data.referencias} />
             </li>
           ))}
         </ol>

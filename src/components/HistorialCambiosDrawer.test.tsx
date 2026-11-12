@@ -41,6 +41,22 @@ describe('HistorialCambiosDrawer', () => {
     expect(screen.getByText('Sistema')).toBeInTheDocument();
   });
 
+  it('shows the current name of referenced entities instead of bare ids', async () => {
+    vi.mocked(api.getHistorialCambios).mockResolvedValue({
+      items: [
+        item({ entidad: 'ruta_articulo', accion: 'crear', despues: { articulo: 29, rutaPasada: 3 } }),
+        item({ id: 2, entidad: 'ruta_articulo', accion: 'eliminar', antes: { id: 6, articulo: 6, rutaPasada: 3 } }),
+      ],
+      referencias: { articulo: { '29': 'A29 - Cono' }, rutaPasada: { '3': 'Ruta Calibracion' } },
+      total: 2, page: 1, pageSize: 20,
+    });
+    renderWithProviders(<HistorialCambiosDrawer raizTipo="ruta" raizId={3} title="Ruta Calibracion" open onOpenChange={() => {}} />);
+
+    expect(await screen.findByText('A29 - Cono (#29)')).toBeInTheDocument();
+    expect(screen.getAllByText('Ruta Calibracion (#3)')).toHaveLength(2);
+    expect(screen.getByText('#6 (ya no existe)')).toBeInTheDocument();
+  });
+
   it('does not fetch while closed', () => {
     vi.mocked(api.getHistorialCambios).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
     renderWithProviders(<HistorialCambiosDrawer raizTipo="etapa" raizId={1} title="Corte" open={false} onOpenChange={() => {}} />);

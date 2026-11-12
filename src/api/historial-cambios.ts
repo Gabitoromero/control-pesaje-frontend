@@ -21,8 +21,12 @@ export interface HistorialCambioItem {
   usuario: { id: number; nombreApellido: string; nombreUsuario: string } | null;
 }
 
+/** Current human name of referenced ids: { field: { id: label } }. */
+export type HistorialReferencias = Record<string, Record<string, string>>;
+
 export interface HistorialCambiosResponse {
   items: HistorialCambioItem[];
+  referencias?: HistorialReferencias;
   total: number;
   page: number;
   pageSize: number;
