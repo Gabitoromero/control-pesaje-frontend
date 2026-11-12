@@ -37,20 +37,26 @@ const initials = (name: string) =>
     .map((w) => w[0]!.toUpperCase())
     .join('');
 
+const UserAvatar = ({ usuario }: { usuario: HistorialCambioItem['usuario'] }) => (
+  <span
+    className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+      usuario?.sector ? 'text-white' : 'bg-primary/15 text-primary'
+    }`}
+    style={usuario?.sector ? { backgroundColor: getSectorColor(usuario.sector) } : undefined}
+    title={usuario?.sector ? getSectorLabel(usuario.sector) ?? undefined : undefined}
+    aria-hidden
+  >
+    {usuario ? initials(usuario.nombreApellido) || <User className="size-4" /> : <Bot className="size-4" />}
+  </span>
+);
+
 const UserBadge = ({ usuario }: { usuario: HistorialCambioItem['usuario'] }) => (
-  <div className="mt-1.5 flex items-center gap-2">
-    <span
-      className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
-        usuario?.sector ? 'text-white' : 'bg-primary/15 text-primary'
-      }`}
-      style={usuario?.sector ? { backgroundColor: getSectorColor(usuario.sector) } : undefined}
-      title={usuario?.sector ? getSectorLabel(usuario.sector) ?? undefined : undefined}
-      aria-hidden
-    >
-      {usuario ? initials(usuario.nombreApellido) || <User className="size-3.5" /> : <Bot className="size-3.5" />}
-    </span>
-    <span className="text-sm text-foreground">{usuario ? usuario.nombreApellido : 'Sistema'}</span>
-    {usuario && <span className="text-xs text-muted-foreground">@{usuario.nombreUsuario}</span>}
+  <div className="flex shrink-0 items-center gap-2">
+    <div className="text-right leading-tight">
+      <p className="text-sm text-foreground">{usuario ? usuario.nombreApellido : 'Sistema'}</p>
+      {usuario && <p className="text-xs text-muted-foreground">@{usuario.nombreUsuario}</p>}
+    </div>
+    <UserAvatar usuario={usuario} />
   </div>
 );
 
@@ -158,12 +164,16 @@ export const HistorialCambiosDrawer = ({ raizTipo, raizId, title, open, onOpenCh
         <ol className="space-y-4">
           {data?.items.map((item) => (
             <li key={item.id} className="rounded-md border border-border p-3">
-              <p className="text-sm font-medium text-foreground">
-                {ACCION_LABEL[item.accion]} · {ENTIDAD_LABEL[item.entidad] ?? item.entidad}
-              </p>
-              {item.contexto && <p className="text-sm font-semibold text-foreground">{item.contexto}</p>}
-              <p className="text-xs text-muted-foreground">{formatFecha(item.fecha)}</p>
-              <UserBadge usuario={item.usuario} />
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {ACCION_LABEL[item.accion]} · {ENTIDAD_LABEL[item.entidad] ?? item.entidad}
+                  </p>
+                  {item.contexto && <p className="text-sm font-semibold text-foreground">{item.contexto}</p>}
+                  <p className="text-xs text-muted-foreground">{formatFecha(item.fecha)}</p>
+                </div>
+                <UserBadge usuario={item.usuario} />
+              </div>
               <ChangeDetail item={item} referencias={data.referencias} />
             </li>
           ))}
