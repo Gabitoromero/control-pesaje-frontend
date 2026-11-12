@@ -114,3 +114,49 @@ describe('SistemaPage sector copy', () => {
     expect(text).toMatch(/filtrar la lista por sector/);
   });
 });
+
+describe('SistemaPage balanza verification copy', () => {
+  it('documents the verification in the Operario manual: when it applies and how to do it', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/9\. Verificación de balanza/);
+    expect(text).toMatch(/Balanza sin verificar/);
+    expect(text).toMatch(/la balanza no tiene historial de producción/);
+    expect(text).toMatch(/cambió el artículo respecto del último producido/);
+    expect(text).toMatch(/Ir a la ruta de verificación/);
+    expect(text).toMatch(/Iniciar verificación/);
+    expect(text).toMatch(/pesas patrón/);
+  });
+
+  it('states that it applies from any line, to free samples, cannot be skipped and that an aborted one does not count', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/desde cualquier línea/);
+    expect(text).toMatch(/Muestras libres también/);
+    expect(text).toMatch(/Nadie puede saltear el bloqueo, tampoco Jefe ni Administrador/);
+    expect(text).toMatch(/una verificación abortada no cuenta/);
+  });
+
+  it('explains how to recognise verification pasadas in Gestión de Pasadas', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/color amarillo y la etiqueta "Verificación"/);
+  });
+
+  it('describes the new pasada modal as two steps and points to the verification section', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/en dos pasos/);
+    expect(text).toMatch(/balanza asignada a la línea aparece primera/);
+    expect(text).toMatch(/ver la sección 9/);
+    expect(text).not.toMatch(/solo se piden dos\s+datos/);
+  });
+
+  it('suggests filtering the Reporte de Pasadas by CALIBRACION BALANZAS to review verification pasadas', () => {
+    const text = renderText();
+
+    expect(text).toMatch(/Para revisar las pasadas de verificación/);
+    expect(text).toMatch(/CALIBRACION BALANZAS/);
+    expect(text).toMatch(/código 0/);
+  });
+});
