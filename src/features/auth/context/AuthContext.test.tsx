@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { render, screen, act, renderHook, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -39,9 +39,12 @@ function LocationProbe() {
   return <div data-testid="loc">{loc.pathname}</div>;
 }
 
-let latestCtx: ReturnType<typeof useAuth> | undefined;
+const latest: { ctx?: ReturnType<typeof useAuth> } = {};
 function Consumer() {
-  latestCtx = useAuth();
+  const ctx = useAuth();
+  useEffect(() => {
+    latest.ctx = ctx;
+  });
   return null;
 }
 
@@ -213,13 +216,13 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('loc').textContent).toBe('/somewhere');
 
     act(() => {
-      latestCtx?.login({
+      latest.ctx?.login({
         token: 'jwt-123',
         user: { id: 1, legajo: 'L1', nombreUsuario: 'UserA', rol: 'operario', puedeTomarMuestrasLibres: true },
       });
     });
     act(() => {
-      latestCtx?.logout();
+      latest.ctx?.logout();
     });
 
     expect(screen.getByTestId('loc').textContent).toBe('/login');

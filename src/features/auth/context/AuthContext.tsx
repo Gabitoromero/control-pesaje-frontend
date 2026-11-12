@@ -33,7 +33,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 type SpaNavigate = (to: string, opts?: { replace?: boolean }) => void;
 let spaNavigate: SpaNavigate | null = null;
 
-export function setSpaNavigate(fn: SpaNavigate | null): void {
+function setSpaNavigate(fn: SpaNavigate | null): void {
   spaNavigate = fn;
 }
 

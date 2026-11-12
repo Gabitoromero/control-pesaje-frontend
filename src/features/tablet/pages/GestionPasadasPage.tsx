@@ -19,11 +19,15 @@ export const GestionPasadasPage: React.FC = () => {
   const { user, activeLineaId } = useAuth();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  // Wizard step of the new-pasada modal: 1 = balanza, 2 = observación.
+  const [paso, setPaso] = React.useState<1 | 2>(1);
   const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
   const [observacionIniciar, setObservacionIniciar] = React.useState('');
   const [sugerenciaObservacionVista, setSugerenciaObservacionVista] = React.useState(false);
   const [iniciando, setIniciando] = React.useState(false);
   const [errorIniciar, setErrorIniciar] = React.useState<string | null>(null);
+  // Backend message when the balanza must be verified first ("Balanza sin verificar: ...")
+  const [bloqueoVerificacion, setBloqueoVerificacion] = React.useState<string | null>(null);
 
   // Task 3.9: guard against accidental tab close / page reload while a line
   // session is active. When activeLineaId is set the browser will prompt the
@@ -91,6 +95,8 @@ export const GestionPasadasPage: React.FC = () => {
     setObservacionIniciar('');
     setSugerenciaObservacionVista(false);
     setErrorIniciar(null);
+    setBloqueoVerificacion(null);
+    setPaso(1);
     setIsModalOpen(true);
   };
 
@@ -98,7 +104,19 @@ export const GestionPasadasPage: React.FC = () => {
     setIsModalOpen(false);
     setSelectedBalanzaId(null);
     setObservacionIniciar('');
+    setBloqueoVerificacion(null);
   };
+
+  const handleSeleccionarBalanza = (id: number | null) => {
+    setSelectedBalanzaId(id);
+    setBloqueoVerificacion(null);
+    setErrorIniciar(null);
+  };
+
+  // The balanza must be verified (standard weights) before any other pasada: either the
+  // backend already flagged it, or the last start attempt was rejected for that reason.
+  const balanzaSeleccionada = balanzas.find((b) => b.id === selectedBalanzaId);
+  const requiereVerificacion = bloqueoVerificacion !== null || balanzaSeleccionada?.verificacionPendiente === true;
 
   // Proposes copying the línea's own observación into the new pasada's
   // observación — the línea's is never exported in the Excel report, so
@@ -132,7 +150,8 @@ export const GestionPasadasPage: React.FC = () => {
 
   // Task 2.3 / 4.2: Iniciar nueva pasada — the articulo is frozen server-side
   // from the línea's assignment; only the balanza is selected here.
-  const handleIniciarPasada = async () => {
+  // `verificacion` starts the verification route (standard weights) from this line.
+  const handleIniciarPasada = async (verificacion = false) => {
     if (!activeLineaId || !selectedBalanzaId) return;
     try {
       setIniciando(true);
@@ -142,13 +161,21 @@ export const GestionPasadasPage: React.FC = () => {
         lineaProduccionId: activeLineaId,
         idBalanza: selectedBalanzaId,
         ...(observacion && { observacion }),
+        ...(verificacion && { verificacion: true }),
       });
       setIsModalOpen(false);
       navigate(`/tablet?pasadaId=${newPasada.id}`);
     } catch (err: unknown) {
       console.error('Error starting pasada:', err);
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
-      setErrorIniciar(axiosErr.response?.data?.error?.message || axiosErr.message || 'Error al iniciar la pasada');
+      const mensaje = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error al iniciar la pasada';
+      if (mensaje.startsWith('Balanza sin verificar')) {
+        setBloqueoVerificacion(mensaje);
+        // The notice lives in step 1: take the operator back to where it is explained.
+        setPaso(1);
+      } else {
+        setErrorIniciar(mensaje);
+      }
     } finally {
       setIniciando(false);
     }
@@ -276,7 +303,12 @@ export const GestionPasadasPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-border rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
             <div className="flex justify-between items-center p-5 border-b border-border">
-              <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Paso {paso} de 2 · {paso === 1 ? 'Balanza' : 'Observación'}
+                </p>
+              </div>
               <button
                 onClick={handleCloseModal}
                 aria-label="Cerrar modal"
@@ -293,6 +325,8 @@ export const GestionPasadasPage: React.FC = () => {
                 </div>
               )}
 
+              {paso === 1 && (
+              <>
               <p className="text-muted-foreground text-sm mb-4">Seleccione la balanza a utilizar en esta pasada:</p>
 
               {loadingBalanzas ? (
@@ -311,7 +345,7 @@ export const GestionPasadasPage: React.FC = () => {
                     return (
                       <button
                         key={balanza.id}
-                        onClick={() => setSelectedBalanzaId(balanza.id ?? null)}
+                        onClick={() => handleSeleccionarBalanza(balanza.id ?? null)}
                         className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between
                           ${isSelected
                             ? 'bg-primary/25 border-primary text-foreground shadow-md shadow-primary/5'
@@ -330,6 +364,38 @@ export const GestionPasadasPage: React.FC = () => {
                 </div>
               )}
 
+              {requiereVerificacion && (
+                <div
+                  data-testid="balanza-sin-verificar"
+                  className="mt-4 flex flex-col gap-3 bg-warning/10 border border-warning/50 rounded-xl p-3.5"
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={18} className="text-warning mt-0.5 shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-semibold text-warning">Balanza sin verificar</p>
+                      <p className="text-warning/80 mt-1">
+                        {bloqueoVerificacion ??
+                          'La balanza tiene la verificación pendiente (cambio de artículo o balanza sin historial). Solo se puede iniciar la ruta de verificación con pesas patrón.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleIniciarPasada(true)}
+                    disabled={iniciando}
+                    className="flex items-center justify-center gap-2 bg-warning/20 border border-warning text-warning hover:bg-warning/30 disabled:opacity-40 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    {iniciando && <Loader2 size={16} className="animate-spin" />}
+                    Ir a la ruta de verificación
+                  </button>
+                </div>
+              )}
+
+              </>
+              )}
+
+              {paso === 2 && (
+              <>
               {linea?.observacion && !sugerenciaObservacionVista && (
                 <div className="mt-4 flex flex-col gap-3 bg-primary/5 border border-primary/30 rounded-xl p-3">
                   <div className="text-sm text-foreground">
@@ -372,26 +438,39 @@ export const GestionPasadasPage: React.FC = () => {
                   onChange={(e) => setObservacionIniciar(e.target.value)}
                 />
               </div>
+              </>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 p-5 border-t border-border">
               <button
                 type="button"
-                onClick={handleCloseModal}
+                onClick={paso === 1 ? handleCloseModal : () => setPaso(1)}
                 className="px-4.5 py-2.5 bg-muted hover:bg-muted/70 text-foreground rounded-xl text-sm font-semibold transition-colors"
                 disabled={iniciando}
               >
-                Cancelar
+                {paso === 1 ? 'Cancelar' : 'Atrás'}
               </button>
-              <button
-                type="button"
-                onClick={handleIniciarPasada}
-                disabled={!selectedBalanzaId || balanzas.length === 0 || iniciando}
-                className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-              >
-                {iniciando && <Loader2 size={16} className="animate-spin" />}
-                Iniciar Pasada
-              </button>
+              {paso === 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setPaso(2)}
+                  disabled={!selectedBalanzaId || balanzas.length === 0 || requiereVerificacion}
+                  className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+                >
+                  Siguiente
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleIniciarPasada()}
+                  disabled={!selectedBalanzaId || iniciando || requiereVerificacion}
+                  className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+                >
+                  {iniciando && <Loader2 size={16} className="animate-spin" />}
+                  Iniciar Pasada
+                </button>
+              )}
             </div>
           </div>
         </div>

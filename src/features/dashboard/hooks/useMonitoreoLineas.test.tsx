@@ -8,6 +8,9 @@ import {
   getDashboardResumen,
   getDashboardKpis,
   getDashboardEtapas,
+  type DashboardKpi,
+  type DashboardLineaItem,
+  type DashboardLineaResumen,
 } from '../../../api/dashboard';
 
 vi.mock('../../../api/dashboard', () => ({
@@ -27,8 +30,8 @@ const kpisVacios = { muestrasTotales: 0, fueraRango: 0, pasadasFinalizadas: 0, p
 
 describe('useMonitoreoLineas', () => {
   beforeEach(() => {
-    vi.mocked(getDashboardResumen).mockResolvedValue(resumenEsperando as any);
-    vi.mocked(getDashboardKpis).mockResolvedValue(kpisVacios as any);
+    vi.mocked(getDashboardResumen).mockResolvedValue(resumenEsperando as unknown as DashboardLineaResumen);
+    vi.mocked(getDashboardKpis).mockResolvedValue(kpisVacios as unknown as DashboardKpi);
     vi.mocked(getDashboardEtapas).mockResolvedValue([]);
   });
 
@@ -41,7 +44,7 @@ describe('useMonitoreoLineas', () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' } },
       { id: 2, nombre: 'Linea 2', activo: true },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -53,7 +56,7 @@ describe('useMonitoreoLineas', () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true },
       { id: 2, nombre: 'Linea 2', activo: true },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -69,7 +72,7 @@ describe('useMonitoreoLineas', () => {
         rutaPasadaActiva: { id: 10, nombre: 'Ruta A' },
         dispositivo: null,
       },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -81,7 +84,7 @@ describe('useMonitoreoLineas', () => {
   it('does not break when resumen payload is "esperando" (pasadaEnCurso: null)', async () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' } },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -95,7 +98,7 @@ describe('useMonitoreoLineas', () => {
     vi.mocked(getDashboardLineas).mockResolvedValue([
       { id: 1, nombre: 'Linea 1', activo: true, rutaPasadaActiva: { id: 10, nombre: 'Ruta A' } },
       { id: 2, nombre: 'Linea 2', activo: true, rutaPasadaActiva: { id: 20, nombre: 'Ruta B' } },
-    ] as any);
+    ] as unknown as DashboardLineaItem[]);
 
     const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
 
@@ -111,5 +114,37 @@ describe('useMonitoreoLineas', () => {
     });
 
     expect(result.current.lineaIndex).toBe(1);
+  });
+
+  it('goes back to the first línea when the list shrinks and grows again', async () => {
+    vi.useFakeTimers();
+    const mk = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: i + 1,
+        nombre: `Linea ${i + 1}`,
+        activo: true,
+        rutaPasadaActiva: { id: 10 + i, nombre: `Ruta ${i + 1}` },
+      })) as unknown as DashboardLineaItem[];
+    vi.mocked(getDashboardLineas).mockResolvedValue(mk(3));
+
+    const { result } = renderHook(() => useMonitoreoLineas(), { wrapper });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120000);
+    });
+    expect(result.current.lineaIndex).toBe(2);
+
+    vi.mocked(getDashboardLineas).mockResolvedValue(mk(1));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30100);
+    });
+    expect(result.current.lineas).toHaveLength(1);
+    expect(result.current.lineaIndex).toBe(0);
+
+    vi.mocked(getDashboardLineas).mockResolvedValue(mk(3));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30100);
+    });
+    expect(result.current.lineas).toHaveLength(3);
+    expect(result.current.lineaIndex).toBe(0);
   });
 });

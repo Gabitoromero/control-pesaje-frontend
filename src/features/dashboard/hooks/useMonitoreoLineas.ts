@@ -39,11 +39,11 @@ export function useMonitoreoLineas(): UseMonitoreoLineas {
 
   const isEmpty = lineas.length === 0;
 
-  useEffect(() => {
-    if (lineaIndex >= lineas.length) {
-      setLineaIndex(0);
-    }
-  }, [lineas.length, lineaIndex]);
+  // When the list shrinks past the stored index, go back to the first línea. Resetting the
+  // state itself (not just reading 0) keeps the view from jumping if the list grows again.
+  if (lineaIndex !== 0 && lineaIndex >= lineas.length) {
+    setLineaIndex(0);
+  }
 
   useEffect(() => {
     if (lineas.length <= 1) return;
