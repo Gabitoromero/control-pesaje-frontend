@@ -19,6 +19,8 @@ export const GestionPasadasPage: React.FC = () => {
   const { user, activeLineaId } = useAuth();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  // Wizard step of the new-pasada modal: 1 = balanza, 2 = observación.
+  const [paso, setPaso] = React.useState<1 | 2>(1);
   const [selectedBalanzaId, setSelectedBalanzaId] = React.useState<number | null>(null);
   const [observacionIniciar, setObservacionIniciar] = React.useState('');
   const [sugerenciaObservacionVista, setSugerenciaObservacionVista] = React.useState(false);
@@ -94,6 +96,7 @@ export const GestionPasadasPage: React.FC = () => {
     setSugerenciaObservacionVista(false);
     setErrorIniciar(null);
     setBloqueoVerificacion(null);
+    setPaso(1);
     setIsModalOpen(true);
   };
 
@@ -168,6 +171,8 @@ export const GestionPasadasPage: React.FC = () => {
       const mensaje = axiosErr.response?.data?.error?.message || axiosErr.message || 'Error al iniciar la pasada';
       if (mensaje.startsWith('Balanza sin verificar')) {
         setBloqueoVerificacion(mensaje);
+        // The notice lives in step 1: take the operator back to where it is explained.
+        setPaso(1);
       } else {
         setErrorIniciar(mensaje);
       }
@@ -298,7 +303,12 @@ export const GestionPasadasPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-card border border-border rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in">
             <div className="flex justify-between items-center p-5 border-b border-border">
-              <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Iniciar Nueva Pasada</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Paso {paso} de 2 · {paso === 1 ? 'Balanza' : 'Observación'}
+                </p>
+              </div>
               <button
                 onClick={handleCloseModal}
                 aria-label="Cerrar modal"
@@ -315,6 +325,8 @@ export const GestionPasadasPage: React.FC = () => {
                 </div>
               )}
 
+              {paso === 1 && (
+              <>
               <p className="text-muted-foreground text-sm mb-4">Seleccione la balanza a utilizar en esta pasada:</p>
 
               {loadingBalanzas ? (
@@ -379,6 +391,11 @@ export const GestionPasadasPage: React.FC = () => {
                 </div>
               )}
 
+              </>
+              )}
+
+              {paso === 2 && (
+              <>
               {linea?.observacion && !sugerenciaObservacionVista && (
                 <div className="mt-4 flex flex-col gap-3 bg-primary/5 border border-primary/30 rounded-xl p-3">
                   <div className="text-sm text-foreground">
@@ -421,26 +438,39 @@ export const GestionPasadasPage: React.FC = () => {
                   onChange={(e) => setObservacionIniciar(e.target.value)}
                 />
               </div>
+              </>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 p-5 border-t border-border">
               <button
                 type="button"
-                onClick={handleCloseModal}
+                onClick={paso === 1 ? handleCloseModal : () => setPaso(1)}
                 className="px-4.5 py-2.5 bg-muted hover:bg-muted/70 text-foreground rounded-xl text-sm font-semibold transition-colors"
                 disabled={iniciando}
               >
-                Cancelar
+                {paso === 1 ? 'Cancelar' : 'Atrás'}
               </button>
-              <button
-                type="button"
-                onClick={() => handleIniciarPasada()}
-                disabled={!selectedBalanzaId || balanzas.length === 0 || iniciando || requiereVerificacion}
-                className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-              >
-                {iniciando && <Loader2 size={16} className="animate-spin" />}
-                Iniciar Pasada
-              </button>
+              {paso === 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setPaso(2)}
+                  disabled={!selectedBalanzaId || balanzas.length === 0 || requiereVerificacion}
+                  className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+                >
+                  Siguiente
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleIniciarPasada()}
+                  disabled={!selectedBalanzaId || iniciando || requiereVerificacion}
+                  className="flex items-center gap-2 bg-primary hover:opacity-90 disabled:opacity-40 text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+                >
+                  {iniciando && <Loader2 size={16} className="animate-spin" />}
+                  Iniciar Pasada
+                </button>
+              )}
             </div>
           </div>
         </div>

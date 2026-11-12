@@ -212,8 +212,10 @@ describe('GestionPasadasPage', () => {
     expect(screen.getByText('Balanza 1')).toBeInTheDocument();
     expect(screen.getByText('Balanza 2')).toBeInTheDocument();
 
-    // The línea's assigned balanza (id 1 → "Balanza 1") is preselected — the
-    // confirm button is enabled without any interaction with the list.
+    // The línea's assigned balanza (id 1 → "Balanza 1") is preselected — "Siguiente"
+    // is enabled without any interaction with the list.
+    expect(screen.getByRole('button', { name: /^siguiente$/i })).not.toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
     expect(btnIniciar).not.toBeDisabled();
 
@@ -235,6 +237,7 @@ describe('GestionPasadasPage', () => {
 
     // Override: pick "Balanza 2" instead of the default "Balanza 1"
     await userEvent.click(screen.getByText('Balanza 2'));
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
 
     const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
     await userEvent.click(btnIniciar);
@@ -264,6 +267,7 @@ describe('GestionPasadasPage', () => {
     await userEvent.click(btnNuevaPasada);
 
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
     await userEvent.click(btnIniciar);
 
@@ -281,13 +285,14 @@ describe('GestionPasadasPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
 
     const aviso = await screen.findByTestId('balanza-sin-verificar');
     expect(within(aviso).getByText('Balanza sin verificar')).toBeInTheDocument();
     expect(within(aviso).getByText(mensaje)).toBeInTheDocument();
-    // The normal start is blocked while the balanza is unverified
-    expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).toBeDisabled();
+    // The normal flow is blocked while the balanza is unverified
+    expect(screen.getByRole('button', { name: /^siguiente$/i })).toBeDisabled();
 
     await userEvent.click(screen.getByRole('button', { name: /ir a la ruta de verificación/i }));
 
@@ -304,12 +309,12 @@ describe('GestionPasadasPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
     expect(await screen.findByTestId('balanza-sin-verificar')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^siguiente$/i })).toBeDisabled();
 
-    // Switching to a verified balanza removes the notice and re-enables the normal start
+    // Switching to a verified balanza removes the notice and re-enables the normal flow
     await userEvent.click(screen.getByText('Balanza 2'));
     expect(screen.queryByTestId('balanza-sin-verificar')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /^siguiente$/i })).not.toBeDisabled();
     expect(iniciarPasada).not.toHaveBeenCalled();
   });
 
@@ -321,6 +326,7 @@ describe('GestionPasadasPage', () => {
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
     expect(screen.queryByTestId('balanza-sin-verificar')).not.toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
   });
@@ -335,8 +341,7 @@ describe('GestionPasadasPage', () => {
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
     expect(screen.getByText(/no hay balanzas activas/i)).toBeInTheDocument();
 
-    const btnIniciar = screen.getByRole('button', { name: /iniciar pasada/i });
-    expect(btnIniciar).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^siguiente$/i })).toBeDisabled();
     expect(iniciarPasada).not.toHaveBeenCalled();
   });
 
@@ -358,6 +363,7 @@ describe('GestionPasadasPage', () => {
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
 
     vi.mocked(iniciarPasada).mockResolvedValue({ id: 202 } as Pasada);
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await userEvent.click(screen.getByRole('button', { name: /iniciar pasada/i }));
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
   });
@@ -371,6 +377,7 @@ describe('GestionPasadasPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await userEvent.type(
       screen.getByLabelText(/observación/i),
       'Lote de materia prima nuevo'
@@ -390,6 +397,7 @@ describe('GestionPasadasPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
     expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await userEvent.click(screen.getByRole('button', { name: /iniciar pasada/i }));
 
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 1 });
@@ -400,10 +408,12 @@ describe('GestionPasadasPage', () => {
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
     await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await userEvent.type(screen.getByLabelText(/observación/i), 'texto temporal');
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar modal' }));
 
     await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     expect(screen.getByLabelText(/observación/i)).toHaveValue('');
   });
 
@@ -559,6 +569,7 @@ describe('GestionPasadasPage', () => {
 
       await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
       expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
 
       expect(screen.getByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).toBeInTheDocument();
 
@@ -573,6 +584,7 @@ describe('GestionPasadasPage', () => {
       renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
       await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
       const textarea = await screen.findByLabelText(/observación de la pasada/i);
       await userEvent.type(textarea, 'Lote nuevo');
 
@@ -586,6 +598,7 @@ describe('GestionPasadasPage', () => {
       renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
 
       await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
       expect(await screen.findByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Descartar sugerencia' }));
@@ -601,6 +614,108 @@ describe('GestionPasadasPage', () => {
       expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
 
       expect(screen.queryByText(/¿querés agregarla a la observación de la nueva pasada\?/i)).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Modal por pasos: 1) balanza, 2) observación ───────────────────────────
+
+  describe('modal de nueva pasada por pasos', () => {
+    const abrirModal = async () => {
+      await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+      expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+    };
+
+    it('abre en el paso 1 mostrando solo la balanza, sin observación ni botón Iniciar Pasada', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      expect(screen.getByText(/paso 1 de 2/i)).toBeInTheDocument();
+      expect(screen.getByText('Balanza 1')).toBeInTheDocument();
+      expect(screen.queryByLabelText(/observación de la pasada/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^iniciar pasada$/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^siguiente$/i })).not.toBeDisabled();
+    });
+
+    it('Siguiente pasa al paso 2 (observación) y oculta la lista de balanzas', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+
+      expect(screen.getByText(/paso 2 de 2/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/observación de la pasada/i)).toBeInTheDocument();
+      expect(screen.queryByText('Balanza 2')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^iniciar pasada$/i })).toBeInTheDocument();
+      expect(iniciarPasada).not.toHaveBeenCalled();
+    });
+
+    it('Atrás vuelve al paso 1 conservando la balanza elegida y lo escrito en la observación', async () => {
+      vi.mocked(iniciarPasada).mockResolvedValue({ id: 400 } as Pasada);
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      await userEvent.click(screen.getByText('Balanza 2'));
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+      await userEvent.type(screen.getByLabelText(/observación de la pasada/i), 'Lote 7');
+      await userEvent.click(screen.getByRole('button', { name: /^atrás$/i }));
+
+      expect(screen.getByText(/paso 1 de 2/i)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+      expect(screen.getByLabelText(/observación de la pasada/i)).toHaveValue('Lote 7');
+      await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
+
+      expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 2, observacion: 'Lote 7' });
+    });
+
+    it('con la balanza sin verificar, el paso 1 ofrece el atajo y no permite avanzar', async () => {
+      vi.mocked(getBalanzas).mockResolvedValue([
+        { id: 1, nombre: 'Balanza 1', activo: true, verificacionPendiente: true },
+      ]);
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      expect(await screen.findByTestId('balanza-sin-verificar')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^siguiente$/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /ir a la ruta de verificación/i })).toBeInTheDocument();
+    });
+
+    it('si el backend rechaza por "Balanza sin verificar" al iniciar, vuelve al paso 1 con el aviso', async () => {
+      const mensaje = 'Balanza sin verificar: la balanza no tiene historial de producción. Solo se puede iniciar la ruta de verificación con pesas patrón.';
+      vi.mocked(iniciarPasada).mockRejectedValueOnce({ response: { data: { error: { message: mensaje } } } });
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+      await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
+
+      expect(await screen.findByText(/paso 1 de 2/i)).toBeInTheDocument();
+      const aviso = await screen.findByTestId('balanza-sin-verificar');
+      expect(within(aviso).getByText(mensaje)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^siguiente$/i })).toBeDisabled();
+    });
+
+    it('un error distinto se muestra en el paso 2 sin volver atrás', async () => {
+      vi.mocked(iniciarPasada).mockRejectedValue({
+        response: { data: { error: { message: 'La balanza seleccionada no está activa' } } },
+      });
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+      await userEvent.click(screen.getByRole('button', { name: /^iniciar pasada$/i }));
+
+      expect(await screen.findByText('La balanza seleccionada no está activa')).toBeInTheDocument();
+      expect(screen.getByText(/paso 2 de 2/i)).toBeInTheDocument();
+    });
+
+    it('al cerrar y reabrir vuelve al paso 1', async () => {
+      renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+      await abrirModal();
+      await userEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'Cerrar modal' }));
+
+      await abrirModal();
+      expect(screen.getByText(/paso 1 de 2/i)).toBeInTheDocument();
     });
   });
 });
