@@ -132,7 +132,7 @@ export function SistemaPage() {
 
       <SistemaIndice secciones={SECCIONES} activa={activa} progreso={progresoSuave} onIr={irA} />
 
-      <SeccionManual id="operario" orden={0} title="Manual — Rol Operario" count={8} defaultOpen>
+      <SeccionManual id="operario" orden={0} title="Manual — Rol Operario" count={9} defaultOpen>
         <p className="text-sm text-muted-foreground mb-5">
           Uso diario de la tablet asignada a cada línea de producción: ingreso, selección de
           línea, registro de muestras de una pasada, muestras libres de calidad e historial propio.
@@ -234,10 +234,25 @@ export function SistemaPage() {
             desde Parametrización → Líneas).
           </Nota>
           <p>
-            Desde la pantalla de Gestión de Pasadas, al iniciar una pasada nueva solo se piden dos
-            datos: la <strong>balanza</strong> a usar (obligatorio) y una{' '}
-            <strong>observación opcional</strong> — el sistema sugiere copiar la observación ya
-            cargada en la línea, si existe.
+            Desde la pantalla de Gestión de Pasadas, el botón "Nueva Pasada" abre una ventana que
+            te guía <strong>en dos pasos</strong>, con el indicador "Paso 1 de 2" / "Paso 2 de 2"
+            arriba:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>Paso 1 — Balanza</strong> (obligatorio): la lista de balanzas activas. La
+              balanza asignada a la línea aparece primera y ya viene seleccionada, así que no hace
+              falta buscarla; si hace falta, elegís otra. Se avanza con "Siguiente".
+            </li>
+            <li>
+              <strong>Paso 2 — Observación</strong> (opcional): el sistema sugiere copiar la
+              observación ya cargada en la línea, si existe. "Atrás" vuelve al paso 1 sin perder lo
+              que cargaste, e "Iniciar Pasada" confirma.
+            </li>
+          </ul>
+          <p>
+            Si la balanza elegida está sin verificar, el paso 1 muestra un aviso en lugar de dejarte
+            continuar: ver la sección 9 ("Verificación de balanza").
           </p>
           <p>
             Si la línea no tiene una ruta asignada, o no tiene un dispositivo/balanza vinculados,
@@ -332,6 +347,72 @@ export function SistemaPage() {
             tarjeta se despliega la observación debajo, dentro de la misma tarjeta, y se vuelve a
             tocar para ocultarla. Las muestras sin observación no se despliegan.
           </p>
+        </Sub>
+
+        <Sub title="9. Verificación de balanza">
+          <p>
+            Cuando una balanza pasa a pesar un artículo distinto —o nunca pesó— queda con{' '}
+            <strong>verificación pendiente</strong>: solo puede iniciar la{' '}
+            <strong>ruta de verificación con pesas patrón</strong> (la que usa el artículo
+            "CALIBRACION BALANZAS", código 0). Al completar esa pasada se habilita la producción.
+          </p>
+
+          <p className="font-semibold">Cuándo se activa</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              <strong>Primera pasada de una balanza</strong>: si no tiene historial, el aviso dice
+              "la balanza no tiene historial de producción". Las balanzas ya cargadas en el sistema
+              arrancan así.
+            </li>
+            <li>
+              <strong>Cambio de artículo</strong>: el artículo de la línea es distinto del último
+              producido en esa balanza (también si la balanza se pasa a otra línea). El aviso dice
+              "cambió el artículo respecto del último producido".
+            </li>
+            <li>
+              Se evalúa <strong>al intentar iniciar</strong> una pasada, no al cambiar la
+              configuración de la línea. Las Muestras libres también quedan bloqueadas por la misma
+              regla.
+            </li>
+            <li>
+              <strong>No se activa</strong> si el artículo es el mismo que el último producido y la
+              balanza ya está verificada: la pasada arranca como siempre.
+            </li>
+          </ul>
+
+          <p className="font-semibold">Cómo se hace</p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>En Gestión de Pasadas tocá "Nueva Pasada" y elegí la balanza.</li>
+            <li>
+              Aparece el aviso <strong>"Balanza sin verificar"</strong> con la causa, y "Siguiente"
+              queda deshabilitado.
+            </li>
+            <li>
+              Tocá <strong>"Ir a la ruta de verificación"</strong> y elegí una de las rutas
+              disponibles (las rutas que tienen asignado el artículo CALIBRACION BALANZAS).
+            </li>
+            <li>
+              Tocá <strong>"Iniciar verificación"</strong>. Se hace desde cualquier línea: la
+              pasada corre en la línea donde estás, sin ir a otra línea ni cambiar la ruta
+              configurada en esta.
+            </li>
+            <li>
+              Tomá las muestras con las pesas patrón, como en cualquier pasada, y completá la
+              pasada. Con eso la balanza queda habilitada para producir.
+            </li>
+          </ol>
+
+          <p>
+            En Gestión de Pasadas, la tarjeta de una pasada de verificación se distingue con{' '}
+            <strong>color amarillo</strong> y la etiqueta <strong>"Verificación"</strong>, porque
+            corre una ruta distinta de la configurada en la línea.
+          </p>
+
+          <Nota clave>
+            Ojo: una verificación abortada no cuenta, y la balanza sigue sin verificar. Nadie puede
+            saltear el bloqueo, tampoco Jefe ni Administrador, y no hay control por tiempo ni
+            parámetro configurable.
+          </Nota>
         </Sub>
       </SeccionManual>
 
@@ -506,6 +587,13 @@ export function SistemaPage() {
               con sus etapas, pesos y artículos asignados. No pide rango de fechas.
             </li>
           </ul>
+          <Nota>
+            Para revisar las pasadas de verificación de balanza, descargá el Reporte de Pasadas y
+            filtrá (con el filtro de Excel) la columna <strong>Artículo</strong> por
+            "CALIBRACION BALANZAS" (código 0, en la columna Código). Cada fila indica la balanza,
+            la ruta de verificación usada, el estado y el promedio de peso de la etapa; una
+            verificación abortada figura con estado "abortada" y su motivo de cierre.
+          </Nota>
           <p>
             Muestras y Pasadas comparten el mismo selector de fechas (Desde / Hasta). El rango
             máximo es de <strong>90 días</strong>, contando ambos extremos; con un rango mayor el
