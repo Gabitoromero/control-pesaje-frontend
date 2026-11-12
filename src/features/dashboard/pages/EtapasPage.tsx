@@ -224,27 +224,27 @@ export const EtapasPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
               {etapasFiltradas.map((etapa) => (
                 <tr key={etapa.id} className={`hover:bg-accent even:bg-muted/40 ${etapa.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{etapa.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{etapa.descripcion || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{etapa.nombre}</td>
+                  <td className="px-4 py-4 max-w-[14rem] truncate text-sm text-muted-foreground" title={etapa.descripcion || undefined}>{etapa.descripcion || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${etapa.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {etapa.activo !== false ? 'Activa' : 'Inactiva'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
                       onClick={() => setHistorial({ id: etapa.id, title: etapa.nombre })}
-                      className="text-muted-foreground hover:text-foreground mr-3"
+                      className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
                       aria-label="Ver historial de cambios"
                     >
@@ -263,7 +263,7 @@ export const EtapasPage = () => {
               ))}
               {etapasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">No hay etapas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                  <td colSpan={4} className="px-4 py-4 text-center text-muted-foreground">No hay etapas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
                 </tr>
               )}
             </tbody>

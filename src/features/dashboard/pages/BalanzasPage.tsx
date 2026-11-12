@@ -216,21 +216,21 @@ export const BalanzasPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
               {balanzasFiltradas.map((balanza) => (
                 <tr key={balanza.id} className={`hover:bg-accent even:bg-muted/40 ${balanza.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{balanza.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{balanza.nombre}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${balanza.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {balanza.activo !== false ? 'Activa' : 'Inactiva'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => openModal(balanza)}
                       disabled={hayActividad}
@@ -244,7 +244,7 @@ export const BalanzasPage = () => {
               ))}
               {balanzasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center text-muted-foreground">No hay balanzas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                  <td colSpan={3} className="px-4 py-4 text-center text-muted-foreground">No hay balanzas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
                 </tr>
               )}
             </tbody>
