@@ -71,6 +71,25 @@ describe('HistorialPage', () => {
     expect(screen.queryByText('Tendencia')).not.toBeInTheDocument();
   });
 
+  it('labels a muestra of a volumen etapa in L and the others in kg', async () => {
+    vi.mocked(getHistorial).mockResolvedValue(
+      response({
+        items: [
+          item(1, 'ok', { pesoNeto: 0.06, magnitud: 'volumen' }),
+          item(2, 'ok', { pesoNeto: 0.085, magnitud: 'peso' }),
+          item(3, 'ok', { pesoNeto: 0.07 }),
+        ],
+        total: 3,
+      }),
+    );
+    renderWithAuth(<HistorialPage />, { user });
+
+    const list = await screen.findByRole('list', { name: 'Listado de muestras' });
+    expect(await within(list).findByText('0.0600 L')).toBeInTheDocument();
+    expect(within(list).getByText('0.0850 kg')).toBeInTheDocument();
+    expect(within(list).getByText('0.0700 kg')).toBeInTheDocument();
+  });
+
   it('hides the observación behind a clickable card that toggles it inline, only when the muestra has one', async () => {
     vi.mocked(getHistorial).mockResolvedValue(
       response({ items: [item(1, 'ok', { observacion: 'Masa pegajosa' }), item(2, 'ok', { articulo: null })] }),

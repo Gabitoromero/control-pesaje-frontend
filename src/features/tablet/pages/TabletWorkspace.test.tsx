@@ -1352,6 +1352,75 @@ describe('TabletWorkspace', () => {
     expect(neutral.style.backgroundColor).toBe('');
     expect(neutral.className).toContain('bg-secondary');
   });
+
+  describe('magnitud of the active etapa', () => {
+    const lineaConEtapa = (magnitud?: 'peso' | 'volumen') =>
+      http.get(`${BASE}/lineas-produccion/1`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            id: 1,
+            nombre: 'Línea 1 — Envasado A',
+            numeroBalanza: 1,
+            activo: true,
+            rutaPasadaActiva: {
+              id: 1,
+              nombre: 'Ruta 1',
+              activo: true,
+              etapas: [
+                {
+                  id: 10,
+                  etapa: { id: 1, nombre: 'Amasado' },
+                  orden: 1,
+                  pesoMinimo: 10,
+                  pesoIdeal: 15,
+                  pesoMaximo: 20,
+                  cantidadMuestrasRequeridas: 2,
+                  ...(magnitud ? { magnitud } : {}),
+                },
+              ],
+            },
+          },
+        }),
+      );
+
+    const renderWorkspace = () => {
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({
+        pesoNeto: 15.0,
+        isConnected: true,
+        hardwareId: 'HW-1',
+        unidad: 'kg',
+      }));
+      renderWithAuth(<TabletWorkspace />, {
+        user: operarioUser,
+        activeLineaId: 1,
+        initialEntries: ['/tablet?pasadaId=101'],
+      });
+    };
+
+    it('a volumen etapa shows L / mL instead of kg / g, with the same values', async () => {
+      server.use(lineaConEtapa('volumen'));
+      renderWorkspace();
+
+      expect(await screen.findByText('10.0000 L')).toBeInTheDocument();
+      expect(screen.getByText('20.0000 L')).toBeInTheDocument();
+      expect(screen.getByTestId('peso-unidad')).toHaveTextContent(/^L$/);
+      expect(screen.getByRole('button', { name: 'mL' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'L' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByText(/kg/)).not.toBeInTheDocument();
+    });
+
+    it('an etapa without magnitud keeps showing kg / g', async () => {
+      server.use(lineaConEtapa());
+      renderWorkspace();
+
+      expect(await screen.findByText('10.0000 kg')).toBeInTheDocument();
+      expect(screen.getByTestId('peso-unidad')).toHaveTextContent(/^kg$/);
+      expect(screen.getByRole('button', { name: 'g' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'kg' })).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+
   // ── Route of the pasada vs. active route of the línea ─────────────────────
 
   const etapaRuta = (nombre: string, id: number) => ({

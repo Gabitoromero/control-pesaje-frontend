@@ -1,4 +1,5 @@
 import api from './axios';
+import type { Magnitud } from '../shared/types/domain';
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -16,6 +17,8 @@ export interface HistorialItem {
   observacion: string | null;
   pasadaId: number | null;
   etapa: { id: number; nombre: string };
+  /** Magnitud of the etapa as configured in its ruta; missing means peso. */
+  magnitud?: Magnitud;
   rutaPasada: { id: number; nombre: string };
   articulo: { id: number; codigo: string; nombre: string | null } | null;
 }

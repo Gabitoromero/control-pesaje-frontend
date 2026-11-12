@@ -10,6 +10,7 @@ import { LineaObservacionBanner } from '../../../components/LineaObservacionBann
 import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
+import { unidadLabel } from '../../../shared/peso';
 import { ToleranceStatus } from '../components/ToleranceStatus';
 import { ReporteSinPesoButton } from '../components/ReporteSinPesoButton';
 import { LineaParadaButton } from '../components/LineaParadaButton';
@@ -118,6 +119,9 @@ export function MuestrasLibresPage() {
 
   // Tolerance of the selected etapa-ruta: its own percentage, or the global one by default.
   const tolerance = resolveEffectiveTolerance(globalTolerance, selectedEtapa);
+  // Volumen is a label only: the etapa is weighed the same way and 1 kg reads as 1 L.
+  const magnitud = selectedEtapa?.magnitud;
+  const unidadPeso = unidadLabel('kg', magnitud);
   const pesoMinimo = selectedEtapa?.pesoMinimo;
   const pesoIdeal = selectedEtapa?.pesoIdeal;
   const pesoMaximo = selectedEtapa?.pesoMaximo;
@@ -251,7 +255,7 @@ export function MuestrasLibresPage() {
                 <span className="text-6xl font-black text-foreground tabular-nums">
                   {pesoNeto.toFixed(PESO_DECIMALS)}
                 </span>
-                <span className="text-2xl text-muted-foreground ml-2">kg</span>
+                <span data-testid="peso-unidad" className="text-2xl text-muted-foreground ml-2">{unidadPeso}</span>
               </div>
             </div>
 
@@ -262,6 +266,7 @@ export function MuestrasLibresPage() {
                 pesoIdeal={pesoIdeal!}
                 pesoMaximo={pesoMaximo!}
                 variant="warning"
+                magnitud={magnitud}
               />
             )}
           </div>
@@ -278,6 +283,7 @@ export function MuestrasLibresPage() {
             unidad={unidad}
             disabled={!isConnected}
             variant="warning"
+            magnitud={magnitud}
           />
 
           <button
@@ -311,6 +317,7 @@ export function MuestrasLibresPage() {
                 setSelectedSampleIndex(muestrasFiltradas[filteredIndex].originalIndex)
               }
               emptyMessage="Sin muestras registradas para esta etapa"
+              magnitud={magnitud}
             />
           </div>
         </div>

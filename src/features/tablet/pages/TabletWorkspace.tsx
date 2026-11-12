@@ -15,6 +15,7 @@ import { MuestraObservacionPopup } from '../components/MuestraObservacionPopup';
 import { LineaObservacionBanner } from '../../../components/LineaObservacionBanner';
 import { ToleranceDisplay } from '../components/ToleranceDisplay';
 import { UnidadBalanzaControl } from '../components/UnidadBalanzaControl';
+import { unidadLabel } from '../../../shared/peso';
 import { ToleranceStatus } from '../components/ToleranceStatus';
 import { ReporteSinPesoButton } from '../components/ReporteSinPesoButton';
 import { LineaParadaButton } from '../components/LineaParadaButton';
@@ -281,6 +282,9 @@ export const TabletWorkspace: React.FC = () => {
   // (that nested `.etapa` is only the stage name/id detail, e.g. `.etapa.nombre`).
   // Tolerance of the active etapa-ruta: its own percentage, or the global one by default.
   const tolerance = resolveEffectiveTolerance(globalTolerance, etapaActiva);
+  // Volumen is a label only: the etapa is weighed the same way and 1 kg reads as 1 L.
+  const magnitud = etapaActiva?.magnitud;
+  const unidadPeso = unidadLabel('kg', magnitud);
   const pesoMinimo = etapaActiva?.pesoMinimo;
   const pesoIdeal = etapaActiva?.pesoIdeal;
   const pesoMaximo = etapaActiva?.pesoMaximo;
@@ -380,7 +384,7 @@ export const TabletWorkspace: React.FC = () => {
                 <span className="text-6xl font-black text-foreground tabular-nums">
                   {pesoNeto.toFixed(PESO_DECIMALS)}
                 </span>
-                <span className="text-2xl text-muted-foreground ml-2">kg</span>
+                <span data-testid="peso-unidad" className="text-2xl text-muted-foreground ml-2">{unidadPeso}</span>
               </div>
             </div>
 
@@ -391,6 +395,7 @@ export const TabletWorkspace: React.FC = () => {
                 pesoIdeal={pesoIdeal!}
                 pesoMaximo={pesoMaximo!}
                 variant="primary"
+                magnitud={magnitud}
               />
             ) : etapaActiva === null ? (
               <div className="w-full flex items-center justify-center gap-2 text-success font-semibold">
@@ -412,6 +417,7 @@ export const TabletWorkspace: React.FC = () => {
             unidad={unidad}
             disabled={!isConnected}
             variant="primary"
+            magnitud={magnitud}
           />
 
           <button
@@ -474,7 +480,7 @@ export const TabletWorkspace: React.FC = () => {
                             {displayIndex + 1}
                           </span>
                           <span className="text-xl font-bold tabular-nums text-foreground">
-                            {muestra.pesoNeto.toFixed(PESO_DECIMALS)} kg
+                            {muestra.pesoNeto.toFixed(PESO_DECIMALS)} {unidadPeso}
                           </span>
                         </div>
                         {muestra.estadoValidacion === 'ok'

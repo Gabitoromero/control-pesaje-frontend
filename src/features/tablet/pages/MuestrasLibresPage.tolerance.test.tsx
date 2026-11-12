@@ -145,4 +145,55 @@ describe('MuestrasLibresPage tolerance (real hook + msw)', () => {
     await waitFor(() => expect(addSampleMock).toHaveBeenCalled());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
+
+  describe('magnitud of the selected etapa', () => {
+    const muestra: Muestra = {
+      id: 1,
+      pesoNeto: 15,
+      estadoValidacion: 'ok',
+      usuarioId: 3,
+      etapaId: 10,
+      lineaProduccionId: 1,
+      timestamp: '2026-11-11T12:00:00.000Z',
+    };
+
+    const renderPage = (etapa: RutaPasadaEtapa) => {
+      vi.mocked(useMuestrasLibresContext).mockReturnValue({
+        muestras: [muestra],
+        etapas: [etapa],
+        selectedEtapaId: 10,
+        selectedEtapa: etapa,
+        setSelectedEtapaId: vi.fn(),
+        addSample: addSampleMock,
+        updateSample: vi.fn(),
+        removeSample: vi.fn(),
+        clearSession: vi.fn(),
+        isRegistering: false,
+      });
+      vi.mocked(useBalanzaWebSocket).mockReturnValue(makeBalanzaHookValue({ pesoNeto: 15, isConnected: true, hardwareId: 'HW-1', unidad: 'kg' }));
+      renderWithAuth(<MuestrasLibresPage />, { user: operarioUser, activeLineaId: 1 });
+    };
+
+    it('a volumen etapa shows L / mL everywhere and never kg, with the same values', async () => {
+      renderPage({ ...etapaNarrow, magnitud: 'volumen' });
+
+      expect(await screen.findByTestId('peso-unidad')).toHaveTextContent(/^L$/);
+      expect(screen.getByText('14.0000 L')).toBeInTheDocument();
+      expect(screen.getByText('16.0000 L')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'mL' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'L' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getAllByText('15.0000 L').length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText(/kg/)).not.toBeInTheDocument();
+    });
+
+    it('an etapa without magnitud keeps showing kg / g', async () => {
+      renderPage(etapaNarrow);
+
+      expect(await screen.findByTestId('peso-unidad')).toHaveTextContent(/^kg$/);
+      expect(screen.getByText('14.0000 kg')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'g' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'kg' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByText(/\d L$/)).not.toBeInTheDocument();
+    });
+  });
 });

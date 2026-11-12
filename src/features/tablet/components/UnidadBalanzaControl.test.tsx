@@ -105,3 +105,33 @@ describe('UnidadBalanzaControl', () => {
     expect(dispositivosApi.updateUnidad).not.toHaveBeenCalled();
   });
 });
+
+describe('UnidadBalanzaControl — magnitud', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows mL / L instead of g / kg on a volumen etapa, keeping the active unit', () => {
+    renderWithProviders(
+      <UnidadBalanzaControl hardwareId="HW-1" unidad="kg" disabled={false} variant="primary" magnitud="volumen" />
+    );
+
+    expect(screen.getByRole('button', { name: 'L' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'mL' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: 'kg' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'g' })).not.toBeInTheDocument();
+  });
+
+  it('still sends the scale unit (g) when the operator taps mL', async () => {
+    vi.mocked(dispositivosApi.updateUnidad).mockResolvedValue({} as Awaited<ReturnType<typeof dispositivosApi.updateUnidad>>);
+    renderWithProviders(
+      <UnidadBalanzaControl hardwareId="HW-1" unidad="kg" disabled={false} variant="primary" magnitud="volumen" />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'mL' }));
+    expect(await screen.findByText(/¿Cambiar la unidad de la balanza a mL\?/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(dispositivosApi.updateUnidad).toHaveBeenCalledWith('HW-1', 'g'));
+  });
+});

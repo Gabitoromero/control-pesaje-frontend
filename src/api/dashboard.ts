@@ -1,5 +1,6 @@
 import api from './axios';
 import type { SectorUsuario } from '../shared/types';
+import type { Magnitud } from '../shared/types/domain';
 
 export interface DashboardLineaItem {
   id: number;
@@ -51,6 +52,8 @@ export interface DashboardEtapa {
     id: number;
     nombre: string;
   };
+  /** Magnitude the ruta-etapa measures; missing means peso. */
+  magnitud?: Magnitud;
   pesoIdeal: number;
   pesoMinimo: number;
   pesoMaximo: number;

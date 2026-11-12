@@ -1,5 +1,6 @@
 import type { DashboardEtapa } from '../../../api/dashboard';
 import { PESO_DECIMALS } from '../../../shared/constants';
+import { unidadLabel } from '../../../shared/peso';
 import { SECTORES, SECTOR_NEUTRAL_COLOR, getSectorColor, getSectorLabel } from '../../../lib/sectores';
 
 // Thick bright red ring separated from the fill by a white gap, so it stays
@@ -15,6 +16,8 @@ interface MonitoreoEtapaCardProps {
 export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEtapaCardProps) {
   const isUltimoOk = etapa.ultimoPeso >= etapa.pesoMinimo && etapa.ultimoPeso <= etapa.pesoMaximo;
   const estadoColor = isUltimoOk ? 'text-success' : 'text-destructive';
+  // Label only: a volumen etapa reads mL where a peso etapa reads g (same values).
+  const unidad = unidadLabel('g', etapa.magnitud);
 
   // Use precalculated counts from the backend response
   const muestrasTotales = etapa.muestrasTotales;
@@ -51,16 +54,16 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ETAPA</p>
           <h3 className="text-lg font-bold text-foreground">{etapa.etapa.nombre}</h3>
           <p className="text-[11px] text-muted-foreground font-mono hidden md:block">
-            rango {etapa.pesoMinimo}–{etapa.pesoMaximo} g · ideal {etapa.pesoIdeal} g
+            rango {etapa.pesoMinimo}–{etapa.pesoMaximo} {unidad} · ideal {etapa.pesoIdeal} {unidad}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ÚLTIMO PESO</p>
-          <p className={`text-2xl font-bold font-mono ${estadoColor}`}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{etapa.magnitud === 'volumen' ? 'ÚLTIMO VOLUMEN' : 'ÚLTIMO PESO'}</p>
+          <p data-testid="ultimo-peso" className={`text-2xl font-bold font-mono ${estadoColor}`}>
             {etapa.ultimoPeso > 0 || etapa.timeSeries.length > 0
               ? (etapa.ultimoPeso > 0 ? etapa.ultimoPeso : Number(etapa.timeSeries[etapa.timeSeries.length - 1]?.peso)).toFixed(PESO_DECIMALS)
               : '—'}
-            <span className="text-sm font-normal text-muted-foreground"> g</span>
+            <span className="text-sm font-normal text-muted-foreground"> {unidad}</span>
           </p>
           <p className={`text-xs font-semibold font-mono ${estadoColor}`}>
             {etapa.porcentajeConforme.toFixed(1)}% conforme
@@ -98,7 +101,7 @@ export function MonitoreoEtapaCard({ etapa, rutaAsignadaAt, ahora }: MonitoreoEt
             // Fill = sector of the user who weighed it; out-of-range samples add a red ring.
             const shapeClass = isLibre ? 'w-2.5 h-2.5 opacity-60 rotate-45' : 'w-3.5 h-3.5 rounded-full';
             const sectorLabel = getSectorLabel(muestra.sector);
-            const label = `${muestra.peso.toFixed(1)}g · ${isOk ? 'OK' : 'Fuera'}${isLibre ? ' · muestra libre' : ''}${sectorLabel ? ` · ${sectorLabel}` : ''}`;
+            const label = `${muestra.peso.toFixed(1)}${unidad} · ${isOk ? 'OK' : 'Fuera'}${isLibre ? ' · muestra libre' : ''}${sectorLabel ? ` · ${sectorLabel}` : ''}`;
             return (
               <div
                 key={i}

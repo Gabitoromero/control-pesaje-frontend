@@ -12,7 +12,9 @@ import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
 import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
-import { PESO_DECIMALS } from '../../../shared/constants';
+import { MAGNITUDES, MAGNITUD_POR_DEFECTO, PESO_DECIMALS } from '../../../shared/constants';
+import { unidadLabel } from '../../../shared/peso';
+import { MAGNITUD_LABEL } from '../../../utils/magnitud';
 import { Plus, Trash, ArrowLeft, Save, RefreshCw, GripVertical, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
@@ -60,6 +62,7 @@ const SortableEtapaItem = ({
   } = useSortable({ id });
 
   const toleranciaPropia = useWatch({ control, name: `etapas.${index}.toleranciaPorDefecto` }) === false;
+  const magnitud = useWatch({ control, name: `etapas.${index}.magnitud` }) ?? MAGNITUD_POR_DEFECTO;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -159,7 +162,7 @@ const SortableEtapaItem = ({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Rango de Peso (kg)</label>
+          <label className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">{`Rango de ${MAGNITUD_LABEL[magnitud]} (${unidadLabel('kg', magnitud)})`}</label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div data-field={`etapas.${index}.pesoMinimo`} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
               <div className="flex items-center gap-1.5 mb-2">
@@ -209,6 +212,36 @@ const SortableEtapaItem = ({
               )}
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span id={`etapas-${index}-magnitud-label`} className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Magnitud</span>
+          <Controller
+            name={`etapas.${index}.magnitud`}
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <div role="radiogroup" aria-labelledby={`etapas-${index}-magnitud-label`} className="flex flex-wrap items-center gap-4">
+                {MAGNITUDES.map((option) => (
+                  <label key={option} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`etapas.${index}.magnitud`}
+                      value={option}
+                      checked={(value ?? MAGNITUD_POR_DEFECTO) === option}
+                      onChange={() => onChange(option)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {MAGNITUD_LABEL[option]}
+                  </label>
+                ))}
+                {magnitud === 'volumen' && (
+                  <span className="text-xs text-muted-foreground">
+                    Se pesa igual que siempre: 1 kg se muestra como 1 L.
+                  </span>
+                )}
+              </div>
+            )}
+          />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -326,6 +359,7 @@ export const RutaFormPage = () => {
           cantidadMuestrasRequeridas: 1,
           toleranciaPorDefecto: true,
           toleranciaPct: null,
+          magnitud: MAGNITUD_POR_DEFECTO,
         }
       ],
     },
@@ -353,6 +387,7 @@ export const RutaFormPage = () => {
           cantidadMuestrasRequeridas: e.cantidadMuestrasRequeridas,
           toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
           toleranciaPct: e.toleranciaPct ?? null,
+          magnitud: e.magnitud ?? MAGNITUD_POR_DEFECTO,
         })),
       });
     }
@@ -556,6 +591,7 @@ export const RutaFormPage = () => {
       // "por defecto" validates against the global tolerance: any own percentage is discarded
       toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
       toleranciaPct: e.toleranciaPorDefecto === false ? (e.toleranciaPct ?? null) : null,
+      magnitud: e.magnitud ?? MAGNITUD_POR_DEFECTO,
     }));
 
     const payload = {
@@ -644,6 +680,7 @@ export const RutaFormPage = () => {
                 cantidadMuestrasRequeridas: 1,
                 toleranciaPorDefecto: true,
                 toleranciaPct: null,
+                magnitud: MAGNITUD_POR_DEFECTO,
               })}
               className="bg-success hover:bg-success/90 text-white px-3 py-1.5 rounded-md flex items-center gap-2 text-sm"
             >
