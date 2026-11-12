@@ -6,6 +6,7 @@ import { getHistorial, type HistorialItem as HistorialItemData } from '../../../
 import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { PESO_DECIMALS } from '../../../shared/constants';
+import { unidadLabel } from '../../../shared/peso';
 import { getLinea } from '../../../api/lineas';
 import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
 import { HistorialKpis } from '../components/HistorialKpis';
@@ -47,7 +48,7 @@ function HistorialItem({ m }: { m: HistorialItemData }) {
             <span className="sr-only">Tiene observación</span>
           </span>
         )}
-        <span className="font-medium">{m.pesoNeto.toFixed(PESO_DECIMALS)} kg</span>
+        <span className="font-medium">{m.pesoNeto.toFixed(PESO_DECIMALS)} {unidadLabel('kg', m.magnitud)}</span>
         <span className="sr-only">{ok ? 'Estado: OK' : 'Estado: fuera de rango'}</span>
       </div>
     </>
