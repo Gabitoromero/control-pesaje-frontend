@@ -16,7 +16,8 @@ import { getBalanzas } from '../../../api/balanzas';
 import { getArticulos } from '../../../api/articulos';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { dispositivosApi } from '../../../api/dispositivos';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit, Trash, History } from 'lucide-react';
+import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
@@ -66,6 +67,7 @@ export const LineasPage = () => {
   const [editingLinea, setEditingLinea] = useState<Linea | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
   const [query, setQuery] = useState('');
@@ -429,6 +431,15 @@ export const LineasPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setHistorial({ id: linea.id, title: linea.nombre })}
+                      className="text-muted-foreground hover:text-foreground mr-3"
+                      title="Ver historial de cambios"
+                      aria-label="Ver historial de cambios"
+                    >
+                      <History size={18} />
+                    </button>
                     <button 
                       onClick={() => openModal(linea)} 
                       disabled={bloqueada}
@@ -585,6 +596,13 @@ export const LineasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <HistorialCambiosDrawer
+        raizTipo="linea"
+        raizId={historial?.id ?? null}
+        title={historial?.title ?? ''}
+        open={historial !== null}
+        onOpenChange={(open) => { if (!open) setHistorial(null); }}
+      />
     </div>
   );
 };

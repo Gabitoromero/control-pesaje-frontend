@@ -8,7 +8,8 @@ import {
   deleteArticulo,
   type Articulo,
 } from '../../../api/articulos';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit, Trash, History } from 'lucide-react';
+import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
@@ -37,6 +38,7 @@ export const ArticulosPage = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const { hayActividad } = useActividadGlobal();
 
+  const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('codigo');
   const [query, setQuery] = useState('');
@@ -236,6 +238,15 @@ export const ArticulosPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setHistorial({ id: articulo.id, title: `${articulo.codigo}${articulo.nombre ? ' · ' + articulo.nombre : ''}` })}
+                      className="text-muted-foreground hover:text-foreground mr-3"
+                      title="Ver historial de cambios"
+                      aria-label="Ver historial de cambios"
+                    >
+                      <History size={18} />
+                    </button>
                     <button 
                       onClick={() => openModal(articulo)} 
                       disabled={hayActividad}
@@ -325,6 +336,13 @@ export const ArticulosPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <HistorialCambiosDrawer
+        raizTipo="articulo"
+        raizId={historial?.id ?? null}
+        title={historial?.title ?? ''}
+        open={historial !== null}
+        onOpenChange={(open) => { if (!open) setHistorial(null); }}
+      />
     </div>
   );
 };

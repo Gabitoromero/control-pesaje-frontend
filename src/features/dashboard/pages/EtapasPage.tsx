@@ -9,7 +9,8 @@ import {
   type Etapa,
   type EtapaCreate,
 } from '../../../api/etapas';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit, Trash, History } from 'lucide-react';
+import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
@@ -38,6 +39,7 @@ export const EtapasPage = () => {
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
   const [query, setQuery] = useState('');
@@ -239,6 +241,15 @@ export const EtapasPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setHistorial({ id: etapa.id, title: etapa.nombre })}
+                      className="text-muted-foreground hover:text-foreground mr-3"
+                      title="Ver historial de cambios"
+                      aria-label="Ver historial de cambios"
+                    >
+                      <History size={18} />
+                    </button>
                     <button 
                       onClick={() => openModal(etapa)} 
                       disabled={hayActividad}
@@ -316,6 +327,13 @@ export const EtapasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <HistorialCambiosDrawer
+        raizTipo="etapa"
+        raizId={historial?.id ?? null}
+        title={historial?.title ?? ''}
+        open={historial !== null}
+        onOpenChange={(open) => { if (!open) setHistorial(null); }}
+      />
     </div>
   );
 };
