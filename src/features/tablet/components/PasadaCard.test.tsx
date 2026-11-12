@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import { renderWithProviders } from '../../../test/render';
 import { PasadaCard } from './PasadaCard';
 import { getMuestras } from '../../../api/muestras';
+import { getRuta } from '../../../api/rutas';
 import type { Muestra, Pasada, RutaPasadaEtapa } from '../../../shared/types/domain';
 
 const navigateMock = vi.fn();
@@ -17,6 +18,10 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../../../api/muestras', () => ({
   getMuestras: vi.fn(),
+}));
+
+vi.mock('../../../api/rutas', () => ({
+  getRuta: vi.fn(),
 }));
 
 const etapas: RutaPasadaEtapa[] = [
@@ -37,6 +42,7 @@ describe('PasadaCard', () => {
     navigateMock.mockClear();
     vi.mocked(getMuestras).mockReset();
     vi.mocked(getMuestras).mockResolvedValue([]);
+    vi.mocked(getRuta).mockReset();
   });
 
   it('renders pasada number, article name and start time', async () => {
@@ -100,5 +106,52 @@ describe('PasadaCard', () => {
     renderWithProviders(<PasadaCard pasada={basePasada} etapas={etapas} />);
 
     expect(await screen.findByText(/Avance: Etapa 2 de 2/)).toBeInTheDocument();
+  });
+  describe('pasada de verificación', () => {
+    const verificacion = {
+      ...basePasada,
+      id: 202,
+      articulo: { id: 9, codigo: '0', nombre: 'CALIBRACION BALANZAS' },
+    } as Pasada;
+
+    it('se distingue con color de advertencia y una etiqueta "Verificación"', async () => {
+      renderWithProviders(<PasadaCard pasada={verificacion} etapas={etapas} />);
+
+      const card = await screen.findByTestId('pasada-card');
+      expect(card.className).toContain('border-warning');
+      expect(screen.getByText('Verificación')).toBeInTheDocument();
+    });
+
+    it('una pasada normal no lleva la etiqueta ni el color de advertencia', async () => {
+      renderWithProviders(<PasadaCard pasada={basePasada} etapas={etapas} />);
+
+      const card = await screen.findByTestId('pasada-card');
+      expect(card.className).not.toContain('border-warning');
+      expect(screen.queryByText('Verificación')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('ruta propia de la pasada', () => {
+    const conRuta = (rutaPasada: unknown) => ({ ...basePasada, rutaPasada }) as unknown as Pasada;
+
+    it('si la ruta de la pasada difiere de la activa de la línea usa las etapas de la ruta de la pasada', async () => {
+      vi.mocked(getRuta).mockResolvedValue({
+        id: 457,
+        nombre: 'PP-1',
+        etapas: [{ id: 7, etapa: { id: 30, nombre: 'Calibracion' }, orden: 1, pesoMinimo: 1, pesoIdeal: 2, pesoMaximo: 3, cantidadMuestrasRequeridas: 1 }],
+      });
+      renderWithProviders(<PasadaCard pasada={conRuta(457)} etapas={etapas} rutaActivaId={10} />);
+
+      expect(await screen.findByText(/Avance: Etapa 1 de 1/)).toBeInTheDocument();
+      expect(getRuta).toHaveBeenCalledWith(457);
+      expect(screen.queryByText('Recepción')).not.toBeInTheDocument();
+    });
+
+    it('si la ruta de la pasada es la activa de la línea no pide la ruta y usa las etapas recibidas', async () => {
+      renderWithProviders(<PasadaCard pasada={conRuta(10)} etapas={etapas} rutaActivaId={10} />);
+
+      expect(await screen.findByText(/Avance: Etapa 1 de 2/)).toBeInTheDocument();
+      expect(getRuta).not.toHaveBeenCalled();
+    });
   });
 });

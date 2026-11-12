@@ -78,7 +78,7 @@ export const GestionPasadasPage: React.FC = () => {
 
   // Query active balanzas for the "Nueva Pasada" modal's balanza picker.
   const {
-    data: balanzas = [],
+    data: balanzasActivas = [],
     isLoading: loadingBalanzas,
     error: errorBalanzas
   } = useQuery<Balanza[]>({
@@ -86,6 +86,17 @@ export const GestionPasadasPage: React.FC = () => {
     queryFn: () => getBalanzas(),
     enabled: isModalOpen,
   });
+
+  // The línea's own balanza goes first: it is the preselected one, and with many balanzas it would
+  // otherwise sit out of sight and the operator could not tell a default was already chosen.
+  const idBalanzaDeLaLinea = linea?.idBalanza;
+  const balanzas = React.useMemo(
+    () => [
+      ...balanzasActivas.filter((b) => b.id === idBalanzaDeLaLinea),
+      ...balanzasActivas.filter((b) => b.id !== idBalanzaDeLaLinea),
+    ],
+    [balanzasActivas, idBalanzaDeLaLinea],
+  );
 
   const {
     data: rutasVerificacion = [],
@@ -249,7 +260,12 @@ export const GestionPasadasPage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 min-[480px]:grid-cols-2 min-[840px]:grid-cols-1 min-[950px]:grid-cols-2 min-[1400px]:grid-cols-3 min-[1800px]:grid-cols-4 gap-4">
                 {filteredPasadas.map((pasada) => (
-                  <PasadaCard key={pasada.id} pasada={pasada} etapas={etapasRuta} />
+                  <PasadaCard
+                    key={pasada.id}
+                    pasada={pasada}
+                    etapas={etapasRuta}
+                    rutaActivaId={linea?.rutaPasadaActiva?.id}
+                  />
                 ))}
               </div>
             )}

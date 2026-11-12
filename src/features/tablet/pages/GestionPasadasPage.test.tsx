@@ -251,6 +251,37 @@ describe('GestionPasadasPage', () => {
     expect(iniciarPasada).toHaveBeenCalledWith({ lineaProduccionId: 1, idBalanza: 2 });
   });
 
+  it('lista primero la balanza asignada a la línea, aunque el backend la devuelva más abajo', async () => {
+    vi.mocked(getBalanzas).mockResolvedValue([
+      { id: 1, nombre: 'Balanza 1', activo: true },
+      { id: 2, nombre: 'Balanza 2', activo: true },
+      { id: 3, nombre: 'Balanza 3', activo: true },
+    ]);
+    vi.mocked(getLinea).mockResolvedValue({ ...lineaConRuta, idBalanza: 3 } as unknown as Linea);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    const nombres = screen.getAllByRole('button', { name: /^Balanza \d$/ }).map((b) => b.textContent);
+    expect(nombres).toEqual(['Balanza 3', 'Balanza 1', 'Balanza 2']);
+  });
+
+  it('sin balanza asignada a la línea mantiene el orden original de la lista', async () => {
+    vi.mocked(getBalanzas).mockResolvedValue([
+      { id: 1, nombre: 'Balanza 1', activo: true },
+      { id: 2, nombre: 'Balanza 2', activo: true },
+    ]);
+    vi.mocked(getLinea).mockResolvedValue({ ...lineaConRuta, idBalanza: undefined } as unknown as Linea);
+    renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
+
+    await userEvent.click(await screen.findByRole('button', { name: /nueva pasada/i }));
+    expect(await screen.findByText('Iniciar Nueva Pasada')).toBeInTheDocument();
+
+    const nombres = screen.getAllByRole('button', { name: /^Balanza \d$/ }).map((b) => b.textContent);
+    expect(nombres).toEqual(['Balanza 1', 'Balanza 2']);
+  });
+
   it('solo lista balanzas activas (según lo que retorna getBalanzas)', async () => {
     vi.mocked(getBalanzas).mockResolvedValue([{ id: 1, nombre: 'Balanza 1', activo: true }]);
     renderWithAuth(<GestionPasadasPage />, { user: operarioUser, activeLineaId: 1 });
