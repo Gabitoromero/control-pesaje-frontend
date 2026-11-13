@@ -210,7 +210,7 @@ export function MuestrasLibresPage() {
 
       {linea?.observacion && (
         <div className="flex-shrink-0">
-          <LineaObservacionBanner observacion={linea.observacion} />
+          <LineaObservacionBanner observacion={linea.observacion} compact />
         </div>
       )}
 

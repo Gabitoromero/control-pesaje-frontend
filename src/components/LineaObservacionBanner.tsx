@@ -1,7 +1,10 @@
-import { Info } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, Info } from 'lucide-react';
 
 interface LineaObservacionBannerProps {
   observacion: string | null | undefined;
+  /** One-line banner that expands on tap; for screens where the main data must stay in view. */
+  compact?: boolean;
 }
 
 /**
@@ -12,8 +15,33 @@ interface LineaObservacionBannerProps {
  * matches the dashboard's blocking "actividad" banners, but this one is
  * informative — Info icon, not AlertTriangle — and never disables anything.
  */
-export function LineaObservacionBanner({ observacion }: LineaObservacionBannerProps) {
+export function LineaObservacionBanner({ observacion, compact = false }: LineaObservacionBannerProps) {
+  const [expanded, setExpanded] = useState(false);
   if (!observacion) return null;
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded(e => !e)}
+        className="flex w-full items-start gap-2 bg-warning/10 border border-warning/50 rounded-xl px-3 py-2 text-left"
+      >
+        <Info size={16} className="text-warning mt-0.5 shrink-0" />
+        <span className="min-w-0 flex-1 text-sm">
+          <span className="font-semibold text-warning">Observación de la línea</span>
+          <span className={`block text-warning/80 break-words ${expanded ? '' : 'line-clamp-1'}`}>
+            {observacion}
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden
+          size={16}
+          className={`text-warning mt-0.5 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+    );
+  }
 
   return (
     <div className="flex items-start gap-3 bg-warning/10 border border-warning/50 rounded-2xl p-5">
