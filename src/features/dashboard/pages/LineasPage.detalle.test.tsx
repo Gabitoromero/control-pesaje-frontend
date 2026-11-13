@@ -61,4 +61,16 @@ describe('LineasPage detail drawer', () => {
     expect(requestedUrl?.searchParams.get('raizTipo')).toBe('linea');
     expect(requestedUrl?.searchParams.get('raizId')).toBe('7');
   });
+
+  it('shows the articulo of the línea, which was only visible when editing', async () => {
+    renderWithProviders(<LineasPage />);
+    await waitFor(() => expect(screen.getByText('Línea Detalle')).toBeInTheDocument());
+
+    const row = screen.getByText('Línea Detalle').closest('tr') as HTMLElement;
+    await userEvent.click(within(row).getByRole('button', { name: 'Ver detalle' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Artículo')).toBeInTheDocument();
+    expect(await within(dialog).findByText('[Harina 000] MarcaA')).toBeInTheDocument();
+  });
 });

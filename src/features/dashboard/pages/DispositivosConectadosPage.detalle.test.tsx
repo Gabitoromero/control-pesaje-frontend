@@ -57,4 +57,25 @@ describe('DispositivosConectadosPage detail drawer', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getAllByText('-')).toHaveLength(3);
   });
+
+  it.each([
+    ['Encendido', 'text-warning'],
+    ['Conectado', 'text-success'],
+    ['Desconectado', 'text-muted-foreground'],
+  ])('colors the estado "%s" in the drawer like in the list', async (estado, colorClass) => {
+    vi.mocked(dispositivosApi.getConectados).mockResolvedValue([
+      { hardwareId: 'rpi-x', nombre: 'RPI Color', lineaId: null, lineaNombre: null, estado, ultimaConexionAt: null, unidad: null },
+    ] as never);
+    renderWithProviders(<DispositivosConectadosPage />);
+    await waitFor(() => expect(screen.getByText('RPI Color')).toBeInTheDocument());
+
+    const row = screen.getByText('RPI Color').closest('tr') as HTMLElement;
+    const listBadge = within(row).getByText(estado);
+    await userEvent.click(within(row).getByRole('button', { name: 'Ver detalle' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const drawerBadge = within(dialog).getByText(estado);
+    expect(drawerBadge).toHaveClass(colorClass);
+    expect(drawerBadge.className).toBe(listBadge.className);
+  });
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dispositivosApi } from '../../../api/dispositivos';
+import { DeviceEstadoBadge } from '../components/DeviceEstadoBadge';
 import type { Dispositivo } from '../../../api/dispositivos';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { Edit, Eye, Trash } from 'lucide-react';
@@ -150,17 +151,7 @@ export const DispositivosConectadosPage: React.FC = () => {
                       {device.lineaNombre ?? '—'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                          device.estado === 'Conectado'
-                            ? 'bg-success-muted text-success'
-                            : device.estado === 'Encendido'
-                              ? 'bg-warning/10 text-warning'
-                              : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {device.estado}
-                      </span>
+                      <DeviceEstadoBadge estado={device.estado} />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {device.ultimaConexionAt ? new Date(device.ultimaConexionAt).toLocaleString() : '—'}
@@ -205,7 +196,7 @@ export const DispositivosConectadosPage: React.FC = () => {
           { label: 'Nombre', value: detalle?.nombre },
           { label: 'Hardware ID', value: detalle?.hardwareId },
           { label: 'Línea de producción', value: detalle?.lineaNombre },
-          { label: 'Estado', value: detalle?.estado },
+          { label: 'Estado', value: detalle?.estado ? <DeviceEstadoBadge estado={detalle.estado} /> : null },
           { label: 'Última conexión', value: detalle?.ultimaConexionAt ? new Date(detalle.ultimaConexionAt).toLocaleString() : null },
           { label: 'Unidad', value: detalle?.unidad },
         ]}

@@ -77,6 +77,12 @@ export const LineasPage = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   const [detalle, setDetalle] = useState<Linea | null>(null);
+  // The línea only carries articuloId, so the detail looks the articulo up by id.
+  const { data: articuloDetalle } = useQuery({
+    queryKey: ['articulo', detalle?.articuloId],
+    queryFn: () => getArticulo(detalle!.articuloId!),
+    enabled: detalle?.articuloId != null,
+  });
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
 
   const {
@@ -621,6 +627,7 @@ export const LineasPage = () => {
           { label: 'Nombre', value: detalle?.nombre },
           { label: 'Dispositivo', value: detalle?.dispositivo ? `${detalle.dispositivo.nombre} (${detalle.dispositivo.hardwareId})` : null },
           { label: 'Ruta activa', value: detalle?.rutaPasadaActiva?.nombre },
+          { label: 'Artículo', value: articuloDetalle ? articuloOption(articuloDetalle).nombre : null },
           { label: 'Observación', value: detalle?.observacion },
           { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
         ]}
