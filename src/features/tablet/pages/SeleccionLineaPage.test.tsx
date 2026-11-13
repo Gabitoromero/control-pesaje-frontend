@@ -6,7 +6,7 @@ import type { User } from '../../../shared/types/auth';
 import { SeleccionLineaPage } from './SeleccionLineaPage';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers } from '../../../test/handlers';
+import { handlers, pagedJson } from '../../../test/handlers';
 
 const mockSocketOn = vi.fn();
 const mockSocketOff = vi.fn();
@@ -58,6 +58,33 @@ describe('SeleccionLineaPage', () => {
     navigateMock.mockClear();
     mockSocketOn.mockClear();
     mockSocketOff.mockClear();
+  });
+
+  it('pide solo una página acotada de líneas y busca en el servidor', async () => {
+    const urls: URL[] = [];
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      id: i + 1,
+      nombre: `Linea ${String(i + 1).padStart(2, '0')}`,
+      estado: 'disponible',
+      rutaPasadaActiva: null,
+    }));
+    server.use(
+      http.get(`${BASE}/lineas-produccion`, ({ request }) => {
+        urls.push(new URL(request.url));
+        return pagedJson(request, many);
+      })
+    );
+    renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
+
+    expect(await screen.findByText('Linea 01')).toBeInTheDocument();
+    expect(screen.queryByText('Linea 21')).not.toBeInTheDocument();
+    expect(urls[0].searchParams.get('pageSize')).toBe('20');
+    expect(screen.getByText('Mostrando 1–20 de 30')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Buscar línea'), 'Linea 27');
+
+    expect(await screen.findByText('Linea 27')).toBeInTheDocument();
+    expect(screen.queryByText('Linea 01')).not.toBeInTheDocument();
   });
 
   it('redirige a /login si no está autenticado', () => {
@@ -197,13 +224,10 @@ describe('SeleccionLineaPage', () => {
     
     // Server setup to respond with new line name
     server.use(
-      http.get(`${BASE}/lineas-produccion`, () =>
-        HttpResponse.json({
-          success: true,
-          data: [
-            { id: 1, nombre: 'Línea 1 — Refetched', estado: 'disponible', rutaPasadaActiva: null }
-          ]
-        })
+      http.get(`${BASE}/lineas-produccion`, ({ request }) =>
+        pagedJson(request, [
+          { id: 1, nombre: 'Línea 1 — Refetched', estado: 'disponible', rutaPasadaActiva: null }
+        ])
       )
     );
 

@@ -4,22 +4,33 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithAuth } from '../../../test/render';
 import { HistorialPage } from './HistorialPage';
 import { getHistorial, type HistorialResponse } from '../../../api/historial';
+import { getArticulos } from '../../../api/articulos';
 
 vi.mock('../../../api/historial', () => ({ getHistorial: vi.fn() }));
 vi.mock('../../../api/lineas', () => ({
   getLinea: vi.fn().mockResolvedValue({ id: 1, nombre: 'Línea Envasado Norte', activo: true }),
 }));
+const { pageOf } = vi.hoisted(() => ({
+  pageOf: <T,>(items: T[]) => ({ items, total: items.length, page: 1, pageSize: 20 }),
+}));
+
 vi.mock('../../../api/etapas', () => ({
-  getEtapas: vi.fn().mockResolvedValue([
-    { id: 1, nombre: 'Mezcla' },
-    { id: 2, nombre: 'Horneado' },
-  ]),
+  getEtapas: vi.fn().mockResolvedValue(
+    pageOf([
+      { id: 1, nombre: 'Mezcla' },
+      { id: 2, nombre: 'Horneado' },
+    ]),
+  ),
+  getEtapa: vi.fn(async (id: number) => ({ id, nombre: id === 1 ? 'Mezcla' : 'Horneado' })),
 }));
 vi.mock('../../../api/articulos', () => ({
-  getArticulos: vi.fn().mockResolvedValue([
-    { id: 9, codigo: 'ALF-10', nombre: 'Alfajor Chico' },
-    { id: 7, codigo: 'ALF-2', nombre: 'Alfajor Triple' },
-  ]),
+  getArticulos: vi.fn().mockResolvedValue(
+    pageOf([
+      { id: 9, codigo: 'ALF-10', nombre: 'Alfajor Chico' },
+      { id: 7, codigo: 'ALF-2', nombre: 'Alfajor Triple' },
+    ]),
+  ),
+  getArticulo: vi.fn(async (id: number) => ({ id, codigo: 'ALF-2', nombre: 'Alfajor Triple' })),
 }));
 
 const user = { id: 3, legajo: 'O1', nombreUsuario: 'operario1', rol: 'operario' as const, puedeTomarMuestrasLibres: true };
@@ -166,14 +177,17 @@ describe('HistorialPage', () => {
     await waitFor(() => expect(lastParams()).toMatchObject({ desde: '2026-10-01' }));
   });
 
-  it('uses the shared combobox for the selectors: naturally sorted, "[código] nombre" and clearable', async () => {
+  it('uses the remote combobox for the selectors: server order, "[código] nombre", bounded page and clearable', async () => {
     renderWithAuth(<HistorialPage />, { user });
 
     await userEvent.click(await screen.findByRole('button', { name: 'Todos los artículos' }));
+    expect(await screen.findByRole('option', { name: '[ALF-10] Alfajor Chico' })).toBeInTheDocument();
+    // The server decides the order; the page no longer re-sorts the catalog (natural order is an open decision).
     expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual([
-      '[ALF-2] Alfajor Triple',
       '[ALF-10] Alfajor Chico',
+      '[ALF-2] Alfajor Triple',
     ]);
+    expect(getArticulos).toHaveBeenCalledWith({ q: '', page: 1, pageSize: 20 });
     await userEvent.click(screen.getByRole('option', { name: '[ALF-10] Alfajor Chico' }));
     await waitFor(() => expect(lastParams()).toMatchObject({ articuloId: 9 }));
 

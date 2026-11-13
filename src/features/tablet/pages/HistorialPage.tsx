@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { ChevronDown, ChevronLeft, ChevronRight, Loader2, MessageSquareText } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { getHistorial, type HistorialItem as HistorialItemData } from '../../../api/historial';
-import { getEtapas } from '../../../api/etapas';
-import { getArticulos } from '../../../api/articulos';
+import { getEtapa, getEtapas } from '../../../api/etapas';
+import { getArticulo, getArticulos } from '../../../api/articulos';
 import { PESO_DECIMALS } from '../../../shared/constants';
 import { unidadLabel } from '../../../shared/peso';
 import { getLinea } from '../../../api/lineas';
-import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
+import { RemoteCombobox } from '../../../components/ui/RemoteCombobox';
 import { HistorialKpis } from '../components/HistorialKpis';
 import { TabletPlantaHeader } from '../components/TabletPlantaHeader';
 import { useTabletLogout } from '../hooks/useTabletLogout';
@@ -20,7 +20,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 const fieldClass =
   'w-full rounded-md border border-border bg-background text-foreground px-3 py-1.5 text-sm shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring';
 
-const naturalCompare = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
 const formatFecha = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
@@ -104,25 +103,11 @@ export function HistorialPage() {
     return () => clearTimeout(id);
   }, [busqueda, q]);
 
-  const { data: etapas = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
-  const { data: articulos = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });
   const { data: linea } = useQuery({
     queryKey: ['linea', activeLineaId],
     queryFn: () => getLinea(activeLineaId!),
     enabled: !!activeLineaId,
   });
-
-  const etapaOptions = useMemo(
-    () => [...etapas].sort((a, b) => naturalCompare(a.nombre, b.nombre)).map(e => ({ id: e.id, nombre: e.nombre })),
-    [etapas],
-  );
-  const articuloOptions = useMemo(
-    () =>
-      [...articulos]
-        .sort((a, b) => naturalCompare(a.codigo, b.codigo))
-        .map(a => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo })),
-    [articulos],
-  );
 
   const params = {
     etapaId: etapaId ?? undefined,
@@ -157,10 +142,12 @@ export function HistorialPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
             Etapa
-            <SearchableCombobox
+            <RemoteCombobox
               value={etapaId}
               onChange={onFilterChange(setEtapaId)}
-              options={etapaOptions}
+              queryKey="etapas"
+              search={getEtapas}
+              fetchById={getEtapa}
               placeholder="Buscar etapa..."
               emptyLabel="Todas las etapas"
               clearable
@@ -168,10 +155,13 @@ export function HistorialPage() {
           </div>
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
             Artículo
-            <SearchableCombobox
+            <RemoteCombobox
               value={articuloId}
               onChange={onFilterChange(setArticuloId)}
-              options={articuloOptions}
+              queryKey="articulos"
+              search={getArticulos}
+              fetchById={getArticulo}
+              toOption={(a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo })}
               placeholder="Buscar artículo..."
               emptyLabel="Todos los artículos"
               clearable

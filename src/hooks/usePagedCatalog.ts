@@ -94,5 +94,6 @@ export function usePagedCatalog<T>({
     isFetching: result.isFetching,
     isPlaceholderData: result.isPlaceholderData,
     error: result.error,
+    refetch: result.refetch,
   };
 }
