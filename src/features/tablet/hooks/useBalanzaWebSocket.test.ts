@@ -9,7 +9,7 @@ vi.mock('../../../services/websocket', () => ({
 }));
 
 vi.mock('sonner', () => ({
-  toast: { info: vi.fn() },
+  toast: { info: vi.fn(), warning: vi.fn() },
 }));
 
 // Stable references: the hook lists logout/user as effect deps, so new
@@ -435,5 +435,79 @@ describe('useBalanzaWebSocket report support', () => {
 
     expect(res).toEqual({ ok: false, code: 'sin-conexion' });
     expect(socket.timeout).not.toHaveBeenCalled();
+  });
+});
+
+describe('useBalanzaWebSocket missing unit of measure notice', () => {
+  let listeners: Record<string, (...args: unknown[]) => void>;
+  const MSG = 'La balanza envía datos, pero todavía no tiene configurada una unidad de medida.';
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(toast.warning).mockClear();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    listeners = {};
+    const mockSocket = {
+      connected: false,
+      connect: vi.fn(),
+      emit: vi.fn(),
+      onAny: vi.fn(),
+      on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+        listeners[event] = handler;
+      }),
+      off: vi.fn(),
+    };
+    vi.mocked(getSocket).mockReturnValue(mockSocket as unknown as ReturnType<typeof getSocket>);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('warns once when frames arrive from a connected scale without unit', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
+    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
+    act(() => listeners['balanza-data']({ pesoNeto: 1.3 }));
+
+    expect(toast.warning).toHaveBeenCalledTimes(1);
+    expect(toast.warning).toHaveBeenCalledWith(MSG);
+  });
+
+  it('does not warn when the unit is configured', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1', unidad: 'kg' }));
+    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
+
+    expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it('does not warn while the scale is offline or before joining the room', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
+    act(() => listeners['balanza-status']({ isConnected: false }));
+    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
+
+    expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it('does not warn for a malformed frame', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
+    act(() => listeners['balanza-data']({ pesoNeto: Number.NaN }));
+
+    expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it('warns again if the unit gets configured and later goes missing again', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
+    act(() => listeners['balanza-data']({ pesoNeto: 1 }));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1', unidad: 'kg' }));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
+    act(() => listeners['balanza-data']({ pesoNeto: 1 }));
+
+    expect(toast.warning).toHaveBeenCalledTimes(2);
   });
 });
