@@ -26,6 +26,10 @@ import { getRuta } from '../../../api/rutas';
 import { getArticulo } from '../../../api/articulos';
 import type { Articulo } from '../../../api/articulos';
 import { getMuestras } from '../../../api/muestras';
+import { getValoresAtributo, registrarValoresAtributo } from '../../../api/valores-atributo';
+import { deriveCualidadesPendientes } from '../utils/cualidadesPendientes';
+import { CualidadesDialog } from '../components/CualidadesDialog';
+import type { CualidadValorInput } from '../components/CualidadesDialog';
 import type { Pasada, Ruta, RutaPasadaEtapa } from '../../../shared/types/domain';
 import { PESO_DECIMALS } from '../../../shared/constants';
 import { Scale, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
@@ -153,6 +157,16 @@ export const TabletWorkspace: React.FC = () => {
     },
   });
 
+  // Cualidades (manual qualities) already loaded for this pasada. Together with the samples they tell whether the
+  // operator must load some before moving on; the backend rejects the next stage's samples otherwise.
+  const { data: valoresCargados = [] } = useQuery({
+    queryKey: ['valores-atributo', pasadaId],
+    queryFn: () => getValoresAtributo(pasadaId!),
+    enabled: !!pasadaId,
+  });
+  // Cheap pure derivation: recomputed on every render, no memo needed.
+  const cualidadesPendientes = deriveCualidadesPendientes(etapas, muestras, new Set(valoresCargados.map((v) => v.atributo)));
+
   // Single source of truth for the forward/backward/none classification of
   // the derived active-etapa transition — shared by the stepper's ring pulse,
   // the samples panel swap and the one-shot flash overlay so all three stay
@@ -204,6 +218,7 @@ export const TabletWorkspace: React.FC = () => {
   // Task 3.4: Bind weight capture (addSample) from WebSocket to registrarMuestra API
   const handleRegistrarMuestra = async () => {
     if (!isConnected) return;
+    if (cualidadesPendientes) return;
     if (isNonPositiveWeight(pesoNeto)) {
       await alertWarning({ ...NON_POSITIVE_WEIGHT_ALERT });
       return;
@@ -231,6 +246,16 @@ export const TabletWorkspace: React.FC = () => {
     } catch {
       // usePasadaState already triggers onApiError
     }
+  };
+
+  const handleGuardarCualidades = async (valores: CualidadValorInput[]) => {
+    if (!cualidadesPendientes) return;
+    await registrarValoresAtributo({
+      pasadaId: pasadaId!,
+      etapaId: cualidadesPendientes.etapa.etapa.id,
+      valores,
+    });
+    await queryClient.invalidateQueries({ queryKey: ['valores-atributo', pasadaId] });
   };
 
   // Task 3.5: Bind delete sample (removeSample) action to call deleteMuestra API.
@@ -397,7 +422,7 @@ export const TabletWorkspace: React.FC = () => {
                 variant="primary"
                 magnitud={magnitud}
               />
-            ) : etapaActiva === null ? (
+            ) : etapaActiva === null && !cualidadesPendientes ? (
               <div className="w-full flex items-center justify-center gap-2 text-success font-semibold">
                 <CheckCircle2 className="w-6 h-6" />
                 Listo para finalizar
@@ -422,9 +447,9 @@ export const TabletWorkspace: React.FC = () => {
 
           <button
             onClick={handleRegistrarMuestra}
-            disabled={!isConnected || etapaActiva === null}
+            disabled={!isConnected || etapaActiva === null || !!cualidadesPendientes}
             className={`w-full py-4 rounded-2xl text-xl font-bold transition-all shadow-lg
-              ${isConnected && etapaActiva !== null && !isToleranceBlockedFlag && !isToleranceUnavailable
+              ${isConnected && etapaActiva !== null && !cualidadesPendientes && !isToleranceBlockedFlag && !isToleranceUnavailable
                 ? 'bg-success hover:bg-success/90 text-white active:scale-95'
                 : isToleranceBlockedFlag || isToleranceUnavailable
                   ? 'bg-muted text-muted-foreground'
@@ -503,7 +528,7 @@ export const TabletWorkspace: React.FC = () => {
               button anymore. Finalizing the whole pasada stays an explicit,
               persisted server transition and is only offered once every
               etapa is derived as completada (etapaActiva === null). */}
-          {etapaActiva === null && etapas.length > 0 && (
+          {etapaActiva === null && etapas.length > 0 && !cualidadesPendientes && (
             <div className="p-4 border-t border-border flex-shrink-0">
               <button
                 onClick={handleFinalizarPasada}
@@ -516,6 +541,16 @@ export const TabletWorkspace: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Blocking: the samples of the etapa are done and its cualidades are pending */}
+      {cualidadesPendientes && (
+        <CualidadesDialog
+          key={cualidadesPendientes.etapa.etapa.id}
+          etapaNombre={cualidadesPendientes.etapa.etapa.nombre}
+          atributos={cualidadesPendientes.atributos}
+          onSubmit={handleGuardarCualidades}
+        />
+      )}
 
       {/* MuestraObservacionPopup — shared edit/delete popup (task 3.2) */}
       {selectedSampleIndex !== null && muestras[selectedSampleIndex] && (
