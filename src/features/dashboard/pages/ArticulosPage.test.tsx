@@ -41,6 +41,31 @@ describe('ArticulosPage', () => {
       expect(screen.getByText('Mostrando 21–40 de 45')).toBeInTheDocument();
     });
 
+    it('falls back to the last valid page after deleting the only row of the last page', async () => {
+      const rows = [...many.slice(0, 21)];
+      server.use(
+        http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, rows)),
+        http.delete('http://localhost:3000/api/articulos/:id', ({ params }) => {
+          rows.splice(rows.findIndex((r) => r.id === Number(params.id)), 1);
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+      renderWithProviders(<ArticulosPage />);
+      await screen.findByText('ART-001');
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+      const onlyRow = (await screen.findByText('ART-021')).closest('tr')!;
+      expect(screen.getByText('Mostrando 21–21 de 21')).toBeInTheDocument();
+
+      await userEvent.click(within(onlyRow).getByTitle('Editar'));
+      await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      expect(await screen.findByText('Mostrando 1–20 de 20')).toBeInTheDocument();
+      expect(screen.getByText('ART-001')).toBeInTheDocument();
+      expect(screen.queryByText('ART-021')).not.toBeInTheDocument();
+    });
+
     it('searches the whole catalog, not only the visible page, and returns to page 1', async () => {
       server.use(http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, many)));
       renderWithProviders(<ArticulosPage />);
