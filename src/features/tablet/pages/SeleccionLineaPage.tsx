@@ -1,14 +1,15 @@
 import React from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../auth/context/AuthContext';
-import api from '../../../api/axios';
 import { isAxiosError } from 'axios';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { abrirSesionLinea } from '../../../api/auth';
-import type { Linea } from '../../../api/lineas';
+import { getLineas, type Linea } from '../../../api/lineas';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { getAvatarInitials } from '../utils/avatarInitials';
 import { getSectorAvatarProps } from '../../../lib/sectores';
 import { getSocket } from '../../../services/websocket';
@@ -36,16 +37,25 @@ export const SeleccionLineaPage: React.FC = () => {
     };
   }, [isAuthenticated, queryClient]);
 
-  const { data: lineas = [], isLoading: loading, error, refetch } = useQuery<Linea[]>({
-    queryKey: ['lineas-produccion'],
-    queryFn: async () => {
-      const response = await api.get('/lineas-produccion');
-      if (response.data?.success) {
-        const rawLineas = response.data.data as Linea[];
-        return rawLineas.sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }));
-      }
-      throw new Error('No se pudo obtener la lista de líneas');
-    },
+  // The `lineas-produccion` key prefix is kept so the socket event refreshes whichever page is shown.
+  const {
+    items: lineas,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    total,
+    isLoading: loading,
+    isFetching,
+    error,
+    refetch,
+  } = usePagedCatalog<Linea>({
+    key: 'lineas-produccion',
+    fetchActive: getLineas,
+    fetchInactive: getLineas,
+    defaultField: 'nombre',
+    sortBy: 'nombre',
     enabled: isAuthenticated,
   });
 
@@ -111,6 +121,13 @@ export const SeleccionLineaPage: React.FC = () => {
 
       {/* Main Content */}
       <main data-testid="tablet-page-scroll" className="flex-1 w-full p-4 md:p-8 overflow-y-auto">
+        <input
+          aria-label="Buscar línea"
+          placeholder="Buscar línea..."
+          className="mb-4 w-full rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
             <Loader2 className="animate-spin text-primary" size={32} />
@@ -129,7 +146,11 @@ export const SeleccionLineaPage: React.FC = () => {
           </div>
         ) : lineas.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p>No hay líneas de producción activas en este momento.</p>
+            <p>
+              {query.trim()
+                ? 'No se encontraron líneas para esa búsqueda.'
+                : 'No hay líneas de producción activas en este momento.'}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -169,6 +190,7 @@ export const SeleccionLineaPage: React.FC = () => {
                 </button>
               ))}
             </div>
+            <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,18 +11,22 @@ import {
   type Linea,
   type LineaCreate,
 } from '../../../api/lineas';
-import { getRutas } from '../../../api/rutas';
+import { getRuta, getRutas } from '../../../api/rutas';
 import { getBalanzas } from '../../../api/balanzas';
-import { getArticulos } from '../../../api/articulos';
+import { getArticulo, getArticulos } from '../../../api/articulos';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { dispositivosApi } from '../../../api/dispositivos';
-import { Plus, Edit, Trash, History } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { toast } from 'sonner';
 import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
+import { RemoteCombobox } from '../../../components/ui/RemoteCombobox';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +46,11 @@ const EMPTY_FORM = {
   articuloId: '',
   observacion: '',
 };
+
+const articuloOption = (a: { id?: number; codigo?: string; nombre?: string }) => ({
+  id: a.id,
+  nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo || '',
+});
 
 const LINEA_FIELDS: SearchField[] = [
   { value: 'nombre', label: 'Nombre' },
@@ -67,24 +76,36 @@ export const LineasPage = () => {
   const [editingLinea, setEditingLinea] = useState<Linea | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [detalle, setDetalle] = useState<Linea | null>(null);
+  // The línea only carries articuloId, so the detail looks the articulo up by id.
+  const { data: articuloDetalle } = useQuery({
+    queryKey: ['articulo', detalle?.articuloId],
+    queryFn: () => getArticulo(detalle!.articuloId!),
+    enabled: detalle?.articuloId != null,
+  });
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('nombre');
-  const [query, setQuery] = useState('');
 
-  const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
-    queryKey: ['lineas'],
-    queryFn: getLineas,
-  });
-
-  const { data: inactivas = [], isLoading: loadingInactivas, error: errorInactivas } = useQuery({
-    queryKey: ['lineas-inactivos'],
-    queryFn: getLineasInactivas,
-  });
-
-  const { data: rutas = [] } = useQuery({
-    queryKey: ['rutas'],
-    queryFn: getRutas,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: lineasFiltradas,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Linea>({
+    key: 'lineas',
+    fetchActive: getLineas,
+    fetchInactive: getLineasInactivas,
+    defaultField: 'nombre',
+    sortBy: 'nombre',
   });
 
   const { data: dispositivos = [] } = useQuery({
@@ -97,15 +118,14 @@ export const LineasPage = () => {
     queryFn: getBalanzas,
   });
 
-  const { data: articulos = [] } = useQuery({
-    queryKey: ['articulos'],
-    queryFn: getArticulos,
-  });
-
   // The artículo of a línea must belong to the línea's ruta (the backend rejects a
   // pasada otherwise), so once a ruta is chosen only its artículos are offered.
   const selectedRutaId = formData.rutaPasadaActiva ? Number(formData.rutaPasadaActiva) : null;
-  const selectedRuta = rutas.find((r) => r.id === selectedRutaId);
+  const { data: selectedRuta } = useQuery({
+    queryKey: ['rutas', 'detail', selectedRutaId],
+    queryFn: () => getRuta(selectedRutaId as number),
+    enabled: selectedRutaId !== null,
+  });
 
   const {
     data: articulosDeRuta,
@@ -117,7 +137,6 @@ export const LineasPage = () => {
     enabled: selectedRutaId !== null,
   });
 
-  const articulosDisponibles = selectedRutaId === null ? articulos : (articulosDeRuta ?? []);
 
   // Clears the chosen artículo when the ruta does not contain it. It shares the query cache
   // with the useQuery above, so no extra request is made for a ruta that is already loaded.
@@ -149,29 +168,11 @@ export const LineasPage = () => {
     if (val) void descartarArticuloAjeno(val);
   };
 
-  const isLoading = loadingActivas || loadingInactivas;
-  const error = errorActivas || errorInactivas;
-
-  const lineasFiltradas = useMemo(() => {
-    const base = status === 'activo' ? activas : inactivas;
-    const q = query.trim().toLowerCase();
-
-    let result = base;
-    if (q) {
-      result = base.filter((l) =>
-        String(l[field as keyof Linea] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [activas, inactivas, status, field, query]);
-
   const saveDeviceMutation = useMutation({
     mutationFn: ({ id, hardwareId }: { id: number; hardwareId: string | null }) => 
       assignDeviceToLinea(id, hardwareId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
-      queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       queryClient.invalidateQueries({ queryKey: ['dispositivos'] });
     },
     onError: (err: unknown) => {
@@ -196,7 +197,6 @@ export const LineasPage = () => {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
-      queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       closeModal();
       notifyOutcome('creada', variables.rutaPasadaActiva);
     },
@@ -233,7 +233,6 @@ export const LineasPage = () => {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
-      queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       closeModal();
       notifyOutcome(variables.accion, variables.data.rutaPasadaActiva);
     },
@@ -250,7 +249,6 @@ export const LineasPage = () => {
     mutationFn: deleteLinea,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
-      queryClient.invalidateQueries({ queryKey: ['lineas-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -433,6 +431,15 @@ export const LineasPage = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
+                      onClick={() => setDetalle(linea)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: linea.id, title: linea.nombre })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -461,6 +468,8 @@ export const LineasPage = () => {
           </table>
         </div>
       </div>
+
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="sm:max-w-lg">
@@ -506,10 +515,12 @@ export const LineasPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Ruta Activa <span className="text-muted-foreground font-normal">(opcional)</span></label>
-                <SearchableCombobox
+                <RemoteCombobox
                   value={selectedRutaId}
                   onChange={handleRutaChange}
-                  options={[...rutas].sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true }))}
+                  queryKey="rutas"
+                  search={getRutas}
+                  fetchById={getRuta}
                   placeholder="Buscar ruta..."
                   clearable
                 />
@@ -517,14 +528,26 @@ export const LineasPage = () => {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Artículo</label>
                 <div data-field="articuloId" className="rounded-md">
-                  <SearchableCombobox
-                    value={formData.articuloId ? Number(formData.articuloId) : null}
-                    onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
-                    options={[...articulosDisponibles]
-                      .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
-                      .map((a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo || '' }))}
-                    placeholder="Buscar artículo..."
-                  />
+                  {selectedRutaId === null ? (
+                    <RemoteCombobox
+                      value={formData.articuloId ? Number(formData.articuloId) : null}
+                      onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
+                      queryKey="articulos"
+                      search={getArticulos}
+                      fetchById={getArticulo}
+                      toOption={articuloOption}
+                      placeholder="Buscar artículo..."
+                    />
+                  ) : (
+                    <SearchableCombobox
+                      value={formData.articuloId ? Number(formData.articuloId) : null}
+                      onChange={(val) => setFormData({ ...formData, articuloId: val ? String(val) : '' })}
+                      options={[...(articulosDeRuta ?? [])]
+                        .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', undefined, { numeric: true }))
+                        .map(articuloOption)}
+                      placeholder="Buscar artículo..."
+                    />
+                  )}
                 </div>
                 {articulosDeRutaConError ? (
                   <p className="mt-1 text-xs text-destructive">
@@ -596,6 +619,24 @@ export const LineasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la línea"
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Dispositivo', value: detalle?.dispositivo ? `${detalle.dispositivo.nombre} (${detalle.dispositivo.hardwareId})` : null },
+          { label: 'Ruta activa', value: detalle?.rutaPasadaActiva?.nombre },
+          { label: 'Artículo', value: articuloDetalle ? articuloOption(articuloDetalle).nombre : null },
+          { label: 'Observación', value: detalle?.observacion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="linea"
         raizId={historial?.id ?? null}

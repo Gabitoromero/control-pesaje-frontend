@@ -1,5 +1,44 @@
 import { http, HttpResponse } from 'msw';
 
+
+const SECTORES_CONOCIDOS = ['OF', 'SU', 'DD', 'MC'];
+
+/** Emulates the paginated list contract of the API: search, sector filter, order and page. */
+export function pagedJson(request: Request, source: ReadonlyArray<object>) {
+  const params = new URL(request.url).searchParams;
+  const page = Number(params.get('page') ?? 1);
+  const pageSize = Number(params.get('pageSize') ?? 20);
+  const q = (params.get('q') ?? '').toLowerCase();
+  const searchField = params.get('searchField');
+  const sector = params.get('sector');
+  const sortBy = params.get('sortBy');
+  const direction = params.get('sortDirection') === 'desc' ? -1 : 1;
+
+  let rows = source as Array<Record<string, unknown>>;
+  if (q) {
+    rows = rows.filter((row) =>
+      (searchField ? [searchField] : Object.keys(row)).some((key) =>
+        String(row[key] ?? '').toLowerCase().includes(q),
+      ),
+    );
+  }
+  if (sector) {
+    rows = rows.filter((row) => {
+      const code = (row.datosAdicionales as { sector?: string } | undefined)?.sector;
+      const known = code && SECTORES_CONOCIDOS.includes(code) ? code : null;
+      return sector === 'sin-sector' ? known === null : known === sector;
+    });
+  }
+  if (sortBy) {
+    rows = [...rows].sort((a, b) => String(a[sortBy] ?? '').localeCompare(String(b[sortBy] ?? '')) * direction);
+  }
+  const start = (page - 1) * pageSize;
+  return HttpResponse.json({
+    success: true,
+    data: { items: rows.slice(start, start + pageSize), total: rows.length, page, pageSize },
+  });
+}
+
 export const loginMock = {
   operario: { id: 3, nombreUsuario: 'operario1', rol: 'operario' as const, puedeTomarMuestrasLibres: false },
   jefe:     { id: 2, nombreUsuario: 'jefe1',     rol: 'jefe'     as const, puedeTomarMuestrasLibres: false },
@@ -134,18 +173,25 @@ export const handlers = [
     HttpResponse.json({ success: true, data: {} })
   ),
 
-  http.get(`${BASE}/lineas-produccion`, () =>
-    HttpResponse.json({ success: true, data: lineasMock })
+  http.get(`${BASE}/lineas-produccion`, ({ request }) =>
+    pagedJson(request, lineasMock)
   ),
 
 
-  http.get(`${BASE}/articulos`, () =>
-    HttpResponse.json({ success: true, data: articulosMock })
+  http.get(`${BASE}/articulos`, ({ request }) =>
+    pagedJson(request, articulosMock)
   ),
 
-  http.get(`${BASE}/articulos/inactive`, () =>
-    HttpResponse.json({ success: true, data: articulosMockInactivos })
+  http.get(`${BASE}/articulos/inactive`, ({ request }) =>
+    pagedJson(request, articulosMockInactivos)
   ),
+
+  http.get(`${BASE}/articulos/:id`, ({ params }) => {
+    const found = [...articulosMock, ...articulosMockInactivos].find((a) => a.id === Number(params.id));
+    return found
+      ? HttpResponse.json({ success: true, data: found })
+      : HttpResponse.json({ success: false, error: { message: 'No encontrado' } }, { status: 404 });
+  }),
 
   http.post(`${BASE}/articulos`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;
@@ -161,12 +207,12 @@ export const handlers = [
     new HttpResponse(null, { status: 204 })
   ),
 
-  http.get(`${BASE}/usuarios`, () =>
-    HttpResponse.json({ success: true, data: usuariosMock })
+  http.get(`${BASE}/usuarios`, ({ request }) =>
+    pagedJson(request, usuariosMock)
   ),
 
-  http.get(`${BASE}/usuarios/inactive`, () =>
-    HttpResponse.json({ success: true, data: usuariosMockInactivos })
+  http.get(`${BASE}/usuarios/inactive`, ({ request }) =>
+    pagedJson(request, usuariosMockInactivos)
   ),
 
   http.post(`${BASE}/usuarios`, async ({ request }) => {
@@ -183,13 +229,20 @@ export const handlers = [
     new HttpResponse(null, { status: 204 })
   ),
 
-  http.get(`${BASE}/etapas`, () =>
-    HttpResponse.json({ success: true, data: etapasMock })
+  http.get(`${BASE}/etapas`, ({ request }) =>
+    pagedJson(request, etapasMock)
   ),
 
-  http.get(`${BASE}/etapas/inactive`, () =>
-    HttpResponse.json({ success: true, data: etapasMockInactivos })
+  http.get(`${BASE}/etapas/inactive`, ({ request }) =>
+    pagedJson(request, etapasMockInactivos)
   ),
+
+  http.get(`${BASE}/etapas/:id`, ({ params }) => {
+    const found = [...etapasMock, ...etapasMockInactivos].find((e) => e.id === Number(params.id));
+    return found
+      ? HttpResponse.json({ success: true, data: found })
+      : HttpResponse.json({ success: false, error: { message: 'No encontrado' } }, { status: 404 });
+  }),
 
   http.post(`${BASE}/etapas`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;
@@ -228,12 +281,12 @@ export const handlers = [
   ),
 
   // rutas-pasadas handlers
-  http.get(`${BASE}/rutas-pasadas`, () =>
-    HttpResponse.json({ success: true, data: rutasMock })
+  http.get(`${BASE}/rutas-pasadas`, ({ request }) =>
+    pagedJson(request, rutasMock)
   ),
 
-  http.get(`${BASE}/rutas-pasadas/inactive`, () =>
-    HttpResponse.json({ success: true, data: rutasMockInactivos })
+  http.get(`${BASE}/rutas-pasadas/inactive`, ({ request }) =>
+    pagedJson(request, rutasMockInactivos)
   ),
 
   http.get(`${BASE}/rutas-pasadas/:id`, ({ params }) => {
@@ -287,8 +340,8 @@ export const handlers = [
   ),
 
   // lineas-produccion ABM handlers (GET active already exists above)
-  http.get(`${BASE}/lineas-produccion/inactive`, () =>
-    HttpResponse.json({ success: true, data: lineasMockInactivos })
+  http.get(`${BASE}/lineas-produccion/inactive`, ({ request }) =>
+    pagedJson(request, lineasMockInactivos)
   ),
 
   http.post(`${BASE}/lineas-produccion`, async ({ request }) => {

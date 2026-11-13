@@ -5,7 +5,7 @@ import { useAuth } from '../../features/auth/context/AuthContext';
 import {
   LayoutDashboard, FileBarChart, LogOut, Package, Users, UserRoundCog, Factory,
   Layers, Route as RouteIcon, SplinePointer, ChevronRight, Cog, Activity, Cpu, Sun, Moon, Radar, Scale, BookOpen, FlaskConical,
-  PanelLeftClose,
+  PanelLeftClose, History,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '../../features/theme/ThemeContext';
@@ -182,6 +182,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavClick, onToggleCollapse }
 
           {isJefe && (
             <NavItem to="/dashboard/planta" icon={Factory} label="Planta" onNavigate={handleNavigate} />
+          )}
+
+          {isJefe && (
+            <NavItem to="/dashboard/historial" icon={History} label="Historial" onNavigate={handleNavigate} />
           )}
 
           {isJefe && (

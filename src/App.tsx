@@ -11,6 +11,7 @@ import { GestionPasadasPage } from './features/tablet/pages/GestionPasadasPage';
 import { MuestrasLibresLayout } from './features/tablet/pages/MuestrasLibresLayout';
 import { MuestrasLibresPage } from './features/tablet/pages/MuestrasLibresPage';
 import { HistorialPage } from './features/tablet/pages/HistorialPage';
+import { HistorialDashboardPage } from './features/dashboard/pages/HistorialDashboardPage';
 
 import { ArticulosPage } from './features/dashboard/pages/ArticulosPage';
 import { BalanzasPage } from './features/dashboard/pages/BalanzasPage';
@@ -73,6 +74,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<MonitoreoPage />} />
           <Route path="planta" element={<Navigate to="/tablet/seleccion-linea" replace />} />
+          <Route path="historial" element={isJefe ? <HistorialDashboardPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="pasadas-activas" element={isJefe ? <PasadasActivasPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="articulos" element={isJefe ? <ArticulosPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="etapas" element={isJefe ? <EtapasPage /> : <Navigate to="/dashboard" replace />} />

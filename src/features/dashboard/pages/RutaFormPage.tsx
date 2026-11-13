@@ -8,8 +8,9 @@ import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRuta, createRuta, updateRuta, deleteRuta } from '../../../api/rutas';
-import { getEtapas } from '../../../api/etapas';
-import { getArticulos } from '../../../api/articulos';
+import { getEtapa, getEtapas } from '../../../api/etapas';
+import { getArticulo, getArticulos } from '../../../api/articulos';
+import { RemoteCombobox } from '../../../components/ui/RemoteCombobox';
 import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
 import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
 import { MAGNITUDES, MAGNITUD_POR_DEFECTO, MAX_ATRIBUTOS_POR_ETAPA, PESO_DECIMALS, TIPOS_ATRIBUTO } from '../../../shared/constants';
@@ -17,7 +18,6 @@ import { unidadLabel } from '../../../shared/peso';
 import { MAGNITUD_LABEL } from '../../../utils/magnitud';
 import { Plus, Trash, ArrowLeft, Save, RefreshCw, GripVertical, Minus } from 'lucide-react';
 import { toast } from 'sonner';
-import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -195,7 +195,6 @@ const SortableEtapaItem = ({
   control,
   setValue,
   errors,
-  etapasOptions,
   remove,
   fieldsLength,
   confirm
@@ -206,7 +205,6 @@ const SortableEtapaItem = ({
   setValue: UseFormSetValue<RutaFormValues>;
   control: Control<RutaFormValues>;
   errors: FieldErrors<RutaFormValues>;
-  etapasOptions: { id?: number; nombre: string }[];
   remove: UseFieldArrayRemove;
   swap: UseFieldArrayMove;
   fieldsLength: number;
@@ -262,7 +260,14 @@ const SortableEtapaItem = ({
               name={`etapas.${index}.etapa`}
               control={control}
               render={({ field: { value, onChange } }) => (
-                <SearchableCombobox value={value} onChange={onChange} options={etapasOptions} placeholder="Buscar etapa..." />
+                <RemoteCombobox
+                  value={value}
+                  onChange={onChange}
+                  queryKey="etapas"
+                  search={getEtapas}
+                  fetchById={getEtapa}
+                  placeholder="Buscar etapa..."
+                />
               )}
             />
             {errors.etapas?.[index]?.etapa && (
@@ -480,9 +485,6 @@ export const RutaFormPage = () => {
 
   const { hayActividad } = useActividadGlobal();
 
-  const { data: etapasOptions = [] } = useQuery({ queryKey: ['etapas'], queryFn: getEtapas });
-  const { data: articulosOptions = [] } = useQuery({ queryKey: ['articulos'], queryFn: getArticulos });
-
   // Articulos asignados a la ruta (pivot table, managed via direct API calls)
   const { data: articulosAsignados = [], refetch: refetchArticulosAsignados } = useQuery({
     queryKey: ['ruta-articulos', id],
@@ -645,7 +647,7 @@ export const RutaFormPage = () => {
     },
   });
 
-  const handleAddArticulo = (articuloId: number) => {
+  const handleAddArticulo = async (articuloId: number) => {
     if (!articuloId || addArticuloMutation.isPending) return;
 
     if (isEditing) {
@@ -656,8 +658,20 @@ export const RutaFormPage = () => {
       const alreadyAssigned = articulosLocal.some(a => a.articulo.id === articuloId);
       if (alreadyAssigned) return;
 
-      const articuloOption = articulosOptions.find(a => a.id === articuloId);
-      if (!articuloOption) return;
+      // Selector rows only carry the id and label, so read the full articulo by id.
+      let articuloOption;
+      try {
+        articuloOption = await queryClient.fetchQuery({
+          queryKey: ['articulos', 'detail', articuloId],
+          queryFn: () => getArticulo(articuloId),
+        });
+      } catch (err) {
+        alertError({
+          title: 'No se pudo agregar el artículo',
+          description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
+        });
+        return;
+      }
 
       const localItem: ArticuloRutaPasadaItem = {
         id: -(Date.now()), // temporary negative ID for local items
@@ -881,7 +895,6 @@ export const RutaFormPage = () => {
                     setValue={setValue}
                     control={control}
                     errors={errors}
-                    etapasOptions={etapasOptions}
                     remove={remove}
                     swap={swap}
                     fieldsLength={fields.length}
@@ -901,14 +914,27 @@ export const RutaFormPage = () => {
           {/* Selector to add a new articulo */}
           <div className="mb-4">
             <div className="min-w-0">
-              <SearchableCombobox 
-                value={selectedArticuloId} 
-                onChange={(val) => handleAddArticulo(val)}
-                options={articulosOptions
-                  .filter(a => !articulosAsignadosIds.has(a.id!))
-                  .map(a => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo }))
-                } 
-                placeholder="Buscar artículo..." 
+              <RemoteCombobox
+                value={selectedArticuloId}
+                onChange={(val) => void handleAddArticulo(val)}
+                queryKey={`ruta-articulos-${[...articulosAsignadosIds].sort().join(',')}`}
+                search={async (query) => {
+                  // Assigned articulos are not offered. Ask for that many extra rows so the offered page
+                  // still fills up, then trim it back to the requested size.
+                  const extra = articulosAsignadosIds.size;
+                  const page = await getArticulos({ ...query, pageSize: Math.min(100, query.pageSize + extra) });
+                  const offered = page.items.filter((a) => !articulosAsignadosIds.has(a.id!));
+                  const removed = page.items.length - offered.length;
+                  return {
+                    ...page,
+                    items: offered.slice(0, query.pageSize),
+                    total: Math.max(0, page.total - removed),
+                    pageSize: query.pageSize,
+                  };
+                }}
+                fetchById={getArticulo}
+                toOption={(a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo })}
+                placeholder="Buscar artículo..."
               />
             </div>
           </div>

@@ -1,4 +1,5 @@
 import api from './axios';
+import { fetchPage, type Page, type PageQuery } from './pagination';
 import type { UsuarioRol, UsuarioMetadata } from '../shared/types';
 
 export type UsuarioDatosAdicionales = UsuarioMetadata;
@@ -17,15 +18,16 @@ export interface Usuario {
 
 export type UsuarioCreate = Omit<Usuario, 'id'>;
 
-export const getUsuarios = async (): Promise<Usuario[]> => {
-  const response = await api.get<{ success: boolean; data: Usuario[] }>('/usuarios');
-  return response.data.data;
-};
+export interface UsuarioPageQuery extends PageQuery {
+  /** A sector code (OF, SU, DD, MC) or `sin-sector`. */
+  sector?: string;
+}
 
-export const getUsuariosInactivos = async (): Promise<Usuario[]> => {
-  const response = await api.get<{ success: boolean; data: Usuario[] }>('/usuarios/inactive');
-  return response.data.data;
-};
+export const getUsuarios = (query?: UsuarioPageQuery): Promise<Page<Usuario>> =>
+  fetchPage<Usuario>('/usuarios', query);
+
+export const getUsuariosInactivos = (query?: UsuarioPageQuery): Promise<Page<Usuario>> =>
+  fetchPage<Usuario>('/usuarios/inactive', query);
 
 export const getUsuario = async (id: number): Promise<Usuario> => {
   const response = await api.get<{ success: boolean; data: Usuario }>(`/usuarios/${id}`);

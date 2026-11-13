@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers, usuariosMock, usuariosMockInactivos } from '../../../test/handlers';
+import { handlers, pagedJson, usuariosMock, usuariosMockInactivos } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { UsuariosPage } from './UsuariosPage';
 import { getSectorColor } from '../../../lib/sectores';
@@ -81,12 +81,12 @@ describe('UsuariosPage', () => {
     await userEvent.type(searchInput, 'pedro');
 
     expect(screen.getByText('Pedro Operario')).toBeInTheDocument();
-    expect(screen.queryByText('Admin Istrador')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Admin Istrador')).not.toBeInTheDocument());
     expect(screen.queryByText('José Jefe')).not.toBeInTheDocument();
 
     await userEvent.clear(searchInput);
 
-    expect(screen.getByText('Admin Istrador')).toBeInTheDocument();
+    expect(await screen.findByText('Admin Istrador')).toBeInTheDocument();
     expect(screen.getByText('José Jefe')).toBeInTheDocument();
     expect(screen.getByText('Pedro Operario')).toBeInTheDocument();
   });
@@ -195,14 +195,11 @@ describe('UsuariosPage', () => {
   it('editing a user preselects the stored sector and keeps the other datosAdicionales keys on save', async () => {
     let requestPayload: Record<string, unknown> | null = null;
     server.use(
-      http.get('http://localhost:3000/api/usuarios', () =>
-        HttpResponse.json({
-          success: true,
-          data: [
-            { id: 7, nombreApellido: 'Sofía Sector', nombreUsuario: 'sofia', rol: 'operario', activo: true, legajo: '55555',
-              datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
-          ],
-        })
+      http.get('http://localhost:3000/api/usuarios', ({ request }) =>
+        pagedJson(request, [
+          { id: 7, nombreApellido: 'Sofía Sector', nombreUsuario: 'sofia', rol: 'operario', activo: true, legajo: '55555',
+            datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
+        ])
       ),
       http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
         requestPayload = (await request.json()) as Record<string, unknown>;
@@ -228,14 +225,11 @@ describe('UsuariosPage', () => {
   it('choosing "Sin sector" on a user that has one sends sector null and keeps the other datosAdicionales keys', async () => {
     let requestPayload: Record<string, unknown> | null = null;
     server.use(
-      http.get('http://localhost:3000/api/usuarios', () =>
-        HttpResponse.json({
-          success: true,
-          data: [
-            { id: 7, nombreApellido: 'Sofía Sector', nombreUsuario: 'sofia', rol: 'operario', activo: true, legajo: '55555',
-              datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
-          ],
-        })
+      http.get('http://localhost:3000/api/usuarios', ({ request }) =>
+        pagedJson(request, [
+          { id: 7, nombreApellido: 'Sofía Sector', nombreUsuario: 'sofia', rol: 'operario', activo: true, legajo: '55555',
+            datosAdicionales: { sector: 'MC', preferenciasInterfaz: { tema: 'oscuro' } } },
+        ])
       ),
       http.put('http://localhost:3000/api/usuarios/:id', async ({ request }) => {
         requestPayload = (await request.json()) as Record<string, unknown>;
@@ -380,6 +374,70 @@ describe('UsuariosPage', () => {
     await screen.findByText('No se pudo actualizar');
   });
 
+  describe('validation errors from the API', () => {
+    const validationError = (issues: Array<{ path: Array<string | number>; message: string }>) =>
+      http.put('http://localhost:3000/api/usuarios/:id', () =>
+        HttpResponse.json(
+          { success: false, error: { message: 'Validation error', details: issues } },
+          { status: 400 }
+        )
+      );
+
+    const openAdminAndSave = async () => {
+      renderWithProviders(<UsuariosPage />);
+      const adminRow = (await screen.findByText('Admin Istrador')).closest('tr')!;
+      await userEvent.click(within(adminRow).getByTitle('Editar'));
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    };
+
+    it('marks the offending input and explains the reason under it and in the notification', async () => {
+      server.use(validationError([{ path: ['legajo'], message: 'Debe tener exactamente 5 dígitos numéricos' }]));
+
+      await openAdminAndSave();
+
+      await screen.findByText('No se pudo guardar el usuario');
+      const legajo = screen.getByLabelText('Legajo');
+      await waitFor(() => expect(legajo).toBeInvalid());
+      expect(legajo).toHaveAccessibleDescription('Debe tener exactamente 5 dígitos numéricos');
+      expect(screen.getByText('Legajo: Debe tener exactamente 5 dígitos numéricos')).toBeInTheDocument();
+      expect(screen.getByLabelText('Nombre completo')).toBeValid();
+    });
+
+    it('marks the Sector select when the API rejects datosAdicionales.sector', async () => {
+      server.use(validationError([{ path: ['datosAdicionales', 'sector'], message: 'Sector inválido' }]));
+
+      await openAdminAndSave();
+
+      await waitFor(() => expect(screen.getByLabelText('Sector')).toBeInvalid());
+      expect(screen.getByLabelText('Sector')).toHaveAccessibleDescription('Sector inválido');
+      expect(screen.getByText('Sector: Sector inválido')).toBeInTheDocument();
+    });
+
+    it('clears the mark of an input as soon as the user edits it', async () => {
+      server.use(validationError([{ path: ['legajo'], message: 'Debe tener exactamente 5 dígitos numéricos' }]));
+
+      await openAdminAndSave();
+      await waitFor(() => expect(screen.getByLabelText('Legajo')).toBeInvalid());
+
+      await userEvent.type(screen.getByLabelText('Legajo'), '1');
+
+      expect(screen.getByLabelText('Legajo')).toBeValid();
+    });
+
+    it('keeps showing only the message when the API sends no field details', async () => {
+      server.use(
+        http.put('http://localhost:3000/api/usuarios/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'No se pudo actualizar' } }, { status: 400 })
+        )
+      );
+
+      await openAdminAndSave();
+
+      await screen.findByText('No se pudo actualizar');
+      expect(screen.getByLabelText('Legajo')).toBeValid();
+    });
+  });
+
   it('clicking "Eliminar Usuario" opens a confirm dialog instead of window.confirm', async () => {
     renderWithProviders(<UsuariosPage />);
 
@@ -468,7 +526,7 @@ describe('UsuariosPage', () => {
     ];
     const useSectorUsers = () =>
       server.use(
-        http.get('http://localhost:3000/api/usuarios', () => HttpResponse.json({ success: true, data: usuariosConSector }))
+        http.get('http://localhost:3000/api/usuarios', ({ request }) => pagedJson(request, usuariosConSector))
       );
     const visible = (name: string) => screen.queryByText(name);
 
@@ -500,17 +558,18 @@ describe('UsuariosPage', () => {
       expect(select.value).toBe('');
 
       await userEvent.selectOptions(select, 'DD');
+      await waitFor(() => expect(visible('Ofelia Oficial')).toBeNull());
       expect(visible('Dario Calidad')).toBeInTheDocument();
-      expect(visible('Ofelia Oficial')).toBeNull();
       expect(visible('Nadia Nosector')).toBeNull();
       expect(visible('Marcos Mejora')).toBeNull();
 
       await userEvent.selectOptions(select, 'sin-sector');
-      expect(visible('Nadia Nosector')).toBeInTheDocument();
+      await waitFor(() => expect(visible('Nadia Nosector')).toBeInTheDocument());
       expect(visible('Dario Calidad')).toBeNull();
 
       await userEvent.selectOptions(select, '');
-      ['Ofelia Oficial', 'Dario Calidad', 'Nadia Nosector', 'Marcos Mejora'].forEach((n) =>
+      await waitFor(() => expect(visible('Ofelia Oficial')).toBeInTheDocument());
+      ['Dario Calidad', 'Nadia Nosector', 'Marcos Mejora'].forEach((n) =>
         expect(visible(n)).toBeInTheDocument()
       );
     });
@@ -523,7 +582,7 @@ describe('UsuariosPage', () => {
       await userEvent.selectOptions(screen.getByLabelText('Filtrar por sector'), 'OF');
       await userEvent.type(screen.getByPlaceholderText('Buscar...'), 'Dario');
 
-      expect(screen.getByText('No hay usuarios activos.')).toBeInTheDocument();
+      expect(await screen.findByText('No hay usuarios activos.')).toBeInTheDocument();
       expect(visible('Dario Calidad')).toBeNull();
     });
   });

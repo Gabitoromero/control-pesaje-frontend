@@ -43,4 +43,21 @@ describe('ArticulosPage history', () => {
     expect(requestedUrl?.searchParams.get('raizTipo')).toBe('articulo');
     expect(requestedUrl?.searchParams.get('raizId')).toBe('1');
   });
+
+  it('shows the full detail without editing and can jump to the history', async () => {
+    renderWithProviders(<ArticulosPage />);
+    await waitFor(() => expect(screen.getByText('Harina 000')).toBeInTheDocument());
+
+    const row = screen.getByText('Harina 000').closest('tr') as HTMLElement;
+    await userEvent.click(within(row).getByRole('button', { name: 'Ver detalle' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Detalle del artículo')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Harina 000')).toHaveLength(1);
+    expect(screen.queryByText('Editar Artículo')).not.toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: /historial/i }));
+    expect(await screen.findByText('José Jefe')).toBeInTheDocument();
+    expect(requestedUrl?.searchParams.get('raizId')).toBe('1');
+  });
 });

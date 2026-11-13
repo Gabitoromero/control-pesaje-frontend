@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getArticulos,
   getArticulosInactivos,
@@ -8,9 +8,12 @@ import {
   deleteArticulo,
   type Articulo,
 } from '../../../api/articulos';
-import { Plus, Edit, Trash, History } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
@@ -21,6 +24,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+
+// The backend finds the verification route through the articulo with this code, so it can't change.
+const CODIGO_ARTICULO_VERIFICACION = '0';
 
 const EMPTY_FORM = { codigo: '', descripcion: '', nombre: '' };
 
@@ -35,46 +41,40 @@ export const ArticulosPage = () => {
   const { alertError, confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
+  const codigoBloqueado = editingArticulo?.codigo === CODIGO_ARTICULO_VERIFICACION;
   const [formData, setFormData] = useState(EMPTY_FORM);
   const { hayActividad } = useActividadGlobal();
 
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('codigo');
-  const [query, setQuery] = useState('');
+  const [detalle, setDetalle] = useState<Articulo | null>(null);
 
-  const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
-    queryKey: ['articulos'],
-    queryFn: getArticulos,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: articulosFiltrados,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Articulo>({
+    key: 'articulos',
+    fetchActive: getArticulos,
+    fetchInactive: getArticulosInactivos,
+    defaultField: 'codigo',
+    sortBy: 'codigo',
   });
-
-  const { data: inactivos = [], isLoading: loadingInactivos, error: errorInactivos } = useQuery({
-    queryKey: ['articulos-inactivos'],
-    queryFn: getArticulosInactivos,
-  });
-
-  const isLoading = loadingActivos || loadingInactivos;
-  const error = errorActivos || errorInactivos;
-
-  const articulosFiltrados = useMemo(() => {
-    const base = status === 'activo' ? activos : inactivos;
-    const q = query.trim().toLowerCase();
-
-    let result = base;
-    if (q) {
-      result = base.filter((a) =>
-        String(a[field as keyof Articulo] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    return [...result].sort((a, b) => a.codigo.localeCompare(b.codigo));
-  }, [activos, inactivos, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createArticulo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -89,7 +89,6 @@ export const ArticulosPage = () => {
     mutationFn: ({ id, data }: { id: number; data: Partial<Articulo> }) => updateArticulo(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -104,7 +103,6 @@ export const ArticulosPage = () => {
     mutationFn: deleteArticulo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -240,6 +238,15 @@ export const ArticulosPage = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
+                      onClick={() => setDetalle(articulo)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: articulo.id, title: `${articulo.codigo}${articulo.nombre ? ' · ' + articulo.nombre : ''}` })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -268,6 +275,8 @@ export const ArticulosPage = () => {
         </div>
       </div>
 
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
+
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
@@ -283,9 +292,11 @@ export const ArticulosPage = () => {
                   type="text"
                   required
                   placeholder="Ej: Palito bombón"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                  disabled={codigoBloqueado}
+                  title={codigoBloqueado ? 'El código del artículo de verificación no se puede modificar' : undefined}
                 />
               </div>
               <div>
@@ -336,6 +347,22 @@ export const ArticulosPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle del artículo"
+        fields={[
+          { label: 'Código', value: detalle?.codigo },
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activo' : 'Inactivo' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: `${detalle.codigo}${detalle.nombre ? ' · ' + detalle.nombre : ''}` });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="articulo"
         raizId={historial?.id ?? null}

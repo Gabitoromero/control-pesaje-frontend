@@ -1,14 +1,16 @@
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getRutas,
   getRutasInactivas,
 } from '../../../api/rutas';
 import type { Ruta } from '../../../shared/types/domain';
-import { Plus, Edit, History } from 'lucide-react';
+import { Plus, Edit, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
 
 
@@ -20,39 +22,33 @@ const RUTA_FIELDS: SearchField[] = [
 export const RutasPage = () => {
   const navigate = useNavigate();
 
+  const [detalle, setDetalle] = useState<Ruta | null>(null);
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('nombre');
-  const [query, setQuery] = useState('');
 
   const { hayActividad } = useActividadGlobal();
 
-  const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
-    queryKey: ['rutas'],
-    queryFn: getRutas,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: rutasFiltradas,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Ruta>({
+    key: 'rutas',
+    fetchActive: getRutas,
+    fetchInactive: getRutasInactivas,
+    defaultField: 'nombre',
+    sortBy: 'nombre',
   });
-
-  const { data: inactivas = [], isLoading: loadingInactivas, error: errorInactivas } = useQuery({
-    queryKey: ['rutas-inactivos'],
-    queryFn: getRutasInactivas,
-  });
-
-  const isLoading = loadingActivas || loadingInactivas;
-  const error = errorActivas || errorInactivas;
-
-  const rutasFiltradas = useMemo(() => {
-    const base = status === 'activo' ? activas : inactivas;
-    const q = query.trim().toLowerCase();
-
-    let result = base;
-    if (q) {
-      result = base.filter((r) =>
-        String(r[field as keyof Ruta] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [activas, inactivas, status, field, query]);
 
   if (isLoading) return <div className="p-6 text-foreground">Cargando rutas...</div>;
   if (error) return <div className="p-6 text-destructive">Error al cargar rutas</div>;
@@ -117,6 +113,15 @@ export const RutasPage = () => {
 
                     <button
                       type="button"
+                      onClick={() => setDetalle(ruta)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: ruta.id, title: ruta.nombre })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -145,6 +150,24 @@ export const RutasPage = () => {
           </table>
         </div>
       </div>
+
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
+
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la ruta"
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="ruta"
         raizId={historial?.id ?? null}

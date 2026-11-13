@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getEtapas,
   getEtapasInactivas,
@@ -9,10 +9,13 @@ import {
   type Etapa,
   type EtapaCreate,
 } from '../../../api/etapas';
-import { Plus, Edit, Trash, History } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
 
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -39,46 +42,38 @@ export const EtapasPage = () => {
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [detalle, setDetalle] = useState<Etapa | null>(null);
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('nombre');
-  const [query, setQuery] = useState('');
 
   const { hayActividad } = useActividadGlobal();
 
-
-  const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
-    queryKey: ['etapas'],
-    queryFn: getEtapas,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: etapasFiltradas,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Etapa>({
+    key: 'etapas',
+    fetchActive: getEtapas,
+    fetchInactive: getEtapasInactivas,
+    defaultField: 'nombre',
+    sortBy: 'nombre',
   });
-
-  const { data: inactivas = [], isLoading: loadingInactivas, error: errorInactivas } = useQuery({
-    queryKey: ['etapas-inactivas'],
-    queryFn: getEtapasInactivas,
-  });
-
-  const isLoading = loadingActivas || loadingInactivas;
-  const error = errorActivas || errorInactivas;
-
-  const etapasFiltradas = useMemo(() => {
-    const base = status === 'activo' ? activas : inactivas;
-    const q = query.trim().toLowerCase();
-
-    let result = base;
-    if (q) {
-      result = base.filter((e) =>
-        String(e[field as keyof Etapa] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [activas, inactivas, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createEtapa,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
-      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
       toast.success('Etapa creada exitosamente');
     },
@@ -95,7 +90,6 @@ export const EtapasPage = () => {
       updateEtapa(id, data),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
-      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
       toast.success(`Etapa ${variables.accion} exitosamente`);
     },
@@ -111,7 +105,6 @@ export const EtapasPage = () => {
     mutationFn: deleteEtapa,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
-      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
       toast.success('Etapa eliminada exitosamente');
     },
@@ -243,6 +236,15 @@ export const EtapasPage = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
+                      onClick={() => setDetalle(etapa)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: etapa.id, title: etapa.nombre })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -270,6 +272,8 @@ export const EtapasPage = () => {
           </table>
         </div>
       </div>
+
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="sm:max-w-lg">
@@ -327,6 +331,21 @@ export const EtapasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la etapa"
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="etapa"
         raizId={historial?.id ?? null}

@@ -1,4 +1,5 @@
 import api from './axios';
+import { fetchPage, type Page, type PageQuery } from './pagination';
 import type { Ruta, RutaCreate, RutaUpdate } from '../shared/types/domain';
 
 interface ApiEnvelope<T> {
@@ -6,15 +7,11 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
-export const getRutas = async (): Promise<Ruta[]> => {
-  const response = await api.get<ApiEnvelope<Ruta[]>>('/rutas-pasadas');
-  return response.data.data;
-};
+export const getRutas = (query?: PageQuery): Promise<Page<Ruta>> =>
+  fetchPage<Ruta>('/rutas-pasadas', query);
 
-export const getRutasInactivas = async (): Promise<Ruta[]> => {
-  const response = await api.get<ApiEnvelope<Ruta[]>>('/rutas-pasadas/inactive');
-  return response.data.data;
-};
+export const getRutasInactivas = (query?: PageQuery): Promise<Page<Ruta>> =>
+  fetchPage<Ruta>('/rutas-pasadas/inactive', query);
 
 export const getRuta = async (id: number): Promise<Ruta> => {
   const response = await api.get<ApiEnvelope<Ruta>>(`/rutas-pasadas/${id}`);

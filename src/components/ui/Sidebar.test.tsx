@@ -134,6 +134,21 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /muestras/i })).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['ADMINISTRADOR', admin],
+    ['JEFE', jefe],
+  ])('shows a top-level Historial link to /dashboard/historial for %s', (_label, user) => {
+    renderWithAuth(<Sidebar />, { user, initialEntries: ['/dashboard'] });
+
+    expect(screen.getByRole('link', { name: /^historial$/i })).toHaveAttribute('href', '/dashboard/historial');
+  });
+
+  it('hides the Historial link from OPERARIO', () => {
+    renderWithAuth(<Sidebar />, { user: operario, initialEntries: ['/dashboard'] });
+
+    expect(screen.queryByRole('link', { name: /^historial$/i })).not.toBeInTheDocument();
+  });
+
   it('hides Muestras from OPERARIO (no Parametrización group at all)', () => {
     renderWithAuth(<Sidebar />, { user: operario, initialEntries: ['/dashboard'] });
 

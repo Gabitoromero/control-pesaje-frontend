@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers } from '../../../test/handlers';
+import { handlers, pagedJson } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { RutaFormPage } from './RutaFormPage';
 import { etapaSchema, rutaSchema } from './RutaFormPage.schemas';
@@ -141,7 +141,7 @@ describe('RutaFormPage Component', () => {
     
     // Select etapa via SearchableCombobox
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Amasado' }));
 
     // Set weights and muestras
     const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
@@ -188,7 +188,7 @@ describe('RutaFormPage Component', () => {
     await userEvent.type(document.querySelector('input[name="nombre"]') as HTMLInputElement, 'Ruta con pesos 0');
     await userEvent.click(await screen.findByRole('button', { name: /etapas de la ruta/i }));
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Amasado' }));
     // Weights keep their default of 0, so the first invalid field is the minimum of the first etapa
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
@@ -223,7 +223,7 @@ describe('RutaFormPage Component', () => {
     // Verify 2 etapa rows (each has a drag handle with this title)
     expect(within(etapasContainer).getAllByTitle(/Arrastrar para reordenar/)).toHaveLength(2);
     // Verify the selected options are displayed in the combobox buttons
-    expect(within(etapasContainer).getByRole('button', { name: 'Amasado' })).toBeInTheDocument();
+    expect(await within(etapasContainer).findByRole('button', { name: 'Amasado' })).toBeInTheDocument();
     expect(within(etapasContainer).getByRole('button', { name: 'Horneado' })).toBeInTheDocument();
   });
 
@@ -402,8 +402,8 @@ describe('RutaFormPage Component', () => {
 
     // Change first etapa from Amasado (1) to Envasado (3)
     // Click the first etapa's combobox trigger (shows "Amasado"), then select "Envasado"
-    await userEvent.click(screen.getByRole('button', { name: 'Amasado' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Envasado' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Amasado' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Envasado' }));
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
@@ -440,7 +440,7 @@ describe('RutaFormPage Component', () => {
 
     // The new (third) etapa combobox shows "Seleccione..." — click it and select "Envasado"
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Envasado' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Envasado' }));
 
     const pesoMinInputs = document.querySelectorAll('input[name$=".pesoMinimo"]');
     const pesoMaxInputs = document.querySelectorAll('input[name$=".pesoMaximo"]');
@@ -548,7 +548,7 @@ describe('RutaFormPage Component', () => {
 
       // Select etapa via SearchableCombobox
       await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-      await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+      await userEvent.click(await screen.findByRole('option', { name: 'Amasado' }));
 
       const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
       const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
@@ -606,7 +606,7 @@ describe('RutaFormPage Component', () => {
 
       // The article combobox shows "Seleccione..." — click it to open, then select "Sal fina"
       await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-      await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+      await userEvent.click(await screen.findByRole('option', { name: '[Sal fina] MarcaC' }));
 
       const dialog = await screen.findByRole('alertdialog');
       expect(within(dialog).getByText('No se pudo agregar el artículo')).toBeInTheDocument();
@@ -704,6 +704,38 @@ describe('RutaFormPage — Artículos Asignados', () => {
     expect(options).toContain('[Sal fina] MarcaC');
   });
 
+  it('15b. the offered page still fills up when some articulos are already assigned', async () => {
+    paramsMock = { id: '1' }; // Harina 000 (1) and Azucar (2) are assigned
+    const urls: URL[] = [];
+    const catalog = Array.from({ length: 40 }, (_, i) => ({
+      id: i + 1,
+      codigo: `ART-${String(i + 1).padStart(2, '0')}`,
+      nombre: `P${i + 1}`,
+      activo: true,
+    }));
+    server.use(
+      http.get('http://localhost:3000/api/articulos', ({ request }) => {
+        urls.push(new URL(request.url));
+        return pagedJson(request, catalog);
+      })
+    );
+    renderWithProviders(<RutaFormPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await screen.findByRole('option', { name: '[ART-03] P3' });
+
+    const options = screen.getAllByRole('option').map(o => o.textContent);
+    expect(options).toHaveLength(20);
+    expect(options).not.toContain('[ART-01] P1');
+    expect(options).not.toContain('[ART-02] P2');
+    expect(urls.at(-1)?.searchParams.get('pageSize')).toBe('22');
+  });
+
   it('16. edit mode: adding an articulo calls the pivot POST endpoint', async () => {
     paramsMock = { id: '1' };
     let pivotPostPayload: Record<string, unknown> | null = null;
@@ -725,7 +757,7 @@ describe('RutaFormPage — Artículos Asignados', () => {
 
     // Select Sal fina (id=3, not yet assigned) via SearchableCombobox
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+    await userEvent.click(await screen.findByRole('option', { name: '[Sal fina] MarcaC' }));
 
 
     await waitFor(() => {
@@ -781,7 +813,7 @@ describe('RutaFormPage — Artículos Asignados', () => {
       // [Harina 000] MarcaA (id=1) should be available in the popover
       expect(screen.getByRole('option', { name: '[Harina 000] MarcaA' })).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByRole('option', { name: '[Harina 000] MarcaA' }));
+    await userEvent.click(await screen.findByRole('option', { name: '[Harina 000] MarcaA' }));
 
 
     // Should appear in the list without any API call
@@ -806,7 +838,7 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     const nombreInput = document.querySelector('input[name="nombre"]') as HTMLInputElement;
     await userEvent.type(nombreInput, 'Ruta con artículos');
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Amasado' }));
     const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
     const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;
     const pesosIdeal = document.querySelectorAll('input[name$=".pesoIdeal"]')[0] as HTMLInputElement;
@@ -822,7 +854,7 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
     // The etapa combobox is already set, so the only "Seleccione..." left is the articulo one
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: label }));
+    await userEvent.click(await screen.findByRole('option', { name: label }));
   };
 
   it('24. create: after the ruta is created every local articulo is associated to the new ruta', async () => {
@@ -842,7 +874,7 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     await fillValidRuta();
     await addLocalArticulo('[Harina 000] MarcaA');
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+    await userEvent.click(await screen.findByRole('option', { name: '[Sal fina] MarcaC' }));
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
@@ -874,7 +906,7 @@ describe('RutaFormPage — create persists locally selected articulos', () => {
     await fillValidRuta();
     await addLocalArticulo('[Harina 000] MarcaA');
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: '[Sal fina] MarcaC' }));
+    await userEvent.click(await screen.findByRole('option', { name: '[Sal fina] MarcaC' }));
 
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
@@ -1023,7 +1055,7 @@ describe('RutaFormPage — success toasts on mutation success', () => {
 
     // Select etapa via SearchableCombobox
     await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Amasado' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Amasado' }));
 
     const pesosMin = document.querySelectorAll('input[name$=".pesoMinimo"]')[0] as HTMLInputElement;
     const pesosMax = document.querySelectorAll('input[name$=".pesoMaximo"]')[0] as HTMLInputElement;

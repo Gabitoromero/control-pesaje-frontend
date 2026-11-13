@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { vi } from 'vitest';
-import { handlers, articulosMock } from '../../../test/handlers';
+import { handlers, pagedJson, articulosMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { ArticulosPage } from './ArticulosPage';
 
@@ -17,6 +17,70 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe('ArticulosPage', () => {
+  describe('server-side pagination', () => {
+    const many = Array.from({ length: 45 }, (_, i) => ({
+      id: 100 + i,
+      codigo: `ART-${String(i + 1).padStart(3, '0')}`,
+      nombre: `Producto ${i + 1}`,
+      activo: true,
+    }));
+
+    it('shows one page of the catalog and moves to the next one', async () => {
+      server.use(http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, many)));
+      renderWithProviders(<ArticulosPage />);
+
+      expect(await screen.findByText('ART-001')).toBeInTheDocument();
+      expect(screen.getByText('ART-020')).toBeInTheDocument();
+      expect(screen.queryByText('ART-021')).not.toBeInTheDocument();
+      expect(screen.getByText('Mostrando 1–20 de 45')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+      expect(await screen.findByText('ART-021')).toBeInTheDocument();
+      expect(screen.queryByText('ART-001')).not.toBeInTheDocument();
+      expect(screen.getByText('Mostrando 21–40 de 45')).toBeInTheDocument();
+    });
+
+    it('falls back to the last valid page after deleting the only row of the last page', async () => {
+      const rows = [...many.slice(0, 21)];
+      server.use(
+        http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, rows)),
+        http.delete('http://localhost:3000/api/articulos/:id', ({ params }) => {
+          rows.splice(rows.findIndex((r) => r.id === Number(params.id)), 1);
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+      renderWithProviders(<ArticulosPage />);
+      await screen.findByText('ART-001');
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+      const onlyRow = (await screen.findByText('ART-021')).closest('tr')!;
+      expect(screen.getByText('Mostrando 21–21 de 21')).toBeInTheDocument();
+
+      await userEvent.click(within(onlyRow).getByTitle('Editar'));
+      await userEvent.click(screen.getByRole('button', { name: /eliminar artículo/i }));
+      const confirmDialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Eliminar' }));
+
+      expect(await screen.findByText('Mostrando 1–20 de 20')).toBeInTheDocument();
+      expect(screen.getByText('ART-001')).toBeInTheDocument();
+      expect(screen.queryByText('ART-021')).not.toBeInTheDocument();
+    });
+
+    it('searches the whole catalog, not only the visible page, and returns to page 1', async () => {
+      server.use(http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, many)));
+      renderWithProviders(<ArticulosPage />);
+      await screen.findByText('ART-001');
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+      await screen.findByText('ART-021');
+
+      await userEvent.type(screen.getByPlaceholderText('Buscar...'), 'ART-045');
+
+      expect(await screen.findByText('Mostrando 1–1 de 1')).toBeInTheDocument();
+      expect(screen.getByText('ART-045')).toBeInTheDocument();
+      expect(screen.queryByText('ART-021')).not.toBeInTheDocument();
+    });
+  });
+
   it('default mount shows only activos and "Código" column header is present', async () => {
     renderWithProviders(<ArticulosPage />);
 
@@ -84,13 +148,13 @@ describe('ArticulosPage', () => {
     await userEvent.type(searchInput, 'harina');
 
     expect(screen.getByText('Harina 000')).toBeInTheDocument();
-    expect(screen.queryByText('Azúcar')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Azúcar')).not.toBeInTheDocument());
     expect(screen.queryByText('Sal fina')).not.toBeInTheDocument();
 
     await userEvent.clear(searchInput);
 
     expect(screen.getByText('Harina 000')).toBeInTheDocument();
-    expect(screen.getByText('Azúcar')).toBeInTheDocument();
+    expect(await screen.findByText('Azúcar')).toBeInTheDocument();
     expect(screen.getByText('Sal fina')).toBeInTheDocument();
   });
 
@@ -167,6 +231,39 @@ describe('ArticulosPage', () => {
     await waitFor(() => {
       expect((requestPayload as Record<string, unknown>).activo).toBe(true);
       expect(screen.queryByRole('heading', { name: 'Editar Artículo' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('verification articulo (codigo "0")', () => {
+    const withVerificacion = () =>
+      server.use(
+        http.get('http://localhost:3000/api/articulos', ({ request }) =>
+          pagedJson(request, [
+            { id: 9, nombre: 'Verificacion', codigo: '0', descripcion: 'Pesas patron', activo: true },
+            ...articulosMock,
+          ])
+        )
+      );
+
+    it('locks the Código input when editing the articulo with codigo "0"', async () => {
+      withVerificacion();
+      renderWithProviders(<ArticulosPage />);
+
+      const row = (await screen.findByText('Verificacion')).closest('tr')!;
+      await userEvent.click(within(row).getByTitle('Editar'));
+
+      expect(screen.getByLabelText('Código')).toBeDisabled();
+      expect(screen.getByRole('textbox', { name: /descripción/i })).toBeEnabled();
+    });
+
+    it('keeps the Código input editable for any other articulo', async () => {
+      withVerificacion();
+      renderWithProviders(<ArticulosPage />);
+
+      const row = (await screen.findByText('Harina 000')).closest('tr')!;
+      await userEvent.click(within(row).getByTitle('Editar'));
+
+      expect(screen.getByLabelText('Código')).toBeEnabled();
     });
   });
 
