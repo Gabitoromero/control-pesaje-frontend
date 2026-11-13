@@ -25,6 +25,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+// The backend finds the verification route through the articulo with this code, so it can't change.
+const CODIGO_ARTICULO_VERIFICACION = '0';
+
 const EMPTY_FORM = { codigo: '', descripcion: '', nombre: '' };
 
 const ARTICULO_FIELDS: SearchField[] = [
@@ -38,6 +41,7 @@ export const ArticulosPage = () => {
   const { alertError, confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
+  const codigoBloqueado = editingArticulo?.codigo === CODIGO_ARTICULO_VERIFICACION;
   const [formData, setFormData] = useState(EMPTY_FORM);
   const { hayActividad } = useActividadGlobal();
 
@@ -288,9 +292,11 @@ export const ArticulosPage = () => {
                   type="text"
                   required
                   placeholder="Ej: Palito bombón"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                  disabled={codigoBloqueado}
+                  title={codigoBloqueado ? 'El código del artículo de verificación no se puede modificar' : undefined}
                 />
               </div>
               <div>

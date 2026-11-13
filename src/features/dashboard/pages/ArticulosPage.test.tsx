@@ -234,6 +234,39 @@ describe('ArticulosPage', () => {
     });
   });
 
+  describe('verification articulo (codigo "0")', () => {
+    const withVerificacion = () =>
+      server.use(
+        http.get('http://localhost:3000/api/articulos', ({ request }) =>
+          pagedJson(request, [
+            { id: 9, nombre: 'Verificacion', codigo: '0', descripcion: 'Pesas patron', activo: true },
+            ...articulosMock,
+          ])
+        )
+      );
+
+    it('locks the Código input when editing the articulo with codigo "0"', async () => {
+      withVerificacion();
+      renderWithProviders(<ArticulosPage />);
+
+      const row = (await screen.findByText('Verificacion')).closest('tr')!;
+      await userEvent.click(within(row).getByTitle('Editar'));
+
+      expect(screen.getByLabelText('Código')).toBeDisabled();
+      expect(screen.getByRole('textbox', { name: /descripción/i })).toBeEnabled();
+    });
+
+    it('keeps the Código input editable for any other articulo', async () => {
+      withVerificacion();
+      renderWithProviders(<ArticulosPage />);
+
+      const row = (await screen.findByText('Harina 000')).closest('tr')!;
+      await userEvent.click(within(row).getByTitle('Editar'));
+
+      expect(screen.getByLabelText('Código')).toBeEnabled();
+    });
+  });
+
   it('editing and clearing descripcion sends PUT with descripcion: null (not empty string)', async () => {
     let requestPayload: unknown = null;
     server.use(
