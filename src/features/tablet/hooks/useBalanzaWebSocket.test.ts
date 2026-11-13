@@ -465,11 +465,12 @@ describe('useBalanzaWebSocket missing unit of measure notice', () => {
     vi.restoreAllMocks();
   });
 
-  it('warns once when frames arrive from a connected scale without unit', () => {
+  // The backend drops every frame of a device without unit, so no balanza-data ever arrives:
+  // the connected balanza-status without unit is the only signal the frontend gets.
+  it('warns once when a connected scale reports no unit, without waiting for any frame', () => {
     renderHook(() => useBalanzaWebSocket(1));
     act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
-    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
-    act(() => listeners['balanza-data']({ pesoNeto: 1.3 }));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
 
     expect(toast.warning).toHaveBeenCalledTimes(1);
     expect(toast.warning).toHaveBeenCalledWith(MSG);
@@ -483,19 +484,9 @@ describe('useBalanzaWebSocket missing unit of measure notice', () => {
     expect(toast.warning).not.toHaveBeenCalled();
   });
 
-  it('does not warn while the scale is offline or before joining the room', () => {
+  it('does not warn while the scale is offline', () => {
     renderHook(() => useBalanzaWebSocket(1));
-    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
     act(() => listeners['balanza-status']({ isConnected: false }));
-    act(() => listeners['balanza-data']({ pesoNeto: 1.2 }));
-
-    expect(toast.warning).not.toHaveBeenCalled();
-  });
-
-  it('does not warn for a malformed frame', () => {
-    renderHook(() => useBalanzaWebSocket(1));
-    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
-    act(() => listeners['balanza-data']({ pesoNeto: Number.NaN }));
 
     expect(toast.warning).not.toHaveBeenCalled();
   });
@@ -503,10 +494,17 @@ describe('useBalanzaWebSocket missing unit of measure notice', () => {
   it('warns again if the unit gets configured and later goes missing again', () => {
     renderHook(() => useBalanzaWebSocket(1));
     act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
-    act(() => listeners['balanza-data']({ pesoNeto: 1 }));
     act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1', unidad: 'kg' }));
     act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
-    act(() => listeners['balanza-data']({ pesoNeto: 1 }));
+
+    expect(toast.warning).toHaveBeenCalledTimes(2);
+  });
+
+  it('warns again after the scale drops and reconnects without unit', () => {
+    renderHook(() => useBalanzaWebSocket(1));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
+    act(() => listeners['balanza-status']({ isConnected: false }));
+    act(() => listeners['balanza-status']({ isConnected: true, hardwareId: 'hw-1' }));
 
     expect(toast.warning).toHaveBeenCalledTimes(2);
   });

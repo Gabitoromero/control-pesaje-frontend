@@ -51,9 +51,6 @@ export function useBalanzaWebSocket(lineaId: number | null) {
   const lastFrameAtRef = useRef<number | null>(null);
   // True once join-linea was done and the server answered with a balanza-status.
   const enSalaRef = useRef<boolean>(false);
-  // Latest balanza-status, read by the frame handler to tell "frames arrive but the unit is not configured".
-  const balanzaConectadaRef = useRef<boolean>(false);
-  const unidadConfiguradaRef = useRef<boolean>(false);
   // One notice per missing-unit episode; re-armed when the unit shows up again or the scale drops.
   const avisoUnidadRef = useRef<boolean>(false);
 
@@ -64,8 +61,6 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     lastFrameValueRef.current = null;
     lastFrameAtRef.current = null;
     enSalaRef.current = false;
-    balanzaConectadaRef.current = false;
-    unidadConfiguradaRef.current = false;
     avisoUnidadRef.current = false;
     let staleTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -90,8 +85,6 @@ export function useBalanzaWebSocket(lineaId: number | null) {
       clearStaleTimer();
       setSocketConectado(false);
       enSalaRef.current = false;
-      balanzaConectadaRef.current = false;
-      unidadConfiguradaRef.current = false;
       avisoUnidadRef.current = false;
       setIsConnected(false);
       setPesoNeto(0);
@@ -102,9 +95,15 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     const onBalanzaStatus = (data: BalanzaStatusPayload) => {
       console.log(`[Balanza WebSocket] Received 'balanza-status':`, data);
       enSalaRef.current = true;
-      balanzaConectadaRef.current = data.isConnected;
-      unidadConfiguradaRef.current = data.unidad !== undefined && data.unidad !== null;
-      if (unidadConfiguradaRef.current || !data.isConnected) avisoUnidadRef.current = false;
+      const sinUnidad = data.isConnected && (data.unidad === undefined || data.unidad === null);
+      if (!sinUnidad) {
+        avisoUnidadRef.current = false;
+      } else if (!avisoUnidadRef.current) {
+        // The backend drops every frame of a device without unit (fail closed), so no balanza-data
+        // ever follows: the connected status without unit is the only signal the frontend gets.
+        avisoUnidadRef.current = true;
+        toast.warning('La balanza envía datos, pero todavía no tiene configurada una unidad de medida.');
+      }
       setIsConnected(data.isConnected);
       setHardwareId(data.hardwareId);
       setUnidad(data.unidad);
@@ -117,16 +116,6 @@ export function useBalanzaWebSocket(lineaId: number | null) {
     const onBalanzaData = (data: BalanzaData) => {
       // A malformed frame must neither reach the screen nor arm a reset toast.
       if (!Number.isFinite(data.pesoNeto)) return;
-
-      if (
-        enSalaRef.current &&
-        balanzaConectadaRef.current &&
-        !unidadConfiguradaRef.current &&
-        !avisoUnidadRef.current
-      ) {
-        avisoUnidadRef.current = true;
-        toast.warning('La balanza envía datos, pero todavía no tiene configurada una unidad de medida.');
-      }
 
       lastFrameValueRef.current = data.pesoNeto;
       lastFrameAtRef.current = Date.now();
