@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk';
 import { Check, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './dialog';
@@ -9,7 +9,13 @@ export const SearchableCombobox = ({
   options,
   placeholder = "Buscar...",
   clearable = false,
-  emptyLabel = 'Seleccione...'
+  emptyLabel = 'Seleccione...',
+  shouldFilter = true,
+  onSearchChange,
+  onOpenChange,
+  selected,
+  hideEmpty = false,
+  status,
 }: {
   value: number | string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,13 +25,26 @@ export const SearchableCombobox = ({
   clearable?: boolean;
   /** Text of the closed field while nothing is selected. */
   emptyLabel?: string;
+  /** Set to false when `options` already come filtered (remote search). */
+  shouldFilter?: boolean;
+  /** Called with the text typed in the search box. */
+  onSearchChange?: (search: string) => void;
+  onOpenChange?: (open: boolean) => void;
+  /** Selected option when it may not be part of `options` (for example outside the loaded page). */
+  selected?: { id?: number | string; nombre: string } | null;
+  /** Hides the built-in "no results" text; the caller renders its own through `status`. */
+  hideEmpty?: boolean;
+  /** Rendered under the options: loading, error, partial-result notices. */
+  status?: ReactNode;
 }) => {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   // Options without id can never be "selected" (avoids undefined === undefined when value is null).
   const selectedOption =
-    value === null || value === undefined ? undefined : options.find((o) => o.id !== undefined && o.id === value);
+    value === null || value === undefined
+      ? undefined
+      : (options.find((o) => o.id !== undefined && o.id === value) ?? selected ?? undefined);
   const selectedLabel = selectedOption?.nombre || emptyLabel;
 
   return (
@@ -34,7 +53,10 @@ export const SearchableCombobox = ({
         <button
           ref={triggerRef}
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+            onOpenChange?.(true);
+          }}
           className="flex-1 text-left truncate outline-none"
         >
           {selectedLabel}
@@ -53,7 +75,13 @@ export const SearchableCombobox = ({
           </button>
         )}
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          onOpenChange?.(next);
+        }}
+      >
         <DialogContent
           className="flex flex-col gap-0 p-0 w-[calc(100vw-1rem)] max-w-none h-[calc(100dvh-1rem)] sm:max-w-2xl sm:h-[80dvh] bg-popover text-popover-foreground overflow-hidden"
           onOpenAutoFocus={(e) => {
@@ -69,10 +97,11 @@ export const SearchableCombobox = ({
           <DialogDescription className="sr-only">
             Escriba para filtrar las opciones y elija una de la lista.
           </DialogDescription>
-          <Command className="flex min-h-0 flex-1 flex-col">
+          <Command shouldFilter={shouldFilter} className="flex min-h-0 flex-1 flex-col">
             <div className="border-b border-border p-3 pr-12">
               <CommandInput
                 ref={inputRef}
+                onValueChange={onSearchChange}
                 placeholder={placeholder}
                 className="flex h-12 w-full rounded-md border border-border bg-background px-3 text-base outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring text-foreground"
               />
@@ -100,7 +129,9 @@ export const SearchableCombobox = ({
               </div>
             )}
             <CommandList className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-2">
-              <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">No se encontraron resultados.</CommandEmpty>
+              {!hideEmpty && (
+                <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">No se encontraron resultados.</CommandEmpty>
+              )}
               <CommandGroup>
                 {options.map((opt, index) => (
                   <CommandItem
@@ -111,14 +142,16 @@ export const SearchableCombobox = ({
                         onChange(opt.id);
                       }
                       setOpen(false);
+                      onOpenChange?.(false);
                     }}
                     className="relative flex min-h-11 cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground text-foreground hover:bg-accent hover:text-accent-foreground"
                   >
                     <span className="min-w-0 flex-1 break-words">{opt.nombre}</span>
-                    {selectedOption === opt && <Check size={16} aria-hidden="true" className="flex-none text-primary" />}
+                    {selectedOption?.id !== undefined && selectedOption.id === opt.id && <Check size={16} aria-hidden="true" className="flex-none text-primary" />}
                   </CommandItem>
                 ))}
               </CommandGroup>
+              {status}
             </CommandList>
           </Command>
         </DialogContent>

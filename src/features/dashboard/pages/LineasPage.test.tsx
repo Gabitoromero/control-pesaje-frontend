@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { vi } from 'vitest';
-import { handlers, lineasMock } from '../../../test/handlers';
+import { handlers, pagedJson, lineasMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { LineasPage } from './LineasPage';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
@@ -38,6 +38,28 @@ const selectComboboxOption = async (fieldLabel: RegExp | string, optionName: str
 };
 
 describe('LineasPage', () => {
+  it('asks for one bounded page of rutas when the ruta selector opens, never the whole catalog', async () => {
+    const urls: URL[] = [];
+    server.use(
+      http.get('http://localhost:3000/api/rutas-pasadas', ({ request }) => {
+        urls.push(new URL(request.url));
+        return pagedJson(request, [{ id: 1, nombre: 'Ruta Alpha', activo: true }]);
+      })
+    );
+    renderWithProviders(<LineasPage />);
+    await screen.findByText('Línea 1 — Envasado A');
+    await userEvent.click(screen.getByRole('button', { name: /Nueva Línea/ }));
+
+    const label = await screen.findByText(/Ruta Activa/, { selector: 'label' });
+    expect(urls).toHaveLength(0);
+    await userEvent.click(within(label.parentElement as HTMLElement).getAllByRole('button')[0]);
+
+    expect(await screen.findByRole('option', { name: 'Ruta Alpha' })).toBeInTheDocument();
+    expect(urls).toHaveLength(1);
+    expect(urls[0].searchParams.get('pageSize')).toBe('20');
+    expect(urls[0].searchParams.get('page')).toBe('1');
+  });
+
   it('default mount shows only activos', async () => {
     renderWithProviders(<LineasPage />);
 
@@ -99,13 +121,13 @@ describe('LineasPage', () => {
     await userEvent.type(searchInput, 'envasado a');
 
     expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
-    expect(screen.queryByText('Línea 2 — Envasado B')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Línea 2 — Envasado B')).not.toBeInTheDocument());
     expect(screen.queryByText('Línea 3 — Fraccionado')).not.toBeInTheDocument();
 
     await userEvent.clear(searchInput);
 
     expect(screen.getByText('Línea 1 — Envasado A')).toBeInTheDocument();
-    expect(screen.getByText('Línea 2 — Envasado B')).toBeInTheDocument();
+    expect(await screen.findByText('Línea 2 — Envasado B')).toBeInTheDocument();
     expect(screen.getByText('Línea 3 — Fraccionado')).toBeInTheDocument();
   });
 
@@ -228,14 +250,11 @@ describe('LineasPage', () => {
 
     // Override lineasMock GET to return a linea with rutaPasadaActiva set
     server.use(
-      http.get('http://localhost:3000/api/lineas-produccion', () =>
-        HttpResponse.json({
-          success: true,
-          data: [
+      http.get('http://localhost:3000/api/lineas-produccion', ({ request }) =>
+        pagedJson(request, [
             { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: 1, idBalanza: 1, articuloId: 1 },
             ...lineasMock.slice(1),
-          ],
-        })
+          ])
       )
     );
 
@@ -269,14 +288,11 @@ describe('LineasPage', () => {
 
     // Override inactive GET to include a rutaPasadaActiva
     server.use(
-      http.get('http://localhost:3000/api/lineas-produccion/inactive', () =>
-        HttpResponse.json({
-          success: true,
-          data: [
+      http.get('http://localhost:3000/api/lineas-produccion/inactive', ({ request }) =>
+        pagedJson(request, [
             { id: 4, nombre: 'Línea 4 — Inactiva A', activo: false, numeroBalanza: 4, rutaPasadaActiva: 1, idBalanza: 1, articuloId: 1 },
             { id: 5, nombre: 'Línea 5 — Inactiva B', activo: false, numeroBalanza: 5, idBalanza: 2, articuloId: 2 },
-          ],
-        })
+          ])
       )
     );
 
@@ -515,14 +531,11 @@ describe('LineasPage', () => {
 
     it('shows a success alertdialog after updating a línea that keeps a ruta activa assigned', async () => {
       server.use(
-        http.get('http://localhost:3000/api/lineas-produccion', () =>
-          HttpResponse.json({
-            success: true,
-            data: [
+        http.get('http://localhost:3000/api/lineas-produccion', ({ request }) =>
+          pagedJson(request, [
               { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: { id: 1, nombre: 'Ruta Alpha' }, idBalanza: 1, articuloId: 1 },
               ...lineasMock.slice(1),
-            ],
-          })
+            ])
         )
       );
 
@@ -898,14 +911,11 @@ describe('LineasPage', () => {
 
     it('opening a línea whose artículo is not in its ruta shows the artículo as unselected', async () => {
       server.use(
-        http.get('http://localhost:3000/api/lineas-produccion', () =>
-          HttpResponse.json({
-            success: true,
-            data: [
+        http.get('http://localhost:3000/api/lineas-produccion', ({ request }) =>
+          pagedJson(request, [
               { id: 1, nombre: 'Línea 1 — Envasado A', estado: 'disponible', activo: true, numeroBalanza: 1, rutaPasadaActiva: { id: 1, nombre: 'Ruta Alpha' }, idBalanza: 1, articuloId: 3 },
               ...lineasMock.slice(1),
-            ],
-          })
+            ])
         )
       );
       renderWithProviders(<LineasPage />);
