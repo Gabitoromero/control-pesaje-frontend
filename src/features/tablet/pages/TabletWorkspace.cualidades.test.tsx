@@ -180,4 +180,46 @@ describe('TabletWorkspace — cualidades al completar la etapa', () => {
     expect((await screen.findAllByText('Listo para finalizar'))[0]).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('does not open the dialog while the loaded values are still being fetched', async () => {
+    muestras = [muestraDe(1, 1), muestraDe(2, 1)];
+    valoresCargados = [
+      { id: 1, atributo: 100, etapa: 1 },
+      { id: 2, atributo: 101, etapa: 1 },
+    ];
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${BASE}/valores-atributo`, async () => {
+        await gate;
+        return HttpResponse.json({ success: true, data: valoresCargados });
+      }),
+    );
+    renderWorkspace();
+
+    expect((await screen.findAllByText('Horneado')).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    release();
+    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i })).toBeEnabled());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('does not lock the operator out when the loaded values cannot be fetched', async () => {
+    muestras = [muestraDe(1, 1), muestraDe(2, 1)];
+    valoresCargados = [
+      { id: 1, atributo: 100, etapa: 1 },
+      { id: 2, atributo: 101, etapa: 1 },
+    ];
+    server.use(
+      http.get(`${BASE}/valores-atributo`, () => HttpResponse.json({ success: false, error: { message: 'boom' } }, { status: 500 })),
+    );
+    renderWorkspace();
+
+    expect((await screen.findAllByText('Horneado')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i })).toBeEnabled());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

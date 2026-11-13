@@ -95,7 +95,7 @@ export function CualidadesDialog({ etapaNombre, atributos, onSubmit }: Cualidade
                     </span>
                     {fuera && (
                       <span role="status" className="text-sm font-medium text-warning">
-                        Fuera del rango aceptado. Se guarda igual y sale marcado en rojo en el reporte.
+                        Fuera del rango aceptado
                       </span>
                     )}
                   </>

@@ -159,13 +159,19 @@ export const TabletWorkspace: React.FC = () => {
 
   // Cualidades (manual qualities) already loaded for this pasada. Together with the samples they tell whether the
   // operator must load some before moving on; the backend rejects the next stage's samples otherwise.
-  const { data: valoresCargados = [] } = useQuery({
+  const { data: valoresCargados, isPending: cargandoValores } = useQuery({
     queryKey: ['valores-atributo', pasadaId],
     queryFn: () => getValoresAtributo(pasadaId!),
     enabled: !!pasadaId,
   });
-  // Cheap pure derivation: recomputed on every render, no memo needed.
-  const cualidadesPendientes = deriveCualidadesPendientes(etapas, muestras, new Set(valoresCargados.map((v) => v.atributo)));
+  // Cheap pure derivation: recomputed on every render, no memo needed. Without the loaded values (still loading or
+  // failed) nothing is asked: an empty default would make the dialog request again what is already stored and,
+  // being blocking, lock the operator out. The backend still rejects the next stage's samples if some are missing.
+  const cualidadesPendientes = valoresCargados
+    ? deriveCualidadesPendientes(etapas, muestras, new Set(valoresCargados.map((v) => v.atributo)))
+    : null;
+  // A disabled query stays pending forever, so only wait when there is a pasada to fetch the values of.
+  const esperandoValores = !!pasadaId && cargandoValores;
 
   // Single source of truth for the forward/backward/none classification of
   // the derived active-etapa transition — shared by the stepper's ring pulse,
@@ -218,7 +224,7 @@ export const TabletWorkspace: React.FC = () => {
   // Task 3.4: Bind weight capture (addSample) from WebSocket to registrarMuestra API
   const handleRegistrarMuestra = async () => {
     if (!isConnected) return;
-    if (cualidadesPendientes) return;
+    if (cualidadesPendientes || esperandoValores) return;
     if (isNonPositiveWeight(pesoNeto)) {
       await alertWarning({ ...NON_POSITIVE_WEIGHT_ALERT });
       return;
@@ -447,9 +453,9 @@ export const TabletWorkspace: React.FC = () => {
 
           <button
             onClick={handleRegistrarMuestra}
-            disabled={!isConnected || etapaActiva === null || !!cualidadesPendientes}
+            disabled={!isConnected || etapaActiva === null || !!cualidadesPendientes || esperandoValores}
             className={`w-full py-4 rounded-2xl text-xl font-bold transition-all shadow-lg
-              ${isConnected && etapaActiva !== null && !cualidadesPendientes && !isToleranceBlockedFlag && !isToleranceUnavailable
+              ${isConnected && etapaActiva !== null && !cualidadesPendientes && !esperandoValores && !isToleranceBlockedFlag && !isToleranceUnavailable
                 ? 'bg-success hover:bg-success/90 text-white active:scale-95'
                 : isToleranceBlockedFlag || isToleranceUnavailable
                   ? 'bg-muted text-muted-foreground'

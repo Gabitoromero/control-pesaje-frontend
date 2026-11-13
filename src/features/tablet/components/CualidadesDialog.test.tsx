@@ -66,7 +66,7 @@ describe('CualidadesDialog', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText('Temperatura (°C)'), '120');
-    expect(screen.getByRole('status')).toHaveTextContent(/fuera del rango aceptado/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/^Fuera del rango aceptado$/);
     expect(guardar()).toBeEnabled();
     await userEvent.click(guardar());
     expect(onSubmit).toHaveBeenCalledWith([{ atributoId: 100, valor: 120 }]);
