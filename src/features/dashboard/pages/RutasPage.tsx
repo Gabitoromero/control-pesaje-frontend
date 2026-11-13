@@ -102,7 +102,7 @@ export const RutasPage = () => {
             <tbody className="bg-card divide-y divide-border">
               {rutasFiltradas.map((ruta) => (
                 <tr key={ruta.id} className={`hover:bg-accent even:bg-muted/40 ${ruta.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{ruta.nombre}</td>
+                  <td className="px-4 py-4 whitespace-nowrap max-w-[18rem] truncate text-sm font-medium text-foreground" title={ruta.nombre}>{ruta.nombre}</td>
                   <td className="px-4 py-4 max-w-[14rem] truncate text-sm text-muted-foreground" title={ruta.descripcion || undefined}>{ruta.descripcion || '-'}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ruta.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>

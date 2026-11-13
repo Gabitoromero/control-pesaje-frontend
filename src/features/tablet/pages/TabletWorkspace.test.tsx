@@ -1476,6 +1476,17 @@ describe('TabletWorkspace', () => {
     expect((await screen.findAllByText('Control Peso1')).length).toBeGreaterThan(0);
   });
 
+  it('truncates a very long ruta name in the topbar and keeps the full name as tooltip', async () => {
+    const largo = 'A'.repeat(80);
+    server.use(pasadaConRuta({ id: 457, nombre: largo, activo: true, etapas: [etapaRuta('Control Peso1', 6)] }));
+
+    renderWithAuth(<TabletWorkspace />, { user: operarioUser, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
+
+    const ruta = await screen.findByText(`Ruta: ${largo}`);
+    expect(ruta).toHaveClass('truncate');
+    expect(ruta).toHaveAttribute('title', largo);
+  });
+
   it('si la pasada no trae ruta usa la ruta activa de la línea (comportamiento previo)', async () => {
     renderWithAuth(<TabletWorkspace />, { user: operarioUser, activeLineaId: 1, initialEntries: ['/tablet?pasadaId=101'] });
 

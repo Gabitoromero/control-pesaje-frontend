@@ -27,11 +27,11 @@ function HistorialItem({ m }: { m: HistorialItemData }) {
 
   const row = (
     <>
-      <div className="flex flex-col">
-        <span className="font-medium">
+      <div className="flex min-w-0 flex-col">
+        <span className="font-medium [overflow-wrap:anywhere]">
           {m.articulo ? `${m.articulo.codigo}${m.articulo.nombre ? ` — ${m.articulo.nombre}` : ''}` : 'Muestra libre'}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
           {m.etapa.nombre} · {m.rutaPasada.nombre} · {formatFecha(m.timestamp)}
         </span>
       </div>

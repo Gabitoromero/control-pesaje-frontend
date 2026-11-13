@@ -453,7 +453,7 @@ export const GestionPasadasPage: React.FC = () => {
                                 : 'bg-muted border-border hover:bg-muted/70 text-foreground'
                               }`}
                           >
-                            <p className="font-semibold text-sm">{ruta.nombre}</p>
+                            <p className="min-w-0 font-semibold text-sm [overflow-wrap:anywhere]">{ruta.nombre}</p>
                             {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-primary" />}
                           </button>
                         );

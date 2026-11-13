@@ -169,7 +169,7 @@ export const SeleccionLineaPage: React.FC = () => {
                   <div className="text-left">
                     <p className="font-semibold text-xl text-foreground">{linea.nombre}</p>
                     {linea.rutaPasadaActiva?.nombre && (
-                      <p className="text-sm text-primary mt-1">Ruta: {linea.rutaPasadaActiva.nombre}</p>
+                      <p className="text-sm text-primary mt-1 [overflow-wrap:anywhere]">Ruta: {linea.rutaPasadaActiva.nombre}</p>
                     )}
                     <span
                       className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium mt-3

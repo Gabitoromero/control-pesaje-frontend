@@ -351,17 +351,17 @@ export const TabletWorkspace: React.FC = () => {
 
       {/* Topbar */}
       <div className="flex flex-nowrap flex-shrink-0 justify-between items-center gap-3 bg-card p-3 rounded-xl shadow-sm border border-border">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <span className="px-2 py-0.5 rounded-md border border-primary bg-primary/10 text-primary text-xs font-bold tracking-wide">
             {linea?.nombre ?? `Línea ${lineaId}`}
           </span>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-foreground">
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-lg font-bold text-foreground">
               {articulo ? (articulo.nombre ? `${articulo.nombre} - ${articulo.codigo}` : articulo.codigo) : '—'}
             </span>
-            <span className="text-sm text-muted-foreground">
-              Ruta: {rutaDeLaPasada?.nombre ?? '—'}
-              <span className="hidden min-[570px]:inline"> · Pasada #{pasada?.numero ?? '—'}</span>
+            <span className="flex text-sm text-muted-foreground">
+              <span className="truncate" title={rutaDeLaPasada?.nombre}>Ruta: {rutaDeLaPasada?.nombre ?? '—'}</span>
+              <span className="hidden min-[570px]:inline shrink-0 whitespace-nowrap">&nbsp;· Pasada #{pasada?.numero ?? '—'}</span>
             </span>
           </div>
         </div>

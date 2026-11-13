@@ -168,13 +168,13 @@ export function MuestrasLibresPage() {
     <div className="min-h-screen lg:h-screen flex flex-col p-4 bg-background gap-4 relative overflow-y-auto lg:overflow-hidden">
       {/* Topbar — structural duplicate of TabletWorkspace's, primary→warning swap */}
       <div className="flex flex-nowrap flex-shrink-0 justify-between items-center gap-3 bg-card p-3 rounded-xl shadow-sm border border-border">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <span className="px-2 py-0.5 rounded-md border border-warning bg-warning/10 text-warning text-xs font-bold tracking-wide">
             {linea?.nombre ?? `Línea ${activeLineaId}`}
           </span>
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <span className="text-lg font-bold text-foreground">Muestras de Calidad Libre</span>
-            <span className="text-sm text-muted-foreground">
+            <span className="truncate text-sm text-muted-foreground" title={linea?.rutaPasadaActiva?.nombre}>
               Ruta: {linea?.rutaPasadaActiva?.nombre ?? '—'}
             </span>
           </div>

@@ -59,7 +59,7 @@ export function MonitoreoLineHeader({ resumen, lineaNombre, rutaActivaNombre, is
         <p className="text-base font-bold text-foreground truncate">
           <span className="text-primary">{lineaNombre}</span>
           <span className="text-muted-foreground mx-2">·</span>
-          <span className="text-foreground/80">{rutaActivaNombre ?? 'Sin ruta activa'}</span>
+          <span className="text-foreground/80" title={rutaActivaNombre ?? undefined}>{rutaActivaNombre ?? 'Sin ruta activa'}</span>
           {sinDispositivo && (
             <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-[11px] font-semibold align-middle">
               Sin dispositivo
