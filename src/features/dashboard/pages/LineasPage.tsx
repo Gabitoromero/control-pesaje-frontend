@@ -16,7 +16,9 @@ import { getBalanzas } from '../../../api/balanzas';
 import { getArticulo, getArticulos } from '../../../api/articulos';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { dispositivosApi } from '../../../api/dispositivos';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
+import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { PaginationBar } from '../../../components/PaginationBar';
 import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
@@ -73,6 +75,9 @@ export const LineasPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLinea, setEditingLinea] = useState<Linea | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+
+  const [detalle, setDetalle] = useState<Linea | null>(null);
+  const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
 
   const {
     status,
@@ -394,11 +399,11 @@ export const LineasPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Dispositivo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Ruta Activa</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Dispositivo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Ruta Activa</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
@@ -407,17 +412,35 @@ export const LineasPage = () => {
                 const bloqueada = linea.id !== undefined && lineaIdsConActividad.has(linea.id);
                 return (
                 <tr key={linea.id} className={`${bloqueada ? 'bg-warning/20' : 'hover:bg-accent even:bg-muted/40'} ${linea.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{linea.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{linea.nombre}</td>
+                  <td className="px-4 py-4 whitespace-nowrap max-w-[14rem] truncate text-sm text-muted-foreground">
                     {linea.dispositivo ? `${linea.dispositivo.nombre} (${linea.dispositivo.hardwareId.slice(0, 8)})` : '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{linea.rutaPasadaActiva?.nombre ?? '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap max-w-[14rem] truncate text-sm text-muted-foreground" title={linea.rutaPasadaActiva?.nombre}>{linea.rutaPasadaActiva?.nombre ?? '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${linea.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {linea.activo !== false ? 'Activa' : 'Inactiva'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setDetalle(linea)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHistorial({ id: linea.id, title: linea.nombre })}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver historial de cambios"
+                      aria-label="Ver historial de cambios"
+                    >
+                      <History size={18} />
+                    </button>
                     <button 
                       onClick={() => openModal(linea)} 
                       disabled={bloqueada}
@@ -432,7 +455,7 @@ export const LineasPage = () => {
               })}
               {lineasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">No hay líneas de producción {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                  <td colSpan={5} className="px-4 py-4 text-center text-muted-foreground">No hay líneas de producción {status === 'activo' ? 'activas' : 'inactivas'}.</td>
                 </tr>
               )}
             </tbody>
@@ -590,6 +613,30 @@ export const LineasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la línea"
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Dispositivo', value: detalle?.dispositivo ? `${detalle.dispositivo.nombre} (${detalle.dispositivo.hardwareId})` : null },
+          { label: 'Ruta activa', value: detalle?.rutaPasadaActiva?.nombre },
+          { label: 'Observación', value: detalle?.observacion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
+      <HistorialCambiosDrawer
+        raizTipo="linea"
+        raizId={historial?.id ?? null}
+        title={historial?.title ?? ''}
+        open={historial !== null}
+        onOpenChange={(open) => { if (!open) setHistorial(null); }}
+      />
     </div>
   );
 };

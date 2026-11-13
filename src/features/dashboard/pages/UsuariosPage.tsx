@@ -267,23 +267,23 @@ export const UsuariosPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre Completo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Usuario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Legajo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Rol</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Sector</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre Completo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Usuario</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Legajo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Rol</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Sector</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
               {usuariosFiltrados.map((u) => (
                 <tr key={u.id} className={`hover:bg-accent even:bg-muted/40 ${u.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{u.nombreApellido || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{u.nombreUsuario}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{u.legajo || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{ROL_LABELS[u.rol] ?? u.rol}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{u.nombreApellido || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">{u.nombreUsuario}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">{u.legajo || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">{ROL_LABELS[u.rol] ?? u.rol}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     {sectorDe(u) ? (
                       <span
                         className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold text-white"
@@ -297,12 +297,12 @@ export const UsuariosPage = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {u.activo !== false ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => openModal(u)} className="text-muted-foreground hover:text-foreground" title="Editar">
                       <Edit size={18} />
                     </button>
@@ -311,7 +311,7 @@ export const UsuariosPage = () => {
               ))}
               {usuariosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-muted-foreground">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
+                  <td colSpan={7} className="px-4 py-4 text-center text-muted-foreground">No hay usuarios {status === 'activo' ? 'activos' : 'inactivos'}.</td>
                 </tr>
               )}
             </tbody>

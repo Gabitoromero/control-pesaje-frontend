@@ -9,7 +9,9 @@ import {
   type Etapa,
   type EtapaCreate,
 } from '../../../api/etapas';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
+import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { PaginationBar } from '../../../components/PaginationBar';
@@ -39,6 +41,9 @@ export const EtapasPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+
+  const [detalle, setDetalle] = useState<Etapa | null>(null);
+  const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
 
   const { hayActividad } = useActividadGlobal();
 
@@ -212,23 +217,41 @@ export const EtapasPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
               {etapasFiltradas.map((etapa) => (
                 <tr key={etapa.id} className={`hover:bg-accent even:bg-muted/40 ${etapa.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{etapa.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{etapa.descripcion || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{etapa.nombre}</td>
+                  <td className="px-4 py-4 max-w-[14rem] truncate text-sm text-muted-foreground" title={etapa.descripcion || undefined}>{etapa.descripcion || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${etapa.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {etapa.activo !== false ? 'Activa' : 'Inactiva'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setDetalle(etapa)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHistorial({ id: etapa.id, title: etapa.nombre })}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver historial de cambios"
+                      aria-label="Ver historial de cambios"
+                    >
+                      <History size={18} />
+                    </button>
                     <button 
                       onClick={() => openModal(etapa)} 
                       disabled={hayActividad}
@@ -242,7 +265,7 @@ export const EtapasPage = () => {
               ))}
               {etapasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">No hay etapas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
+                  <td colSpan={4} className="px-4 py-4 text-center text-muted-foreground">No hay etapas {status === 'activo' ? 'activas' : 'inactivas'}.</td>
                 </tr>
               )}
             </tbody>
@@ -308,6 +331,28 @@ export const EtapasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la etapa"
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
+      <HistorialCambiosDrawer
+        raizTipo="etapa"
+        raizId={historial?.id ?? null}
+        title={historial?.title ?? ''}
+        open={historial !== null}
+        onOpenChange={(open) => { if (!open) setHistorial(null); }}
+      />
     </div>
   );
 };

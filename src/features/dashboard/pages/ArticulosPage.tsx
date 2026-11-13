@@ -8,7 +8,9 @@ import {
   deleteArticulo,
   type Articulo,
 } from '../../../api/articulos';
-import { Plus, Edit, Trash } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
+import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { PaginationBar } from '../../../components/PaginationBar';
 import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
@@ -38,6 +40,9 @@ export const ArticulosPage = () => {
   const [editingArticulo, setEditingArticulo] = useState<Articulo | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const { hayActividad } = useActividadGlobal();
+
+  const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
+  const [detalle, setDetalle] = useState<Articulo | null>(null);
 
   const {
     status,
@@ -208,25 +213,43 @@ export const ArticulosPage = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Código</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
+                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Código</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descripción</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
               {articulosFiltrados.map((articulo) => (
                 <tr key={articulo.id} className={`hover:bg-accent even:bg-muted/40 ${articulo.activo === false ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{articulo.codigo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{articulo.nombre || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{articulo.descripcion || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">{articulo.codigo}</td>
+                  <td className="px-4 py-4 whitespace-nowrap max-w-[14rem] truncate text-sm text-muted-foreground" title={articulo.nombre || undefined}>{articulo.nombre || '-'}</td>
+                  <td className="px-4 py-4 max-w-[14rem] truncate text-sm text-muted-foreground" title={articulo.descripcion || undefined}>{articulo.descripcion || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${articulo.activo !== false ? 'bg-success-muted text-success' : 'bg-muted text-muted-foreground'}`}>
                       {articulo.activo !== false ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setDetalle(articulo)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHistorial({ id: articulo.id, title: `${articulo.codigo}${articulo.nombre ? ' · ' + articulo.nombre : ''}` })}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver historial de cambios"
+                      aria-label="Ver historial de cambios"
+                    >
+                      <History size={18} />
+                    </button>
                     <button 
                       onClick={() => openModal(articulo)} 
                       disabled={hayActividad}
@@ -240,7 +263,7 @@ export const ArticulosPage = () => {
               ))}
               {articulosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-muted-foreground">No hay artículos {status === 'activo' ? 'activos' : 'inactivos'}.</td>
+                  <td colSpan={5} className="px-4 py-4 text-center text-muted-foreground">No hay artículos {status === 'activo' ? 'activos' : 'inactivos'}.</td>
                 </tr>
               )}
             </tbody>
@@ -318,6 +341,29 @@ export const ArticulosPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle del artículo"
+        fields={[
+          { label: 'Código', value: detalle?.codigo },
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activo' : 'Inactivo' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: `${detalle.codigo}${detalle.nombre ? ' · ' + detalle.nombre : ''}` });
+          setDetalle(null);
+        }}
+      />
+      <HistorialCambiosDrawer
+        raizTipo="articulo"
+        raizId={historial?.id ?? null}
+        title={historial?.title ?? ''}
+        open={historial !== null}
+        onOpenChange={(open) => { if (!open) setHistorial(null); }}
+      />
     </div>
   );
 };
