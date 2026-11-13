@@ -100,6 +100,22 @@ const VALUE_LABEL: Record<string, Record<string, string>> = {
   tipo: { numerico: 'Numérico', aceptado: 'Aceptado / No aceptado' },
 };
 
+/**
+ * For the business a cualidad is either there or deleted: a physical delete and a deactivation (kept only
+ * because values were already loaded with it) read the same.
+ */
+const isCualidadEliminada = (item: HistorialCambioItem) =>
+  item.entidad === 'ruta_atributo' && (item.accion === 'eliminar' || item.accion === 'desactivar');
+
+/** Fields shown for a change: the ones that mean something to the business, not how they are stored. */
+const visibleKeys = (item: HistorialCambioItem): string[] => {
+  const keys = Array.from(new Set([...Object.keys(item.antes), ...Object.keys(item.despues)])).filter((k) => !HIDDEN_FIELDS.has(k));
+  if (item.entidad !== 'ruta_atributo') return keys;
+  // The range only exists for numeric cualidades; "aceptado / no aceptado" has none to show
+  const tipoResultante = item.accion === 'eliminar' ? item.antes.tipo : (item.despues.tipo ?? item.antes.tipo);
+  return keys.filter((k) => k !== 'activo' && !(tipoResultante === 'aceptado' && (k === 'minimo' || k === 'maximo')));
+};
+
 const formatValue = (value: unknown, field?: string, referencias?: HistorialReferencias): string => {
   if (field && typeof value === 'number' && referencias?.[field]) {
     const label = referencias[field][String(value)];
@@ -113,8 +129,11 @@ const formatValue = (value: unknown, field?: string, referencias?: HistorialRefe
 };
 
 const ChangeDetail = ({ item, referencias }: { item: HistorialCambioItem; referencias?: HistorialReferencias }) => {
-  const keys = Array.from(new Set([...Object.keys(item.antes), ...Object.keys(item.despues)])).filter((k) => !HIDDEN_FIELDS.has(k));
+  const keys = visibleKeys(item);
   if (keys.length === 0) return null;
+  // The fixed 1 / 1 of an aceptado cualidad is not a range the reader ever saw
+  const antesDe = (key: string) =>
+    item.entidad === 'ruta_atributo' && item.antes.tipo === 'aceptado' && (key === 'minimo' || key === 'maximo') ? undefined : item.antes[key];
   return (
     <ul className="mt-2 space-y-1 text-sm">
       {keys.map((key) => (
@@ -123,10 +142,10 @@ const ChangeDetail = ({ item, referencias }: { item: HistorialCambioItem; refere
           {item.accion === 'crear' ? (
             <span className="text-foreground">{formatValue(item.despues[key], key, referencias)}</span>
           ) : item.accion === 'eliminar' ? (
-            <span className="text-muted-foreground line-through">{formatValue(item.antes[key], key, referencias)}</span>
+            <span className="text-muted-foreground line-through">{formatValue(antesDe(key), key, referencias)}</span>
           ) : (
             <>
-              <span className="text-muted-foreground line-through">{formatValue(item.antes[key], key, referencias)}</span>
+              <span className="text-muted-foreground line-through">{formatValue(antesDe(key), key, referencias)}</span>
               <span aria-hidden>→</span>
               <span className="text-foreground">{formatValue(item.despues[key], key, referencias)}</span>
             </>
@@ -178,9 +197,14 @@ export const HistorialCambiosDrawer = ({ raizTipo, raizId, title, open, onOpenCh
             <li key={item.id} className="rounded-md border border-border p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {ACCION_LABEL[item.accion]} · {ENTIDAD_LABEL[item.entidad] ?? item.entidad}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {ACCION_LABEL[isCualidadEliminada(item) ? 'eliminar' : item.accion]} · {ENTIDAD_LABEL[item.entidad] ?? item.entidad}
+                    </p>
+                    {isCualidadEliminada(item) && (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive">ELIMINADO</span>
+                    )}
+                  </div>
                   {item.contexto && <p className="text-sm font-semibold text-foreground">{item.contexto}</p>}
                   <p className="text-xs text-muted-foreground">{formatFecha(item.fecha)}</p>
                 </div>

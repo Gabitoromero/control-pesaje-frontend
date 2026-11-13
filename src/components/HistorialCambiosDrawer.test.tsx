@@ -65,6 +65,70 @@ describe('HistorialCambiosDrawer', () => {
     expect(screen.queryByText('777')).not.toBeInTheDocument();
   });
 
+  describe('cualidades of an etapa, in business terms', () => {
+    const open = (items: api.HistorialCambioItem[]) => {
+      vi.mocked(api.getHistorialCambios).mockResolvedValue({ items, total: items.length, page: 1, pageSize: 20 });
+      renderWithProviders(<HistorialCambiosDrawer raizTipo="ruta" raizId={3} title="Ruta 1" open onOpenChange={() => {}} />);
+    };
+    const cualidad = (over: Partial<api.HistorialCambioItem>) =>
+      item({ entidad: 'ruta_atributo', raizTipo: 'ruta', raizId: 3, contexto: 'Horno · Temperatura', ...over });
+
+    it('marks a physically deleted cualidad as ELIMINADO and shows what it was, without the internal "activo"', async () => {
+      open([cualidad({ accion: 'eliminar', antes: { rutaPasadaEtapa: 50, nombre: 'Temperatura', tipo: 'numerico', minimo: 0, maximo: 99, activo: true } })]);
+
+      expect(await screen.findByText('ELIMINADO')).toBeInTheDocument();
+      expect(screen.getByText('Eliminación · Cualidad de la etapa')).toBeInTheDocument();
+      expect(screen.getByText('Numérico')).toBeInTheDocument();
+      expect(screen.getByText('Mínimo:')).toBeInTheDocument();
+      expect(screen.queryByText('Activo:')).not.toBeInTheDocument();
+    });
+
+    it('treats a deactivation as a deletion too: same badge, same label, no "activo" diff', async () => {
+      open([cualidad({ accion: 'desactivar', antes: { activo: true }, despues: { activo: false } })]);
+
+      expect(await screen.findByText('ELIMINADO')).toBeInTheDocument();
+      expect(screen.getByText('Eliminación · Cualidad de la etapa')).toBeInTheDocument();
+      expect(screen.queryByText(/Desactivación/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Activo:')).not.toBeInTheDocument();
+    });
+
+    it('does not show the badge on other changes, cualidad creations included', async () => {
+      open([
+        cualidad({ id: 1, accion: 'crear', despues: { nombre: 'Temperatura', tipo: 'numerico', minimo: 0, maximo: 99, activo: true } }),
+        item({ id: 2, entidad: 'ruta_etapa', accion: 'eliminar', antes: { toleranciaPct: 5 } }),
+      ]);
+
+      await screen.findByText(/Creación · Cualidad de la etapa/);
+      expect(screen.queryByText('ELIMINADO')).not.toBeInTheDocument();
+    });
+
+    it('hides the range of an aceptado / no aceptado cualidad', async () => {
+      open([cualidad({ accion: 'crear', despues: { nombre: 'Degustación', tipo: 'aceptado', minimo: 1, maximo: 1, activo: true } })]);
+
+      expect(await screen.findByText('Aceptado / No aceptado')).toBeInTheDocument();
+      expect(screen.queryByText('Mínimo:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Máximo:')).not.toBeInTheDocument();
+    });
+
+    it('shows only the change of "tipo" when a numerico becomes aceptado / no aceptado', async () => {
+      open([cualidad({ accion: 'editar', antes: { tipo: 'numerico', minimo: 0, maximo: 99 }, despues: { tipo: 'aceptado', minimo: 1, maximo: 1 } })]);
+
+      expect(await screen.findByText('Tipo:')).toBeInTheDocument();
+      expect(screen.getByText('Numérico')).toBeInTheDocument();
+      expect(screen.getByText('Aceptado / No aceptado')).toBeInTheDocument();
+      expect(screen.queryByText('Mínimo:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Máximo:')).not.toBeInTheDocument();
+    });
+
+    it('when an aceptado becomes numerico, shows the new range without the old fixed 1 / 1', async () => {
+      open([cualidad({ accion: 'editar', antes: { tipo: 'aceptado', minimo: 1, maximo: 1 }, despues: { tipo: 'numerico', minimo: 0, maximo: 99 } })]);
+
+      expect(await screen.findByText('Mínimo:')).toBeInTheDocument();
+      expect(screen.getByText('99')).toBeInTheDocument();
+      expect(screen.queryByText('1')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows the current name of referenced entities instead of bare ids', async () => {
     vi.mocked(api.getHistorialCambios).mockResolvedValue({
       items: [
