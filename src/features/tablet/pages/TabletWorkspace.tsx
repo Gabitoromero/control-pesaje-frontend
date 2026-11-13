@@ -27,6 +27,7 @@ import { getArticulo } from '../../../api/articulos';
 import type { Articulo } from '../../../api/articulos';
 import { getMuestras } from '../../../api/muestras';
 import { getValoresAtributo, registrarValoresAtributo } from '../../../api/valores-atributo';
+import type { ValorAtributoCargado } from '../../../api/valores-atributo';
 import { deriveCualidadesPendientes } from '../utils/cualidadesPendientes';
 import { CualidadesDialog } from '../components/CualidadesDialog';
 import type { CualidadValorInput } from '../components/CualidadesDialog';
@@ -159,17 +160,17 @@ export const TabletWorkspace: React.FC = () => {
 
   // Cualidades (manual qualities) already loaded for this pasada. Together with the samples they tell whether the
   // operator must load some before moving on; the backend rejects the next stage's samples otherwise.
-  const { data: valoresCargados, isPending: cargandoValores, isError: errorValores, refetch: recargarValores } = useQuery({
+  const { data: valoresCargados, isPending: cargandoValores, isError: errorValores } = useQuery({
     queryKey: ['valores-atributo', pasadaId],
     queryFn: () => getValoresAtributo(pasadaId!),
     enabled: !!pasadaId,
   });
-  // Cheap pure derivation: recomputed on every render, no memo needed. Without the loaded values (still loading or
-  // failed) nothing is asked: an empty default would make the dialog request again what is already stored and,
-  // being blocking, lock the operator out (the backend refuses to reload a stored value). On failure a warning with
-  // a retry is shown instead; the backend still rejects the next stage's samples if some are missing.
-  const cualidadesPendientes = valoresCargados
-    ? deriveCualidadesPendientes(etapas, muestras, new Set(valoresCargados.map((v) => v.atributo)))
+  // Cheap pure derivation: recomputed on every render, no memo needed. While the values load nothing is asked (an empty
+  // default would re-ask what is already stored). If they cannot be read, the operator is asked again: the backend
+  // overwrites a value that was already stored, so it is safe, and the dialog warns about it.
+  const valoresConocidos = valoresCargados ?? (errorValores ? [] : null);
+  const cualidadesPendientes = valoresConocidos
+    ? deriveCualidadesPendientes(etapas, muestras, new Set(valoresConocidos.map((v) => v.atributo)))
     : null;
   // A disabled query stays pending forever, so only wait when there is a pasada to fetch the values of.
   const esperandoValores = !!pasadaId && cargandoValores;
@@ -257,11 +258,16 @@ export const TabletWorkspace: React.FC = () => {
 
   const handleGuardarCualidades = async (valores: CualidadValorInput[]) => {
     if (!cualidadesPendientes) return;
-    await registrarValoresAtributo({
+    const guardados = await registrarValoresAtributo({
       pasadaId: pasadaId!,
       etapaId: cualidadesPendientes.etapa.etapa.id,
       valores,
     });
+    // Seed the cache with what was just stored: without it a failing read would ask the same cualidades again.
+    queryClient.setQueryData<ValorAtributoCargado[]>(['valores-atributo', pasadaId], (previos = []) => [
+      ...previos.filter((p) => !guardados.some((g) => g.atributo === p.atributo)),
+      ...guardados,
+    ]);
     await queryClient.invalidateQueries({ queryKey: ['valores-atributo', pasadaId] });
   };
 
@@ -437,15 +443,6 @@ export const TabletWorkspace: React.FC = () => {
             ) : null}
           </div>
 
-          {errorValores && (
-            <div role="alert" className="w-full flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-              <span>No se pudieron cargar las cualidades de esta pasada.</span>
-              <button type="button" onClick={() => recargarValores()} className="shrink-0 rounded-lg border border-warning/40 px-3 py-1.5 font-semibold hover:bg-warning/20">
-                Reintentar
-              </button>
-            </div>
-          )}
-
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
             <span className="text-base font-medium text-muted-foreground">
@@ -565,6 +562,7 @@ export const TabletWorkspace: React.FC = () => {
           etapaNombre={cualidadesPendientes.etapa.etapa.nombre}
           atributos={cualidadesPendientes.atributos}
           onSubmit={handleGuardarCualidades}
+          sinVerificar={errorValores && !valoresCargados}
         />
       )}
 

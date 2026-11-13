@@ -13,6 +13,8 @@ export interface CualidadesDialogProps {
   atributos: AtributoEtapa[];
   /** Saves every value; a rejection keeps the dialog open with an error so the operator can retry. */
   onSubmit: (valores: CualidadValorInput[]) => Promise<void>;
+  /** The values already stored could not be read: warns that loading again replaces what was stored. */
+  sinVerificar?: boolean;
 }
 
 const OPCIONES_ACEPTADO = [
@@ -31,7 +33,7 @@ const parseNumero = (texto: string | undefined): number | null => {
  * pending. It cannot be dismissed: the operator loads every value before moving on (the backend rejects the next
  * stage's samples otherwise). An out-of-range number does not block, it only warns (it shows in red in the report).
  */
-export function CualidadesDialog({ etapaNombre, atributos, onSubmit }: CualidadesDialogProps) {
+export function CualidadesDialog({ etapaNombre, atributos, onSubmit, sinVerificar = false }: CualidadesDialogProps) {
   const titleId = useId();
   const [entradas, setEntradas] = useState<Record<number, string>>({});
   const [guardando, setGuardando] = useState(false);
@@ -71,6 +73,11 @@ export function CualidadesDialog({ etapaNombre, atributos, onSubmit }: Cualidade
         <p className="mt-1 text-sm text-muted-foreground">
           Terminaste las muestras de la etapa. Cargá estos datos para poder seguir.
         </p>
+        {sinVerificar && (
+          <p className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
+            No se pudo verificar lo ya cargado. Si estas cualidades ya estaban guardadas, los valores que cargues las reemplazan.
+          </p>
+        )}
 
         <div className="mt-5 flex flex-col gap-5">
           {atributos.map((a) => {

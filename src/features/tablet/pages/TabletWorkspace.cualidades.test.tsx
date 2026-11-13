@@ -59,8 +59,9 @@ const server = setupServer(
   http.post(`${BASE}/valores-atributo`, async ({ request }) => {
     const body = (await request.json()) as { etapaId: number; valores: Array<{ atributoId: number }> };
     postedBodies.push(body);
-    valoresCargados = [...valoresCargados, ...body.valores.map((v, i) => ({ id: 900 + i, atributo: v.atributoId, etapa: body.etapaId }))];
-    return HttpResponse.json({ success: true, data: [] }, { status: 201 });
+    const guardados = body.valores.map((v, i) => ({ id: 900 + i, atributo: v.atributoId, etapa: body.etapaId }));
+    valoresCargados = [...valoresCargados, ...guardados];
+    return HttpResponse.json({ success: true, data: guardados }, { status: 201 });
   }),
   http.put(`${BASE}/pasadas/101`, () => HttpResponse.json({ success: true, data: { id: 101, estado: 'completa' } })),
 );
@@ -207,7 +208,7 @@ describe('TabletWorkspace — cualidades al completar la etapa', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('does not lock the operator out when the loaded values cannot be fetched', async () => {
+  it('asks the cualidades again when the loaded values cannot be fetched, warning that stored ones are replaced', async () => {
     muestras = [muestraDe(1, 1), muestraDe(2, 1)];
     valoresCargados = [
       { id: 1, atributo: 100, etapa: 1 },
@@ -218,31 +219,26 @@ describe('TabletWorkspace — cualidades al completar la etapa', () => {
     );
     renderWorkspace();
 
-    expect((await screen.findAllByText('Horneado')).length).toBeGreaterThan(0);
-    await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i })).toBeEnabled());
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Cualidades de Amasado' })).toBeInTheDocument();
+    expect(screen.getByText(/no se pudo verificar lo ya cargado/i)).toBeInTheDocument();
   });
 
-  it('warns visibly when the loaded values cannot be fetched and retries on demand', async () => {
+  it('re-sends the values and moves on even if the loaded values keep failing to be fetched', async () => {
     muestras = [muestraDe(1, 1), muestraDe(2, 1)];
-    let gets = 0;
     server.use(
-      http.get(`${BASE}/valores-atributo`, () => {
-        gets += 1;
-        return gets === 1
-          ? HttpResponse.json({ success: false, error: { message: 'boom' } }, { status: 500 })
-          : HttpResponse.json({ success: true, data: [] });
-      }),
+      http.get(`${BASE}/valores-atributo`, () => HttpResponse.json({ success: false, error: { message: 'boom' } }, { status: 500 })),
     );
     renderWorkspace();
+    await screen.findByRole('dialog', { name: 'Cualidades de Amasado' });
 
-    const alerta = await screen.findByRole('alert');
-    expect(alerta).toHaveTextContent('No se pudieron cargar las cualidades de esta pasada');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Temperatura (°C)'), '37.5');
+    await userEvent.click(screen.getByRole('radio', { name: 'Aceptado' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar cualidades' }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
-
-    expect(await screen.findByRole('dialog', { name: 'Cualidades de Amasado' })).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(postedBodies).toEqual([
+      { pasadaId: 101, etapaId: 1, valores: [{ atributoId: 100, valor: 37.5 }, { atributoId: 101, valor: 1 }] },
+    ]);
+    expect(screen.getByRole('button', { name: /registrar muestra/i })).toBeEnabled();
   });
 });
