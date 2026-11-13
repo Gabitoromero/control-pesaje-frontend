@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { handlers } from '../../../test/handlers';
+import { handlers, pagedJson } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { RutaFormPage } from './RutaFormPage';
 import { etapaSchema, rutaSchema } from './RutaFormPage.schemas';
@@ -702,6 +702,38 @@ describe('RutaFormPage — Artículos Asignados', () => {
     expect(options).not.toContain('[Harina 000] MarcaA');
     expect(options).not.toContain('[Azúcar] MarcaB');
     expect(options).toContain('[Sal fina] MarcaC');
+  });
+
+  it('15b. the offered page still fills up when some articulos are already assigned', async () => {
+    paramsMock = { id: '1' }; // Harina 000 (1) and Azucar (2) are assigned
+    const urls: URL[] = [];
+    const catalog = Array.from({ length: 40 }, (_, i) => ({
+      id: i + 1,
+      codigo: `ART-${String(i + 1).padStart(2, '0')}`,
+      nombre: `P${i + 1}`,
+      activo: true,
+    }));
+    server.use(
+      http.get('http://localhost:3000/api/articulos', ({ request }) => {
+        urls.push(new URL(request.url));
+        return pagedJson(request, catalog);
+      })
+    );
+    renderWithProviders(<RutaFormPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Harina 000')).toBeInTheDocument();
+    });
+
+    // Expand the Artículos section (collapsed by default)
+    await userEvent.click(screen.getByRole('button', { name: /artículos asignados/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Seleccione...' }));
+    await screen.findByRole('option', { name: '[ART-03] P3' });
+
+    const options = screen.getAllByRole('option').map(o => o.textContent);
+    expect(options).toHaveLength(20);
+    expect(options).not.toContain('[ART-01] P1');
+    expect(options).not.toContain('[ART-02] P2');
+    expect(urls.at(-1)?.searchParams.get('pageSize')).toBe('22');
   });
 
   it('16. edit mode: adding an articulo calls the pivot POST endpoint', async () => {

@@ -18,6 +18,8 @@ export interface UsePagedCatalogOptions<T> {
   debounceMs?: number;
   /** Catalog-specific filters (for example the users' sector). Changing them returns to page 1. */
   extra?: object;
+  /** Set to false to hold the request, for example until the user is authenticated. */
+  enabled?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function usePagedCatalog<T>({
   pageSize = DEFAULT_PAGE_SIZE,
   debounceMs = 300,
   extra,
+  enabled = true,
 }: UsePagedCatalogOptions<T>) {
   const [status, setStatus] = useState<CatalogStatus>('activo');
   const [field, setField] = useState(defaultField);
@@ -64,6 +67,7 @@ export function usePagedCatalog<T>({
     queryKey: [key, 'page', status, params],
     queryFn: () => (status === 'activo' ? fetchActive(params) : fetchInactive(params)),
     placeholderData: keepPreviousData,
+    enabled,
   });
 
   const data = result.data;

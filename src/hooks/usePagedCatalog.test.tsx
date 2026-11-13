@@ -62,6 +62,29 @@ describe('usePagedCatalog', () => {
     expect(fetchInactive).not.toHaveBeenCalled();
   });
 
+  it('holds the request while disabled and sends it once enabled', async () => {
+    const { result, rerender } = renderHook(
+      (props: { enabled: boolean }) =>
+        usePagedCatalog<Row>({
+          key: 'gated',
+          fetchActive,
+          fetchInactive,
+          defaultField: 'nombre',
+          sortBy: 'nombre',
+          enabled: props.enabled,
+        }),
+      { wrapper, initialProps: { enabled: false } },
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(fetchActive).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+
+    await waitFor(() => expect(result.current.items).toEqual([{ id: 1 }]));
+    expect(fetchActive).toHaveBeenCalledTimes(1);
+  });
+
   it('requests the chosen page', async () => {
     const { result } = setup();
     await waitFor(() => expect(result.current.items).toHaveLength(1));

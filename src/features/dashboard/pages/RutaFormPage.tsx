@@ -738,9 +738,18 @@ export const RutaFormPage = () => {
                 onChange={(val) => void handleAddArticulo(val)}
                 queryKey={`ruta-articulos-${[...articulosAsignadosIds].sort().join(',')}`}
                 search={async (query) => {
-                  // Already assigned articulos are left out of the offered page.
-                  const page = await getArticulos(query);
-                  return { ...page, items: page.items.filter((a) => !articulosAsignadosIds.has(a.id!)) };
+                  // Assigned articulos are not offered. Ask for that many extra rows so the offered page
+                  // still fills up, then trim it back to the requested size.
+                  const extra = articulosAsignadosIds.size;
+                  const page = await getArticulos({ ...query, pageSize: Math.min(100, query.pageSize + extra) });
+                  const offered = page.items.filter((a) => !articulosAsignadosIds.has(a.id!));
+                  const removed = page.items.length - offered.length;
+                  return {
+                    ...page,
+                    items: offered.slice(0, query.pageSize),
+                    total: Math.max(0, page.total - removed),
+                    pageSize: query.pageSize,
+                  };
                 }}
                 fetchById={getArticulo}
                 toOption={(a) => ({ id: a.id, nombre: a.nombre ? `[${a.codigo}] ${a.nombre}` : a.codigo })}

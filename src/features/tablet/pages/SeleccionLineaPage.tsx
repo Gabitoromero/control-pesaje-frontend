@@ -56,6 +56,7 @@ export const SeleccionLineaPage: React.FC = () => {
     fetchInactive: getLineas,
     defaultField: 'nombre',
     sortBy: 'nombre',
+    enabled: isAuthenticated,
   });
 
   const errorMessage = error ? getApiErrorMessage(error, 'Error al cargar las líneas') : null;

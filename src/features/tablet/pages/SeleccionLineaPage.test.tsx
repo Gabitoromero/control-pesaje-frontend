@@ -94,6 +94,21 @@ describe('SeleccionLineaPage', () => {
     expect(screen.queryByText('Selección de Línea')).not.toBeInTheDocument();
   });
 
+  it('no pide líneas mientras no hay sesión', async () => {
+    let requested = false;
+    server.use(
+      http.get(`${BASE}/lineas-produccion`, () => {
+        requested = true;
+        return HttpResponse.json({ success: true, data: { items: [], total: 0, page: 1, pageSize: 20 } });
+      })
+    );
+
+    renderWithAuth(<SeleccionLineaPage />, { initialEntries: ['/tablet/seleccion-linea'] });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(requested).toBe(false);
+  });
+
   it('muestra las líneas disponibles cuando está autenticado', async () => {
     renderWithAuth(<SeleccionLineaPage />, { user: operarioUser });
     expect(await screen.findByText('Línea 1 — Envasado A')).toBeInTheDocument();
