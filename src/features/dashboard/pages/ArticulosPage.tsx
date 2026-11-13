@@ -8,8 +8,9 @@ import {
   deleteArticulo,
   type Articulo,
 } from '../../../api/articulos';
-import { Plus, Edit, Trash, History } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
@@ -39,6 +40,7 @@ export const ArticulosPage = () => {
   const { hayActividad } = useActividadGlobal();
 
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
+  const [detalle, setDetalle] = useState<Articulo | null>(null);
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('codigo');
   const [query, setQuery] = useState('');
@@ -240,6 +242,15 @@ export const ArticulosPage = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
+                      onClick={() => setDetalle(articulo)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: articulo.id, title: `${articulo.codigo}${articulo.nombre ? ' · ' + articulo.nombre : ''}` })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -336,6 +347,23 @@ export const ArticulosPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle del artículo"
+        subtitle={detalle?.codigo}
+        fields={[
+          { label: 'Código', value: detalle?.codigo },
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activo' : 'Inactivo' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: `${detalle.codigo}${detalle.nombre ? ' · ' + detalle.nombre : ''}` });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="articulo"
         raizId={historial?.id ?? null}

@@ -9,8 +9,9 @@ import {
   type Etapa,
   type EtapaCreate,
 } from '../../../api/etapas';
-import { Plus, Edit, Trash, History } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
@@ -39,6 +40,7 @@ export const EtapasPage = () => {
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [detalle, setDetalle] = useState<Etapa | null>(null);
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
@@ -243,6 +245,15 @@ export const EtapasPage = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
+                      onClick={() => setDetalle(etapa)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: etapa.id, title: etapa.nombre })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -327,6 +338,22 @@ export const EtapasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la etapa"
+        subtitle={detalle?.nombre}
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Descripción', value: detalle?.descripcion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="etapa"
         raizId={historial?.id ?? null}

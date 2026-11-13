@@ -16,8 +16,9 @@ import { getBalanzas } from '../../../api/balanzas';
 import { getArticulos } from '../../../api/articulos';
 import { getArticulosPorRuta } from '../../../api/rutas-pasadas-articulos';
 import { dispositivosApi } from '../../../api/dispositivos';
-import { Plus, Edit, Trash, History } from 'lucide-react';
+import { Plus, Edit, Trash, History, Eye } from 'lucide-react';
 import { HistorialCambiosDrawer } from '../../../components/HistorialCambiosDrawer';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
@@ -67,6 +68,7 @@ export const LineasPage = () => {
   const [editingLinea, setEditingLinea] = useState<Linea | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  const [detalle, setDetalle] = useState<Linea | null>(null);
   const [historial, setHistorial] = useState<{ id?: number; title: string } | null>(null);
   const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
   const [field, setField] = useState('nombre');
@@ -433,6 +435,15 @@ export const LineasPage = () => {
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       type="button"
+                      onClick={() => setDetalle(linea)}
+                      className="text-muted-foreground hover:text-foreground mr-5"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setHistorial({ id: linea.id, title: linea.nombre })}
                       className="text-muted-foreground hover:text-foreground mr-5"
                       title="Ver historial de cambios"
@@ -596,6 +607,24 @@ export const LineasPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle de la línea"
+        subtitle={detalle?.nombre}
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Dispositivo', value: detalle?.dispositivo ? `${detalle.dispositivo.nombre} (${detalle.dispositivo.hardwareId})` : null },
+          { label: 'Ruta activa', value: detalle?.rutaPasadaActiva?.nombre },
+          { label: 'Observación', value: detalle?.observacion },
+          { label: 'Estado', value: detalle?.activo !== false ? 'Activa' : 'Inactiva' },
+        ]}
+        onViewHistorial={() => {
+          if (!detalle) return;
+          setHistorial({ id: detalle.id, title: detalle.nombre });
+          setDetalle(null);
+        }}
+      />
       <HistorialCambiosDrawer
         raizTipo="linea"
         raizId={historial?.id ?? null}
