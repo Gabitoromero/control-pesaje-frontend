@@ -43,6 +43,28 @@ describe('HistorialCambiosDrawer', () => {
     expect(screen.getByText('Sistema')).toBeInTheDocument();
   });
 
+  it('shows a cualidad of an etapa with its name, readable fields and no internal ids', async () => {
+    vi.mocked(api.getHistorialCambios).mockResolvedValue({
+      items: [
+        item({
+          entidad: 'ruta_atributo', accion: 'crear', contexto: 'Horno · Temperatura',
+          despues: { rutaPasadaEtapa: 777, nombre: 'Temperatura', tipo: 'numerico', minimo: 0, maximo: 99, activo: true },
+        }),
+        item({ id: 2, entidad: 'ruta_atributo', accion: 'editar', contexto: 'Horno · Temperatura', antes: { maximo: 99 }, despues: { maximo: 50 } }),
+      ],
+      total: 2, page: 1, pageSize: 20,
+    });
+    renderWithProviders(<HistorialCambiosDrawer raizTipo="ruta" raizId={3} title="Ruta 1" open onOpenChange={() => {}} />);
+
+    expect(await screen.findByText(/Creación · Cualidad de la etapa/)).toBeInTheDocument();
+    expect(screen.getAllByText('Horno · Temperatura')).toHaveLength(2);
+    expect(screen.getByText('Numérico')).toBeInTheDocument();
+    expect(screen.getByText('Mínimo:')).toBeInTheDocument();
+    expect(screen.getAllByText('Máximo:')).toHaveLength(2);
+    expect(screen.queryByText('Etapa de la ruta:')).not.toBeInTheDocument();
+    expect(screen.queryByText('777')).not.toBeInTheDocument();
+  });
+
   it('shows the current name of referenced entities instead of bare ids', async () => {
     vi.mocked(api.getHistorialCambios).mockResolvedValue({
       items: [

@@ -27,6 +27,7 @@ const ENTIDAD_LABEL: Record<string, string> = {
   ruta: 'Ruta',
   ruta_etapa: 'Etapa de la ruta',
   ruta_articulo: 'Artículo asignado',
+  ruta_atributo: 'Cualidad de la etapa',
 };
 
 const initials = (name: string) =>
@@ -87,6 +88,16 @@ const FIELD_LABEL: Record<string, string> = {
   toleranciaPct: 'Tolerancia (%)',
   magnitud: 'Magnitud',
   observacion: 'Observación',
+  tipo: 'Tipo',
+  minimo: 'Mínimo',
+  maximo: 'Máximo',
+};
+
+/** Internal ids with no meaning for the reader: the row's context already names what they point to. */
+const HIDDEN_FIELDS = new Set(['rutaPasadaEtapa']);
+
+const VALUE_LABEL: Record<string, Record<string, string>> = {
+  tipo: { numerico: 'Numérico', aceptado: 'Aceptado / No aceptado' },
 };
 
 const formatValue = (value: unknown, field?: string, referencias?: HistorialReferencias): string => {
@@ -96,12 +107,13 @@ const formatValue = (value: unknown, field?: string, referencias?: HistorialRefe
   }
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (field && typeof value === 'string' && VALUE_LABEL[field]?.[value]) return VALUE_LABEL[field][value];
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 };
 
 const ChangeDetail = ({ item, referencias }: { item: HistorialCambioItem; referencias?: HistorialReferencias }) => {
-  const keys = Array.from(new Set([...Object.keys(item.antes), ...Object.keys(item.despues)]));
+  const keys = Array.from(new Set([...Object.keys(item.antes), ...Object.keys(item.despues)])).filter((k) => !HIDDEN_FIELDS.has(k));
   if (keys.length === 0) return null;
   return (
     <ul className="mt-2 space-y-1 text-sm">
