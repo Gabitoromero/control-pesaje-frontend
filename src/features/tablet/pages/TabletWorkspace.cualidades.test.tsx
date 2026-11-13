@@ -222,4 +222,27 @@ describe('TabletWorkspace — cualidades al completar la etapa', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /registrar muestra/i })).toBeEnabled());
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('warns visibly when the loaded values cannot be fetched and retries on demand', async () => {
+    muestras = [muestraDe(1, 1), muestraDe(2, 1)];
+    let gets = 0;
+    server.use(
+      http.get(`${BASE}/valores-atributo`, () => {
+        gets += 1;
+        return gets === 1
+          ? HttpResponse.json({ success: false, error: { message: 'boom' } }, { status: 500 })
+          : HttpResponse.json({ success: true, data: [] });
+      }),
+    );
+    renderWorkspace();
+
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('No se pudieron cargar las cualidades de esta pasada');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Cualidades de Amasado' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

@@ -126,6 +126,7 @@ const handlers = [
       },
     });
   }),
+  http.get(`${BASE}/valores-atributo`, () => HttpResponse.json({ success: true, data: [] })),
 ];
 
 const server = setupServer(...handlers);

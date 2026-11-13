@@ -159,14 +159,15 @@ export const TabletWorkspace: React.FC = () => {
 
   // Cualidades (manual qualities) already loaded for this pasada. Together with the samples they tell whether the
   // operator must load some before moving on; the backend rejects the next stage's samples otherwise.
-  const { data: valoresCargados, isPending: cargandoValores } = useQuery({
+  const { data: valoresCargados, isPending: cargandoValores, isError: errorValores, refetch: recargarValores } = useQuery({
     queryKey: ['valores-atributo', pasadaId],
     queryFn: () => getValoresAtributo(pasadaId!),
     enabled: !!pasadaId,
   });
   // Cheap pure derivation: recomputed on every render, no memo needed. Without the loaded values (still loading or
   // failed) nothing is asked: an empty default would make the dialog request again what is already stored and,
-  // being blocking, lock the operator out. The backend still rejects the next stage's samples if some are missing.
+  // being blocking, lock the operator out (the backend refuses to reload a stored value). On failure a warning with
+  // a retry is shown instead; the backend still rejects the next stage's samples if some are missing.
   const cualidadesPendientes = valoresCargados
     ? deriveCualidadesPendientes(etapas, muestras, new Set(valoresCargados.map((v) => v.atributo)))
     : null;
@@ -435,6 +436,15 @@ export const TabletWorkspace: React.FC = () => {
               </div>
             ) : null}
           </div>
+
+          {errorValores && (
+            <div role="alert" className="w-full flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+              <span>No se pudieron cargar las cualidades de esta pasada.</span>
+              <button type="button" onClick={() => recargarValores()} className="shrink-0 rounded-lg border border-warning/40 px-3 py-1.5 font-semibold hover:bg-warning/20">
+                Reintentar
+              </button>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success' : 'bg-warning'}`} />
