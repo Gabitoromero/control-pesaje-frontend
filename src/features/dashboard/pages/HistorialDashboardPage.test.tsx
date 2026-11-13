@@ -52,4 +52,11 @@ describe('HistorialDashboardPage', () => {
     expect(screen.getByRole('list', { name: 'Listado de muestras' })).toBeInTheDocument();
     expect(screen.queryByTestId('tablet-page-root')).not.toBeInTheDocument();
   });
+
+  it('sets the theme text color itself, since the dashboard layout does not provide one', async () => {
+    renderWithAuth(<HistorialDashboardPage />, { user: jefe, activeLineaId: null });
+
+    const list = await screen.findByRole('list', { name: 'Listado de muestras' });
+    expect(list.closest('.text-foreground')).not.toBeNull();
+  });
 });
