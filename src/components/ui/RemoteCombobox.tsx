@@ -64,7 +64,8 @@ export function RemoteCombobox<T = Option>({
   const items = (results.data?.items ?? []).map(toOption);
   const total = results.data?.total ?? 0;
   const selectedInResults = value !== null && items.some((item) => item.id === value);
-  const hasValue = typeof value === 'number';
+  // 0 is the forms' "nothing selected" placeholder, never a real id: looking it up only produces a 404.
+  const hasValue = typeof value === 'number' && value > 0;
   const selectedLookup = useQuery({
     queryKey: ['remote-combobox', queryKey, 'by-id', value],
     queryFn: () => (fetchById as (id: number) => Promise<T>)(value as number),

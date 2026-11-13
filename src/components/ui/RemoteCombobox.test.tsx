@@ -95,6 +95,13 @@ describe('RemoteCombobox', () => {
     expect(fetchById).toHaveBeenCalledWith(42);
   });
 
+  it('does not look up the placeholder value 0, which means "nothing selected"', async () => {
+    const { fetchById } = setup({ value: 0 });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(fetchById).not.toHaveBeenCalled();
+  });
+
   it('tells the user when the results are only part of the catalog', async () => {
     setup({ search: vi.fn(async () => pageOf([{ id: 1, nombre: 'Amasado' }], 45)) });
 
