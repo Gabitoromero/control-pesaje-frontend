@@ -1,4 +1,5 @@
 import api from './axios';
+import { fetchPage, type Page, type PageQuery } from './pagination';
 import type { Ruta } from '../shared/types/domain';
 
 export interface AssignedDevice {
@@ -30,15 +31,11 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
-export const getLineas = async (): Promise<Linea[]> => {
-  const response = await api.get<ApiEnvelope<Linea[]>>('/lineas-produccion');
-  return response.data.data;
-};
+export const getLineas = (query?: PageQuery): Promise<Page<Linea>> =>
+  fetchPage<Linea>('/lineas-produccion', query);
 
-export const getLineasInactivas = async (): Promise<Linea[]> => {
-  const response = await api.get<ApiEnvelope<Linea[]>>('/lineas-produccion/inactive');
-  return response.data.data;
-};
+export const getLineasInactivas = (query?: PageQuery): Promise<Page<Linea>> =>
+  fetchPage<Linea>('/lineas-produccion/inactive', query);
 
 export const getLinea = async (id: number): Promise<Linea> => {
   const response = await api.get<ApiEnvelope<Linea>>(`/lineas-produccion/${id}`);

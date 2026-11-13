@@ -1,4 +1,5 @@
 import api from './axios';
+import { fetchPage, type Page, type PageQuery } from './pagination';
 
 export interface Etapa {
   id?: number;
@@ -14,15 +15,11 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
-export const getEtapas = async (): Promise<Etapa[]> => {
-  const response = await api.get<ApiEnvelope<Etapa[]>>('/etapas');
-  return response.data.data;
-};
+export const getEtapas = (query?: PageQuery): Promise<Page<Etapa>> =>
+  fetchPage<Etapa>('/etapas', query);
 
-export const getEtapasInactivas = async (): Promise<Etapa[]> => {
-  const response = await api.get<ApiEnvelope<Etapa[]>>('/etapas/inactive');
-  return response.data.data;
-};
+export const getEtapasInactivas = (query?: PageQuery): Promise<Page<Etapa>> =>
+  fetchPage<Etapa>('/etapas/inactive', query);
 
 export const getEtapa = async (id: number): Promise<Etapa> => {
   const response = await api.get<ApiEnvelope<Etapa>>(`/etapas/${id}`);
