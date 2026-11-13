@@ -88,7 +88,7 @@ describe('SistemaPage reports copy', () => {
 
     expect(text).toMatch(/Reporte de Muestras/);
     expect(text).toMatch(/Reporte de Pasadas/);
-    expect(text).toMatch(/Reporte de Rutas de Pasada/);
+    expect(text).toMatch(/Reporte de Rutas/);
     expect(text).toMatch(/90 días/);
     expect(text).toMatch(/Generando el reporte en el servidor/);
     expect(text).not.toMatch(/Reporte de Pasadas y Muestras/);

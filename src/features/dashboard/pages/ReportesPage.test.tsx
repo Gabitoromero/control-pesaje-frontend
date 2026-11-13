@@ -18,7 +18,7 @@ vi.mock('@/api/reportes', () => ({
 const muestrasButton = () => screen.getByRole('button', { name: /descargar reporte de muestras/i });
 const pasadasButton = () => screen.getByRole('button', { name: /descargar reporte de pasadas/i });
 const rutasButton = () =>
-  screen.getByRole('button', { name: /descargar reporte de rutas de pasada/i });
+  screen.getByRole('button', { name: /descargar reporte de rutas/i });
 
 async function fillRange(user: ReturnType<typeof userEvent.setup>, desde: string, hasta: string) {
   await user.type(screen.getByLabelText('Desde'), desde);
@@ -40,7 +40,7 @@ describe('ReportesPage', () => {
 
     expect(screen.getByText('Reporte de Muestras')).toBeInTheDocument();
     expect(screen.getByText('Reporte de Pasadas')).toBeInTheDocument();
-    expect(screen.getByText('Reporte de Rutas de Pasada')).toBeInTheDocument();
+    expect(screen.getByText('Reporte de Rutas')).toBeInTheDocument();
     expect(
       screen.getByText(
         'Configuración actual de rutas de pasada, sus etapas con pesos y los artículos asignados.',
@@ -83,7 +83,7 @@ describe('ReportesPage', () => {
 
     await user.click(rutasButton());
 
-    const pending = await screen.findByRole('button', { name: /descargar reporte de rutas de pasada/i });
+    const pending = await screen.findByRole('button', { name: /descargar reporte de rutas/i });
     expect(pending).toBeDisabled();
     expect(pending).toHaveTextContent('Descargando...');
 

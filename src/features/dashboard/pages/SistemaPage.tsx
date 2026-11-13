@@ -583,7 +583,7 @@ export function SistemaPage() {
               archivo trae una hoja "Sin datos".
             </li>
             <li>
-              <strong>Reporte de Rutas de Pasada</strong>: la configuración actual de las rutas,
+              <strong>Reporte de Rutas</strong>: la configuración actual de las rutas,
               con sus etapas, pesos y artículos asignados. No pide rango de fechas.
             </li>
           </ul>

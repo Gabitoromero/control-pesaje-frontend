@@ -54,7 +54,7 @@ const REPORTES: ReporteDefinicion[] = [
   {
     id: 'reporte-rutas-pasada',
     icono: 'rutas',
-    titulo: 'Reporte de Rutas de Pasada',
+    titulo: 'Reporte de Rutas',
     descripcion:
       'Configuración actual de rutas de pasada, sus etapas con pesos y los artículos asignados.',
     requiresDateRange: false,
