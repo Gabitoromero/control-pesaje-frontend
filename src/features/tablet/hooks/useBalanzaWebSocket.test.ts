@@ -440,7 +440,7 @@ describe('useBalanzaWebSocket report support', () => {
 
 describe('useBalanzaWebSocket missing unit of measure notice', () => {
   let listeners: Record<string, (...args: unknown[]) => void>;
-  const MSG = 'La balanza envía datos, pero todavía no tiene configurada una unidad de medida.';
+  const MSG = 'La Raspberry envía datos, pero todavía no tiene configurada una unidad de medida.';
 
   beforeEach(() => {
     vi.useFakeTimers();

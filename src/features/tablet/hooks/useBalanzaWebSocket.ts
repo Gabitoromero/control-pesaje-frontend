@@ -102,7 +102,7 @@ export function useBalanzaWebSocket(lineaId: number | null) {
         // The backend drops every frame of a device without unit (fail closed), so no balanza-data
         // ever follows: the connected status without unit is the only signal the frontend gets.
         avisoUnidadRef.current = true;
-        toast.warning('La balanza envía datos, pero todavía no tiene configurada una unidad de medida.');
+        toast.warning('La Raspberry envía datos, pero todavía no tiene configurada una unidad de medida.');
       }
       setIsConnected(data.isConnected);
       setHardwareId(data.hardwareId);
