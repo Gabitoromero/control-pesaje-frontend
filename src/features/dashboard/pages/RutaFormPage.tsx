@@ -12,7 +12,7 @@ import { getEtapas } from '../../../api/etapas';
 import { getArticulos } from '../../../api/articulos';
 import { getArticulosDeRuta, addArticuloARuta, removeArticuloDeRuta } from '../../../api/articulos-ruta';
 import type { ArticuloRutaPasadaItem } from '../../../shared/types/domain';
-import { MAGNITUDES, MAGNITUD_POR_DEFECTO, PESO_DECIMALS } from '../../../shared/constants';
+import { MAGNITUDES, MAGNITUD_POR_DEFECTO, MAX_ATRIBUTOS_POR_ETAPA, PESO_DECIMALS, TIPOS_ATRIBUTO } from '../../../shared/constants';
 import { unidadLabel } from '../../../shared/peso';
 import { MAGNITUD_LABEL } from '../../../utils/magnitud';
 import { Plus, Trash, ArrowLeft, Save, RefreshCw, GripVertical, Minus } from 'lucide-react';
@@ -25,6 +25,168 @@ import { CSS } from '@dnd-kit/utilities';
 
 
 const pesoStep = (10 ** -PESO_DECIMALS).toFixed(PESO_DECIMALS);
+
+const TIPO_ATRIBUTO_LABEL = { numerico: 'Numérico', aceptado: 'Aceptado / No aceptado' } as const;
+
+const inputBase = 'bg-background border rounded text-foreground text-sm px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring dark:[color-scheme:dark]';
+
+type CualidadFilaProps = {
+  etapaIndex: number;
+  index: number;
+  control: Control<RutaFormValues>;
+  register: UseFormRegister<RutaFormValues>;
+  setValue: UseFormSetValue<RutaFormValues>;
+  errors: FieldErrors<RutaFormValues>;
+  onRemove: () => void;
+};
+
+const CualidadFila = ({ etapaIndex, index, control, register, setValue, errors, onRemove }: CualidadFilaProps) => {
+  const base = `etapas.${etapaIndex}.atributos.${index}` as const;
+  const tipo = useWatch({ control, name: `${base}.tipo` });
+  const fieldErrors = errors.etapas?.[etapaIndex]?.atributos?.[index];
+  const numberOrNull = { setValueAs: (v: unknown) => (v === '' || v == null ? null : Number(v)) };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-background/40 p-3">
+      <div className="flex flex-wrap items-start gap-3">
+        <div data-field={`${base}.nombre`} className="flex min-w-[12rem] flex-1 flex-col gap-1 rounded-md">
+          <input
+            type="text"
+            aria-label="Nombre de la cualidad"
+            placeholder="Nombre (ej. Temperatura (°C))"
+            {...register(`${base}.nombre`)}
+            className={`w-full ${inputBase} border-border`}
+          />
+          {fieldErrors?.nombre && <span className="text-destructive text-xs">{fieldErrors.nombre.message}</span>}
+        </div>
+        <Controller
+          name={`${base}.tipo`}
+          control={control}
+          render={({ field: { value, onChange } }) => (
+            <div role="radiogroup" aria-label="Tipo de cualidad" className="flex flex-wrap items-center gap-4 py-1.5">
+              {TIPOS_ATRIBUTO.map((option) => (
+                <label key={option} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`${base}.tipo`}
+                    value={option}
+                    checked={value === option}
+                    onChange={() => {
+                      onChange(option);
+                      // The range only exists for numeric cualidades (aceptado is fixed by the system)
+                      if (option === 'aceptado') {
+                        setValue(`${base}.minimo`, null);
+                        setValue(`${base}.maximo`, null);
+                      }
+                    }}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {TIPO_ATRIBUTO_LABEL[option]}
+                </label>
+              ))}
+            </div>
+          )}
+        />
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Quitar cualidad"
+          title="Quitar cualidad"
+          className="p-1.5 text-muted-foreground hover:text-destructive"
+        >
+          <Trash size={16} />
+        </button>
+      </div>
+
+      {tipo === 'numerico' ? (
+        <div className="flex flex-wrap items-start gap-3">
+          <span className="py-1.5 text-xs text-muted-foreground">Rango aceptado</span>
+          <div data-field={`${base}.minimo`} className="flex flex-col gap-1 rounded-md">
+            <input
+              type="number"
+              step="any"
+              aria-label="Mínimo de la cualidad"
+              placeholder="Mínimo"
+              {...register(`${base}.minimo`, numberOrNull)}
+              className={`w-28 font-mono ${inputBase} border-border`}
+            />
+            {fieldErrors?.minimo && <span className="text-destructive text-xs">{fieldErrors.minimo.message}</span>}
+          </div>
+          <div data-field={`${base}.maximo`} className="flex flex-col gap-1 rounded-md">
+            <input
+              type="number"
+              step="any"
+              aria-label="Máximo de la cualidad"
+              placeholder="Máximo"
+              {...register(`${base}.maximo`, numberOrNull)}
+              className={`w-28 font-mono ${inputBase} border-border`}
+            />
+            {fieldErrors?.maximo && <span className="text-destructive text-xs">{fieldErrors.maximo.message}</span>}
+          </div>
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground">
+          El operario elige Aceptado o No aceptado. Solo Aceptado está dentro de lo esperado.
+        </span>
+      )}
+    </div>
+  );
+};
+
+const CualidadesEtapa = ({
+  index,
+  control,
+  register,
+  setValue,
+  errors,
+}: {
+  index: number;
+  control: Control<RutaFormValues>;
+  register: UseFormRegister<RutaFormValues>;
+  setValue: UseFormSetValue<RutaFormValues>;
+  errors: FieldErrors<RutaFormValues>;
+}) => {
+  const { fields, append, remove } = useFieldArray({ control, name: `etapas.${index}.atributos` });
+  const llena = fields.length >= MAX_ATRIBUTOS_POR_ETAPA;
+  const arrayError = errors.etapas?.[index]?.atributos?.message ?? errors.etapas?.[index]?.atributos?.root?.message;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Cualidades</span>
+        <button
+          type="button"
+          disabled={llena}
+          onClick={() => append({ nombre: '', tipo: 'numerico', minimo: null, maximo: null })}
+          className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus size={14} /> Agregar cualidad
+        </button>
+      </div>
+      {fields.length === 0 && (
+        <span className="text-xs text-muted-foreground">
+          Sin cualidades: el operario no carga datos manuales al terminar esta etapa.
+        </span>
+      )}
+      {llena && (
+        <span className="text-xs text-muted-foreground">Máximo {MAX_ATRIBUTOS_POR_ETAPA} cualidades por etapa.</span>
+      )}
+      {arrayError && <span className="text-destructive text-xs">{arrayError}</span>}
+      {fields.map((field, j) => (
+        <CualidadFila
+          key={field.id}
+          etapaIndex={index}
+          index={j}
+          control={control}
+          register={register}
+          setValue={setValue}
+          errors={errors}
+          onRemove={() => remove(j)}
+        />
+      ))}
+    </div>
+  );
+};
 
 const SortableEtapaItem = ({
   id,
@@ -293,6 +455,8 @@ const SortableEtapaItem = ({
             )}
           </div>
         </div>
+
+        <CualidadesEtapa index={index} control={control} register={register} setValue={setValue} errors={errors} />
       </div>
     </div>
   );
@@ -360,6 +524,7 @@ export const RutaFormPage = () => {
           toleranciaPorDefecto: true,
           toleranciaPct: null,
           magnitud: MAGNITUD_POR_DEFECTO,
+          atributos: [],
         }
       ],
     },
@@ -388,6 +553,13 @@ export const RutaFormPage = () => {
           toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
           toleranciaPct: e.toleranciaPct ?? null,
           magnitud: e.magnitud ?? MAGNITUD_POR_DEFECTO,
+          atributos: (e.atributos ?? []).map(a => ({
+            id: a.id,
+            nombre: a.nombre,
+            tipo: a.tipo,
+            minimo: a.tipo === 'numerico' ? a.minimo : null,
+            maximo: a.tipo === 'numerico' ? a.maximo : null,
+          })),
         })),
       });
     }
@@ -592,6 +764,14 @@ export const RutaFormPage = () => {
       toleranciaPorDefecto: e.toleranciaPorDefecto !== false,
       toleranciaPct: e.toleranciaPorDefecto === false ? (e.toleranciaPct ?? null) : null,
       magnitud: e.magnitud ?? MAGNITUD_POR_DEFECTO,
+      // Always sent: on update the list replaces the stored cualidades (the ones left out are dropped)
+      atributos: (e.atributos ?? []).map(a => ({
+        ...(a.id != null ? { id: a.id } : {}),
+        nombre: a.nombre.trim(),
+        tipo: a.tipo,
+        // aceptado/no aceptado has a fixed range that the backend applies
+        ...(a.tipo === 'numerico' ? { minimo: a.minimo as number, maximo: a.maximo as number } : {}),
+      })),
     }));
 
     const payload = {
@@ -681,6 +861,7 @@ export const RutaFormPage = () => {
                 toleranciaPorDefecto: true,
                 toleranciaPct: null,
                 magnitud: MAGNITUD_POR_DEFECTO,
+                atributos: [],
               })}
               className="bg-success hover:bg-success/90 text-white px-3 py-1.5 rounded-md flex items-center gap-2 text-sm"
             >
