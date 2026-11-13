@@ -186,6 +186,13 @@ export const handlers = [
     pagedJson(request, articulosMockInactivos)
   ),
 
+  http.get(`${BASE}/articulos/:id`, ({ params }) => {
+    const found = [...articulosMock, ...articulosMockInactivos].find((a) => a.id === Number(params.id));
+    return found
+      ? HttpResponse.json({ success: true, data: found })
+      : HttpResponse.json({ success: false, error: { message: 'No encontrado' } }, { status: 404 });
+  }),
+
   http.post(`${BASE}/articulos`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;
     return HttpResponse.json({ success: true, data: { id: 99, activo: true, ...body } }, { status: 201 });
@@ -229,6 +236,13 @@ export const handlers = [
   http.get(`${BASE}/etapas/inactive`, ({ request }) =>
     pagedJson(request, etapasMockInactivos)
   ),
+
+  http.get(`${BASE}/etapas/:id`, ({ params }) => {
+    const found = [...etapasMock, ...etapasMockInactivos].find((e) => e.id === Number(params.id));
+    return found
+      ? HttpResponse.json({ success: true, data: found })
+      : HttpResponse.json({ success: false, error: { message: 'No encontrado' } }, { status: 404 });
+  }),
 
   http.post(`${BASE}/etapas`, async ({ request }) => {
     const body = await request.json() as Record<string, unknown>;
