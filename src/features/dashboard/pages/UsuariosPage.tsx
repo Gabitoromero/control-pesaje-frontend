@@ -17,7 +17,7 @@ import { SearchToolbar, type SearchField } from '../../../components/SearchToolb
 import { PaginationBar } from '../../../components/PaginationBar';
 import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useDialog } from '../../../components/dialogs/useDialog';
-import { getApiErrorMessage } from '../../../utils/errors';
+import { getApiErrorMessage, getApiFieldErrors } from '../../../utils/errors';
 import { toast } from 'sonner';
 import { SearchableCombobox } from '../../../components/ui/SearchableCombobox';
 import {
@@ -47,6 +47,22 @@ const EMPTY_FORM = {
 
 const FILTRO_SIN_SECTOR = 'sin-sector';
 
+const FIELD_LABELS: Record<string, string> = {
+  legajo: 'Legajo',
+  nombreApellido: 'Nombre completo',
+  nombreUsuario: 'Nombre de usuario',
+  rol: 'Rol',
+  sector: 'Sector',
+  pin: 'PIN',
+};
+
+const INPUT_CLASS =
+  'mt-1 block w-full rounded-md border bg-background text-foreground px-3 py-2 shadow-sm focus:outline-none focus:ring-1';
+const inputBorder = (invalid: boolean) =>
+  invalid
+    ? 'border-destructive focus:border-destructive focus:ring-destructive'
+    : 'border-border focus:border-ring focus:ring-ring';
+
 // Only a known sector code counts; anything else is shown and filtered as "Sin sector".
 const sectorDe = (u: Usuario): string | null => {
   const codigo = u.datosAdicionales?.sector ?? null;
@@ -66,6 +82,36 @@ export const UsuariosPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const updateForm = (changes: Partial<typeof EMPTY_FORM>) => {
+    setFormData((prev) => ({ ...prev, ...changes }));
+    setFieldErrors((prev) => {
+      const touched = Object.keys(changes).filter((key) => key in prev);
+      if (touched.length === 0) return prev;
+      const next = { ...prev };
+      touched.forEach((key) => delete next[key]);
+      return next;
+    });
+  };
+
+  // Marks each rejected input and lists the reasons in the notification.
+  const reportApiError = (title: string, err: unknown) => {
+    const reasons = getApiFieldErrors(err);
+    setFieldErrors(Object.fromEntries(reasons.map((r) => [r.field, r.message])));
+    toast.error(title, {
+      description:
+        reasons.length > 0 ? (
+          <ul>
+            {reasons.map((r) => (
+              <li key={r.field}>{`${FIELD_LABELS[r.field] ?? r.field}: ${r.message}`}</li>
+            ))}
+          </ul>
+        ) : (
+          getApiErrorMessage(err, 'Ocurrió un error inesperado')
+        ),
+    });
+  };
 
   const [sector, setSector] = useState('');
 
@@ -99,11 +145,7 @@ export const UsuariosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       closeModal();
     },
-    onError: (err: unknown) => {
-      toast.error('No se pudo crear el usuario', {
-        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
-      });
-    },
+    onError: (err: unknown) => reportApiError('No se pudo crear el usuario', err),
   });
 
   const updateMutation = useMutation({
@@ -112,11 +154,7 @@ export const UsuariosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       closeModal();
     },
-    onError: (err: unknown) => {
-      toast.error('No se pudo guardar el usuario', {
-        description: getApiErrorMessage(err, 'Ocurrió un error inesperado'),
-      });
-    },
+    onError: (err: unknown) => reportApiError('No se pudo guardar el usuario', err),
   });
 
   const deleteMutation = useMutation({
@@ -133,6 +171,7 @@ export const UsuariosPage = () => {
   });
 
   const openModal = (usuario?: Usuario) => {
+    setFieldErrors({});
     if (usuario) {
       setEditingUsuario(usuario);
       setFormData({
@@ -152,6 +191,7 @@ export const UsuariosPage = () => {
   };
 
   const closeModal = () => {
+    setFieldErrors({});
     setIsModalOpen(false);
     setEditingUsuario(null);
     setFormData(EMPTY_FORM);
@@ -336,10 +376,13 @@ export const UsuariosPage = () => {
                   id="legajo"
                   type="text"
                   required
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  className={`${INPUT_CLASS} ${inputBorder(!!fieldErrors.legajo)}`}
+                  aria-invalid={!!fieldErrors.legajo}
+                  aria-describedby={fieldErrors.legajo ? 'legajo-error' : undefined}
                   value={formData.legajo}
-                  onChange={(e) => setFormData({ ...formData, legajo: e.target.value })}
+                  onChange={(e) => updateForm({ legajo: e.target.value })}
                 />
+                {fieldErrors.legajo && <span id="legajo-error" className="mt-1 block text-destructive text-xs">{fieldErrors.legajo}</span>}
               </div>
 
               <div>
@@ -348,10 +391,13 @@ export const UsuariosPage = () => {
                   id="nombreApellido"
                   type="text"
                   required
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  className={`${INPUT_CLASS} ${inputBorder(!!fieldErrors.nombreApellido)}`}
+                  aria-invalid={!!fieldErrors.nombreApellido}
+                  aria-describedby={fieldErrors.nombreApellido ? 'nombreApellido-error' : undefined}
                   value={formData.nombreApellido}
-                  onChange={(e) => setFormData({ ...formData, nombreApellido: e.target.value })}
+                  onChange={(e) => updateForm({ nombreApellido: e.target.value })}
                 />
+                {fieldErrors.nombreApellido && <span id="nombreApellido-error" className="mt-1 block text-destructive text-xs">{fieldErrors.nombreApellido}</span>}
               </div>
 
               <div>
@@ -360,35 +406,42 @@ export const UsuariosPage = () => {
                   id="nombreUsuario"
                   type="text"
                   required
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  className={`${INPUT_CLASS} ${inputBorder(!!fieldErrors.nombreUsuario)}`}
+                  aria-invalid={!!fieldErrors.nombreUsuario}
+                  aria-describedby={fieldErrors.nombreUsuario ? 'nombreUsuario-error' : undefined}
                   value={formData.nombreUsuario}
-                  onChange={(e) => setFormData({ ...formData, nombreUsuario: e.target.value })}
+                  onChange={(e) => updateForm({ nombreUsuario: e.target.value })}
                 />
+                {fieldErrors.nombreUsuario && <span id="nombreUsuario-error" className="mt-1 block text-destructive text-xs">{fieldErrors.nombreUsuario}</span>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Rol</label>
                 <SearchableCombobox
                   value={formData.rol}
-                  onChange={(val) => setFormData({ ...formData, rol: (val as string) || UsuarioRol.OPERARIO, pin: '' })}
+                  onChange={(val) => updateForm({ rol: (val as string) || UsuarioRol.OPERARIO, pin: '' })}
                   options={Object.entries(ROL_LABELS).map(([id, nombre]) => ({ id, nombre }))}
                   placeholder="Buscar rol..."
                 />
+                {fieldErrors.rol && <span id="rol-error" className="mt-1 block text-destructive text-xs">{fieldErrors.rol}</span>}
               </div>
 
               <div>
                 <label htmlFor="sector" className="block text-sm font-medium text-foreground">Sector</label>
                 <select
                   id="sector"
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  className={`${INPUT_CLASS} ${inputBorder(!!fieldErrors.sector)}`}
+                  aria-invalid={!!fieldErrors.sector}
+                  aria-describedby={fieldErrors.sector ? 'sector-error' : undefined}
                   value={formData.sector}
-                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  onChange={(e) => updateForm({ sector: e.target.value })}
                 >
                   <option value="">Sin sector</option>
                   {SECTORES.map((s) => (
                     <option key={s.codigo} value={s.codigo}>{s.label}</option>
                   ))}
                 </select>
+                {fieldErrors.sector && <span id="sector-error" className="mt-1 block text-destructive text-xs">{fieldErrors.sector}</span>}
               </div>
 
               <div>
@@ -401,10 +454,13 @@ export const UsuariosPage = () => {
                   maxLength={6}
                   required={!editingUsuario}
                   placeholder={editingUsuario ? 'Dejar vacío para no cambiar' : ''}
-                  className="mt-1 block w-full rounded-md border border-border bg-background text-foreground px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  className={`${INPUT_CLASS} ${inputBorder(!!fieldErrors.pin)}`}
+                  aria-invalid={!!fieldErrors.pin}
+                  aria-describedby={fieldErrors.pin ? 'pin-error' : undefined}
                   value={formData.pin}
-                  onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                  onChange={(e) => updateForm({ pin: e.target.value })}
                 />
+                {fieldErrors.pin && <span id="pin-error" className="mt-1 block text-destructive text-xs">{fieldErrors.pin}</span>}
               </div>
 
               <div className="sm:col-span-2 flex items-center gap-3 pt-1">

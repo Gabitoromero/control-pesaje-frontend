@@ -374,6 +374,70 @@ describe('UsuariosPage', () => {
     await screen.findByText('No se pudo actualizar');
   });
 
+  describe('validation errors from the API', () => {
+    const validationError = (issues: Array<{ path: Array<string | number>; message: string }>) =>
+      http.put('http://localhost:3000/api/usuarios/:id', () =>
+        HttpResponse.json(
+          { success: false, error: { message: 'Validation error', details: issues } },
+          { status: 400 }
+        )
+      );
+
+    const openAdminAndSave = async () => {
+      renderWithProviders(<UsuariosPage />);
+      const adminRow = (await screen.findByText('Admin Istrador')).closest('tr')!;
+      await userEvent.click(within(adminRow).getByTitle('Editar'));
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    };
+
+    it('marks the offending input and explains the reason under it and in the notification', async () => {
+      server.use(validationError([{ path: ['legajo'], message: 'Debe tener exactamente 5 dígitos numéricos' }]));
+
+      await openAdminAndSave();
+
+      await screen.findByText('No se pudo guardar el usuario');
+      const legajo = screen.getByLabelText('Legajo');
+      await waitFor(() => expect(legajo).toBeInvalid());
+      expect(legajo).toHaveAccessibleDescription('Debe tener exactamente 5 dígitos numéricos');
+      expect(screen.getByText('Legajo: Debe tener exactamente 5 dígitos numéricos')).toBeInTheDocument();
+      expect(screen.getByLabelText('Nombre completo')).toBeValid();
+    });
+
+    it('marks the Sector select when the API rejects datosAdicionales.sector', async () => {
+      server.use(validationError([{ path: ['datosAdicionales', 'sector'], message: 'Sector inválido' }]));
+
+      await openAdminAndSave();
+
+      await waitFor(() => expect(screen.getByLabelText('Sector')).toBeInvalid());
+      expect(screen.getByLabelText('Sector')).toHaveAccessibleDescription('Sector inválido');
+      expect(screen.getByText('Sector: Sector inválido')).toBeInTheDocument();
+    });
+
+    it('clears the mark of an input as soon as the user edits it', async () => {
+      server.use(validationError([{ path: ['legajo'], message: 'Debe tener exactamente 5 dígitos numéricos' }]));
+
+      await openAdminAndSave();
+      await waitFor(() => expect(screen.getByLabelText('Legajo')).toBeInvalid());
+
+      await userEvent.type(screen.getByLabelText('Legajo'), '1');
+
+      expect(screen.getByLabelText('Legajo')).toBeValid();
+    });
+
+    it('keeps showing only the message when the API sends no field details', async () => {
+      server.use(
+        http.put('http://localhost:3000/api/usuarios/:id', () =>
+          HttpResponse.json({ success: false, error: { message: 'No se pudo actualizar' } }, { status: 400 })
+        )
+      );
+
+      await openAdminAndSave();
+
+      await screen.findByText('No se pudo actualizar');
+      expect(screen.getByLabelText('Legajo')).toBeValid();
+    });
+  });
+
   it('clicking "Eliminar Usuario" opens a confirm dialog instead of window.confirm', async () => {
     renderWithProviders(<UsuariosPage />);
 
