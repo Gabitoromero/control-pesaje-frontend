@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getArticulos,
   getArticulosInactivos,
@@ -10,6 +10,8 @@ import {
 } from '../../../api/articulos';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
@@ -37,42 +39,33 @@ export const ArticulosPage = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const { hayActividad } = useActividadGlobal();
 
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('codigo');
-  const [query, setQuery] = useState('');
-
-  const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
-    queryKey: ['articulos'],
-    queryFn: getArticulos,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: articulosFiltrados,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Articulo>({
+    key: 'articulos',
+    fetchActive: getArticulos,
+    fetchInactive: getArticulosInactivos,
+    defaultField: 'codigo',
+    sortBy: 'codigo',
   });
-
-  const { data: inactivos = [], isLoading: loadingInactivos, error: errorInactivos } = useQuery({
-    queryKey: ['articulos-inactivos'],
-    queryFn: getArticulosInactivos,
-  });
-
-  const isLoading = loadingActivos || loadingInactivos;
-  const error = errorActivos || errorInactivos;
-
-  const articulosFiltrados = useMemo(() => {
-    const base = status === 'activo' ? activos : inactivos;
-    const q = query.trim().toLowerCase();
-
-    let result = base;
-    if (q) {
-      result = base.filter((a) =>
-        String(a[field as keyof Articulo] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    return [...result].sort((a, b) => a.codigo.localeCompare(b.codigo));
-  }, [activos, inactivos, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createArticulo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -87,7 +80,6 @@ export const ArticulosPage = () => {
     mutationFn: ({ id, data }: { id: number; data: Partial<Articulo> }) => updateArticulo(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -102,7 +94,6 @@ export const ArticulosPage = () => {
     mutationFn: deleteArticulo,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articulos'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -256,6 +247,8 @@ export const ArticulosPage = () => {
           </table>
         </div>
       </div>
+
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="sm:max-w-2xl">

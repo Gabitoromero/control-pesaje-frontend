@@ -79,7 +79,7 @@ describe('EtapasPage', () => {
 
     // Should only show Amasado
     expect(screen.getByText('Amasado')).toBeInTheDocument();
-    expect(screen.queryByText('Horneado')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Horneado')).not.toBeInTheDocument());
     expect(screen.queryByText('Envasado')).not.toBeInTheDocument();
 
     // Clear search
@@ -87,7 +87,7 @@ describe('EtapasPage', () => {
 
     // Should show all 3 again
     expect(screen.getByText('Amasado')).toBeInTheDocument();
-    expect(screen.getByText('Horneado')).toBeInTheDocument();
+    expect(await screen.findByText('Horneado')).toBeInTheDocument();
     expect(screen.getByText('Envasado')).toBeInTheDocument();
   });
 

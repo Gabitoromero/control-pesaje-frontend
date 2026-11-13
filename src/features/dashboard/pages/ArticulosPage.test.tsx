@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { vi } from 'vitest';
-import { handlers, articulosMock } from '../../../test/handlers';
+import { handlers, pagedJson, articulosMock } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/render';
 import { ArticulosPage } from './ArticulosPage';
 
@@ -17,6 +17,45 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe('ArticulosPage', () => {
+  describe('server-side pagination', () => {
+    const many = Array.from({ length: 45 }, (_, i) => ({
+      id: 100 + i,
+      codigo: `ART-${String(i + 1).padStart(3, '0')}`,
+      nombre: `Producto ${i + 1}`,
+      activo: true,
+    }));
+
+    it('shows one page of the catalog and moves to the next one', async () => {
+      server.use(http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, many)));
+      renderWithProviders(<ArticulosPage />);
+
+      expect(await screen.findByText('ART-001')).toBeInTheDocument();
+      expect(screen.getByText('ART-020')).toBeInTheDocument();
+      expect(screen.queryByText('ART-021')).not.toBeInTheDocument();
+      expect(screen.getByText('Mostrando 1–20 de 45')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+
+      expect(await screen.findByText('ART-021')).toBeInTheDocument();
+      expect(screen.queryByText('ART-001')).not.toBeInTheDocument();
+      expect(screen.getByText('Mostrando 21–40 de 45')).toBeInTheDocument();
+    });
+
+    it('searches the whole catalog, not only the visible page, and returns to page 1', async () => {
+      server.use(http.get('http://localhost:3000/api/articulos', ({ request }) => pagedJson(request, many)));
+      renderWithProviders(<ArticulosPage />);
+      await screen.findByText('ART-001');
+      await userEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+      await screen.findByText('ART-021');
+
+      await userEvent.type(screen.getByPlaceholderText('Buscar...'), 'ART-045');
+
+      expect(await screen.findByText('Mostrando 1–1 de 1')).toBeInTheDocument();
+      expect(screen.getByText('ART-045')).toBeInTheDocument();
+      expect(screen.queryByText('ART-021')).not.toBeInTheDocument();
+    });
+  });
+
   it('default mount shows only activos and "Código" column header is present', async () => {
     renderWithProviders(<ArticulosPage />);
 
@@ -84,13 +123,13 @@ describe('ArticulosPage', () => {
     await userEvent.type(searchInput, 'harina');
 
     expect(screen.getByText('Harina 000')).toBeInTheDocument();
-    expect(screen.queryByText('Azúcar')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Azúcar')).not.toBeInTheDocument());
     expect(screen.queryByText('Sal fina')).not.toBeInTheDocument();
 
     await userEvent.clear(searchInput);
 
     expect(screen.getByText('Harina 000')).toBeInTheDocument();
-    expect(screen.getByText('Azúcar')).toBeInTheDocument();
+    expect(await screen.findByText('Azúcar')).toBeInTheDocument();
     expect(screen.getByText('Sal fina')).toBeInTheDocument();
   });
 

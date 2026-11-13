@@ -66,9 +66,9 @@ describe('RutasPage', () => {
     const searchInput = screen.getByPlaceholderText('Buscar...');
     await userEvent.type(searchInput, 'alpha');
     expect(screen.getByText('Ruta Alpha')).toBeInTheDocument();
-    expect(screen.queryByText('Ruta Beta')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Ruta Beta')).not.toBeInTheDocument());
     await userEvent.clear(searchInput);
-    expect(screen.getByText('Ruta Beta')).toBeInTheDocument();
+    expect(await screen.findByText('Ruta Beta')).toBeInTheDocument();
   });
 
   it('row count matches mock length', async () => {

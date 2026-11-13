@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getEtapas,
   getEtapasInactivas,
@@ -12,6 +12,8 @@ import {
 import { Plus, Edit, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useActividadGlobal } from '../hooks/useActividadGlobal';
 
 import { useDialog } from '../../../components/dialogs/useDialog';
@@ -38,45 +40,35 @@ export const EtapasPage = () => {
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('nombre');
-  const [query, setQuery] = useState('');
-
   const { hayActividad } = useActividadGlobal();
 
-
-  const { data: activas = [], isLoading: loadingActivas, error: errorActivas } = useQuery({
-    queryKey: ['etapas'],
-    queryFn: getEtapas,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: etapasFiltradas,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Etapa>({
+    key: 'etapas',
+    fetchActive: getEtapas,
+    fetchInactive: getEtapasInactivas,
+    defaultField: 'nombre',
+    sortBy: 'nombre',
   });
-
-  const { data: inactivas = [], isLoading: loadingInactivas, error: errorInactivas } = useQuery({
-    queryKey: ['etapas-inactivas'],
-    queryFn: getEtapasInactivas,
-  });
-
-  const isLoading = loadingActivas || loadingInactivas;
-  const error = errorActivas || errorInactivas;
-
-  const etapasFiltradas = useMemo(() => {
-    const base = status === 'activo' ? activas : inactivas;
-    const q = query.trim().toLowerCase();
-
-    let result = base;
-    if (q) {
-      result = base.filter((e) =>
-        String(e[field as keyof Etapa] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    return [...result].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [activas, inactivas, status, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createEtapa,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
-      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
       toast.success('Etapa creada exitosamente');
     },
@@ -93,7 +85,6 @@ export const EtapasPage = () => {
       updateEtapa(id, data),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
-      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
       toast.success(`Etapa ${variables.accion} exitosamente`);
     },
@@ -109,7 +100,6 @@ export const EtapasPage = () => {
     mutationFn: deleteEtapa,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['etapas'] });
-      queryClient.invalidateQueries({ queryKey: ['etapas-inactivas'] });
       closeModal();
       toast.success('Etapa eliminada exitosamente');
     },
@@ -259,6 +249,8 @@ export const EtapasPage = () => {
           </table>
         </div>
       </div>
+
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="sm:max-w-lg">

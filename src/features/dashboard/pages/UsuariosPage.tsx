@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getUsuarios,
   getUsuariosInactivos,
@@ -14,6 +14,8 @@ import type { SectorUsuario } from '../../../shared/types';
 import { SECTORES, getSectorColor, getSectorLabel } from '../../../lib/sectores';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { SearchToolbar, type SearchField } from '../../../components/SearchToolbar';
+import { PaginationBar } from '../../../components/PaginationBar';
+import { usePagedCatalog } from '../../../hooks/usePagedCatalog';
 import { useDialog } from '../../../components/dialogs/useDialog';
 import { getApiErrorMessage } from '../../../utils/errors';
 import { toast } from 'sonner';
@@ -65,44 +67,36 @@ export const UsuariosPage = () => {
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const [status, setStatus] = useState<'activo' | 'inactivo'>('activo');
-  const [field, setField] = useState('nombreApellido');
-  const [query, setQuery] = useState('');
   const [sector, setSector] = useState('');
 
-  const { data: activos = [], isLoading: loadingActivos, error: errorActivos } = useQuery({
-    queryKey: ['usuarios'],
-    queryFn: getUsuarios,
+  const {
+    status,
+    setStatus,
+    field,
+    setField,
+    query,
+    setQuery,
+    page,
+    setPage,
+    pageSize,
+    items: usuariosFiltrados,
+    total,
+    isLoading,
+    isFetching,
+    error,
+  } = usePagedCatalog<Usuario>({
+    key: 'usuarios',
+    fetchActive: getUsuarios,
+    fetchInactive: getUsuariosInactivos,
+    defaultField: 'nombreApellido',
+    sortBy: 'nombreApellido',
+    extra: { sector },
   });
-
-  const { data: inactivos = [], isLoading: loadingInactivos, error: errorInactivos } = useQuery({
-    queryKey: ['usuarios-inactivos'],
-    queryFn: getUsuariosInactivos,
-  });
-
-  const isLoading = loadingActivos || loadingInactivos;
-  const error = errorActivos || errorInactivos;
-
-  const usuariosFiltrados = useMemo(() => {
-    const todos = status === 'activo' ? activos : inactivos;
-    const base = sector
-      ? todos.filter((u) => (sector === FILTRO_SIN_SECTOR ? sectorDe(u) === null : sectorDe(u) === sector))
-      : todos;
-    const q = query.trim().toLowerCase();
-    let result = base;
-    if (q) {
-      result = base.filter((u) =>
-        String(u[field as keyof Usuario] ?? '').toLowerCase().includes(q)
-      );
-    }
-    return [...result].sort((a, b) => a.nombreApellido.localeCompare(b.nombreApellido));
-  }, [activos, inactivos, status, sector, field, query]);
 
   const createMutation = useMutation({
     mutationFn: createUsuario,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -116,7 +110,6 @@ export const UsuariosPage = () => {
     mutationFn: ({ id, data }: { id: number; data: Partial<UsuarioCreate> }) => updateUsuario(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -130,7 +123,6 @@ export const UsuariosPage = () => {
     mutationFn: deleteUsuario,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      queryClient.invalidateQueries({ queryKey: ['usuarios-inactivos'] });
       closeModal();
     },
     onError: (err: unknown) => {
@@ -326,6 +318,8 @@ export const UsuariosPage = () => {
           </table>
         </div>
       </div>
+
+      <PaginationBar page={page} pageSize={pageSize} total={total} onPageChange={setPage} disabled={isFetching} />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="sm:max-w-2xl">
