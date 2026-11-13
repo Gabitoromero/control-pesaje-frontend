@@ -12,7 +12,6 @@ describe('EntityDetailDrawer', () => {
         open
         onOpenChange={() => {}}
         title="Detalle del artículo"
-        subtitle="ABC-1"
         fields={[
           { label: 'Código', value: 'ABC-1' },
           { label: 'Descripción', value: LONG },
@@ -22,7 +21,7 @@ describe('EntityDetailDrawer', () => {
     );
 
     expect(screen.getByText('Detalle del artículo')).toBeInTheDocument();
-    expect(screen.getAllByText('ABC-1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('ABC-1')).toHaveLength(1);
     expect(screen.getByText(LONG)).toBeInTheDocument();
     expect(screen.getByText('Nombre')).toBeInTheDocument();
     expect(screen.getByText('-')).toBeInTheDocument();

@@ -611,7 +611,6 @@ export const LineasPage = () => {
         open={detalle !== null}
         onOpenChange={(open) => { if (!open) setDetalle(null); }}
         title="Detalle de la línea"
-        subtitle={detalle?.nombre}
         fields={[
           { label: 'Nombre', value: detalle?.nombre },
           { label: 'Dispositivo', value: detalle?.dispositivo ? `${detalle.dispositivo.nombre} (${detalle.dispositivo.hardwareId})` : null },

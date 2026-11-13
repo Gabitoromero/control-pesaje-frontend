@@ -52,7 +52,7 @@ describe('LineasPage detail drawer', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Detalle de la línea')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Línea Detalle')).toHaveLength(2);
+    expect(within(dialog).getAllByText('Línea Detalle')).toHaveLength(1);
     expect(within(dialog).getByText('Tablet Norte (abcdef1234567890)')).toBeInTheDocument();
     expect(within(dialog).getByText('Ruta Alpha')).toBeInTheDocument();
     expect(within(dialog).getByText('Revisar la celda de carga cada turno')).toBeInTheDocument();

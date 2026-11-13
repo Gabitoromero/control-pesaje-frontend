@@ -41,7 +41,7 @@ describe('EtapasPage detail drawer', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Detalle de la etapa')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Amasado')).toHaveLength(2);
+    expect(within(dialog).getAllByText('Amasado')).toHaveLength(1);
     expect(within(dialog).getByText('Proceso de amasado')).toBeInTheDocument();
     expect(within(dialog).getByText('Activa')).toBeInTheDocument();
     expect(screen.queryByText('Editar Etapa')).not.toBeInTheDocument();

@@ -53,7 +53,7 @@ describe('ArticulosPage history', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Detalle del artículo')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Harina 000')).toHaveLength(2);
+    expect(within(dialog).getAllByText('Harina 000')).toHaveLength(1);
     expect(screen.queryByText('Editar Artículo')).not.toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole('button', { name: /historial/i }));

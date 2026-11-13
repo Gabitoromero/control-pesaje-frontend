@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dispositivosApi } from '../../../api/dispositivos';
 import type { Dispositivo } from '../../../api/dispositivos';
 import { useDialog } from '../../../components/dialogs/useDialog';
-import { Edit, Trash } from 'lucide-react';
+import { Edit, Eye, Trash } from 'lucide-react';
+import { EntityDetailDrawer } from '../../../components/EntityDetailDrawer';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ export const DispositivosConectadosPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Dispositivo | null>(null);
   const [formData, setFormData] = useState({ nombre: '' });
+  const [detalle, setDetalle] = useState<Dispositivo | null>(null);
 
   const { data: devices = [], isLoading: loading, isError } = useQuery({
     queryKey: ['dispositivos'],
@@ -112,25 +114,25 @@ export const DispositivosConectadosPage: React.FC = () => {
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Nombre
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Hardware ID
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Línea de Producción
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Estado
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Última Conexión
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Unidad
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -138,16 +140,16 @@ export const DispositivosConectadosPage: React.FC = () => {
               <tbody className="bg-card divide-y divide-border">
                 {devices.map((device) => (
                   <tr key={device.hardwareId} className="hover:bg-accent even:bg-muted/40">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                       {device.nombre}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <td className="px-4 py-4 whitespace-nowrap max-w-[14rem] truncate text-sm text-foreground" title={device.hardwareId}>
                       {device.hardwareId}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <td className="px-4 py-4 whitespace-nowrap max-w-[14rem] truncate text-sm text-foreground" title={device.lineaNombre ?? undefined}>
                       {device.lineaNombre ?? '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                           device.estado === 'Conectado'
@@ -160,14 +162,23 @@ export const DispositivosConectadosPage: React.FC = () => {
                         {device.estado}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {device.ultimaConexionAt ? new Date(device.ultimaConexionAt).toLocaleString() : '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">
                       {device.unidad ?? '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-3">
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end gap-5">
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          title="Ver detalle"
+                          aria-label="Ver detalle"
+                          onClick={() => setDetalle(device)}
+                        >
+                          <Eye size={18} />
+                        </button>
                         <button
                           type="button"
                           className="text-muted-foreground hover:text-foreground"
@@ -186,6 +197,20 @@ export const DispositivosConectadosPage: React.FC = () => {
         </div>
       )}
       
+      <EntityDetailDrawer
+        open={detalle !== null}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        title="Detalle del dispositivo"
+        fields={[
+          { label: 'Nombre', value: detalle?.nombre },
+          { label: 'Hardware ID', value: detalle?.hardwareId },
+          { label: 'Línea de producción', value: detalle?.lineaNombre },
+          { label: 'Estado', value: detalle?.estado },
+          { label: 'Última conexión', value: detalle?.ultimaConexionAt ? new Date(detalle.ultimaConexionAt).toLocaleString() : null },
+          { label: 'Unidad', value: detalle?.unidad },
+        ]}
+      />
+
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeEditModal(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

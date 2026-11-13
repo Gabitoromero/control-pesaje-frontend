@@ -11,7 +11,6 @@ interface EntityDetailDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  subtitle?: string;
   fields: DetailField[];
   /** When provided, a button to jump to the change history is shown. */
   onViewHistorial?: () => void;
@@ -20,11 +19,11 @@ interface EntityDetailDrawerProps {
 const isEmpty = (value: ReactNode) => value === null || value === undefined || value === '' || value === false;
 
 /** Read-only side panel that shows every field of a list row without truncation. */
-export const EntityDetailDrawer = ({ open, onOpenChange, title, subtitle, fields, onViewHistorial }: EntityDetailDrawerProps) => (
+export const EntityDetailDrawer = ({ open, onOpenChange, title, fields, onViewHistorial }: EntityDetailDrawerProps) => (
   <Sheet open={open} onOpenChange={onOpenChange}>
     <SheetContent className="overflow-y-auto">
       <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
-      <SheetDescription className="text-sm text-muted-foreground">{subtitle ?? 'Datos completos'}</SheetDescription>
+      <SheetDescription className="sr-only">Datos completos</SheetDescription>
 
       <dl className="space-y-4">
         {fields.map((field) => (

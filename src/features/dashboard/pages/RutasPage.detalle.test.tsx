@@ -46,7 +46,7 @@ describe('RutasPage detail drawer', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Detalle de la ruta')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Ruta Alpha')).toHaveLength(2);
+    expect(within(dialog).getAllByText('Ruta Alpha')).toHaveLength(1);
     expect(within(dialog).getByText('Descripción Alpha')).toBeInTheDocument();
     expect(within(dialog).getByText('Activa')).toBeInTheDocument();
     expect(screen.queryByText('Editar Ruta')).not.toBeInTheDocument();

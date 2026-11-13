@@ -351,7 +351,6 @@ export const ArticulosPage = () => {
         open={detalle !== null}
         onOpenChange={(open) => { if (!open) setDetalle(null); }}
         title="Detalle del artículo"
-        subtitle={detalle?.codigo}
         fields={[
           { label: 'Código', value: detalle?.codigo },
           { label: 'Nombre', value: detalle?.nombre },

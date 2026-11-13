@@ -342,7 +342,6 @@ export const EtapasPage = () => {
         open={detalle !== null}
         onOpenChange={(open) => { if (!open) setDetalle(null); }}
         title="Detalle de la etapa"
-        subtitle={detalle?.nombre}
         fields={[
           { label: 'Nombre', value: detalle?.nombre },
           { label: 'Descripción', value: detalle?.descripcion },
